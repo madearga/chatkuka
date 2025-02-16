@@ -2,6 +2,7 @@ import { openai } from '@ai-sdk/openai';
 import { fireworks } from '@ai-sdk/fireworks';
 import { google } from '@ai-sdk/google';
 import { groq } from '@ai-sdk/groq';
+import { fal } from '@ai-sdk/fal';
 import {
   customProvider,
   extractReasoningMiddleware,
@@ -22,8 +23,8 @@ export const myProvider = customProvider({
     'artifact-model': google('gemini-2.0-pro-exp-02-05'),
   },
   imageModels: {
-    'small-model': openai.image('dall-e-2'),
-    'large-model': openai.image('dall-e-3'),
+    'small-model': fal.image('fal-ai/flux/schnell'),
+    'large-model': fal.image('fal-ai/flux/schnell'),
   },
 });
 
