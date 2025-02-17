@@ -12,10 +12,23 @@ import { createSuggestionWidget, type UISuggestion } from './suggestions';
 
 export const buildDocumentFromContent = (content: string) => {
   const parser = DOMParser.fromSchema(documentSchema);
-  const stringFromMarkdown = renderToString(<Markdown>{content}</Markdown>);
+  // Sanitize the content to ensure it's valid markdown
+  const sanitizedContent = content.replace(/[^\x20-\x7E\s]/g, '');
+  const stringFromMarkdown = renderToString(<Markdown>{sanitizedContent}</Markdown>);
   const tempContainer = document.createElement('div');
   tempContainer.innerHTML = stringFromMarkdown;
-  return parser.parse(tempContainer);
+  
+  try {
+    return parser.parse(tempContainer);
+  } catch (error) {
+    console.error('Error parsing document:', error);
+    // Return an empty document as fallback
+    return documentSchema.node('doc', null, [
+      documentSchema.node('paragraph', null, [
+        documentSchema.text(content)
+      ])
+    ]);
+  }
 };
 
 export const buildContentFromDocument = (document: Node) => {
