@@ -1,0 +1,220 @@
+Below is an updated version of our “cursor rules” document that is tailored to our codebase. This document explains our project’s structure, naming conventions, and coding guidelines using our own code examples (such as file uploads, authentication actions, and artifact handling) rather than simply copying existing examples. You can place this file (for example, in the docs folder) as a single source reference for the team.
+
+```markdown:docs/cursor-rules.md
+# Cursor Rules & Coding Guidelines for Our Codebase
+
+## Overview
+This document explains the coding rules and best practices for our web app. Following these guidelines ensures that our code remains clean, modular, and maintainable. It covers our frontend, backend, and storage strategies as implemented in our project.
+
+## Tech Stack
+- **Frontend:** Next.js (App Router), Tailwind CSS, Shadcn UI, Framer Motion
+- **Backend:** PostgreSQL (with Drizzle ORM), Supabase, Server Actions
+- **Auth:** NextAuth/Clerk
+- **Payments:** Stripe
+- **Analytics:** PostHog
+- **Deployment:** Vercel
+
+## Project Structure & Naming
+- **Filenames and Folders:**  
+  Use kebab-case for file and folder names (e.g. `preview-attachment.tsx`).  
+  Organize code as follows:
+  - `app` – Next.js pages and API routes (e.g., `/api/files/upload`, `/api/chat`)
+  - `components` – Reusable UI components (e.g. file previews, multimodal inputs, icons)
+  - `actions` – Server actions handling data mutations (e.g. auth actions)
+  - `lib` – Shared logic like database queries, AI models, and artifact handlers
+  - `db` – Database schemas and migration setups (using Drizzle ORM)
+  - `types` – Type definitions used across the project
+- **Imports:**  
+  Always use the `@` alias to import modules from the project root (e.g. `import { auth } from '@/app/(auth)/auth';`).
+
+## Environment Variables
+- Place variables in `.env.local` while maintaining a sample file in `.env.example`.
+- Use the `NEXT_PUBLIC_` prefix only for those variables that need to be accessed by client-side code.
+- Never expose sensitive credentials on the frontend.
+
+## Components
+
+### Server Components
+- Begin each server component file with `"use server"`.  
+- They handle data fetching and business logic.  
+- Use Suspense for async boundaries if necessary.
+  
+**Example:**
+```tsx
+"use server"
+
+import { Suspense } from "react";
+import UserProfile from "@/components/user-profile";
+
+export default async function UserPage() {
+  const userData = await fetchUserData(); // Replace with your async fetch logic
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <UserProfile data={userData} />
+    </Suspense>
+  );
+}
+```
+
+### Client Components
+- Mark client components with `"use client"` at the top.  
+- They handle dynamic UI interactions and local state.
+  
+**Example:**
+```tsx
+"use client"
+
+interface ButtonProps {
+  label: string;
+  onClick: () => void;
+}
+
+export default function Button({ label, onClick }: ButtonProps) {
+  return <button onClick={onClick}>{label}</button>;
+}
+```
+
+## Server Actions & Database Guidelines
+- **Actions Folder:**  
+  All server actions (like login and registration) go in the `/actions` folder.  
+  Use clear function names such as `loginAction` or `registerAction` that return an `ActionState` type.
+  
+- **Database Queries:**  
+  Place DB queries in `lib/db/queries.ts` and database schemas in `lib/db/schema.ts`.  
+  Every table should include `createdAt` and `updatedAt` fields, and use cascade deletion where necessary.
+
+**Example Action Type:**
+```ts
+export type ActionState<T> =
+  | { isSuccess: true; message: string; data: T }
+  | { isSuccess: false; message: string };
+```
+
+## File Upload & Storage
+- **Validation:**  
+  Validate file size and type before proceeding, using Zod schemas.  
+  Ensure files meet your app’s requirements.
+  
+- **Implementation:**  
+  Use server actions to handle uploads (as shown in our file upload route) and external services (like Vercel Blob or Supabase Storage) for storage.
+
+**Example File Upload Action:**
+```ts
+"use server"
+
+import { put } from '@vercel/blob';
+import { NextResponse } from 'next/server';
+import { z } from 'zod';
+import { auth } from '@/app/(auth)/auth';
+
+// Define our file schema using Zod.
+const FileSchema = z.object({
+  file: z.instanceof(Blob)
+    .refine((file) => file.size <= 5 * 1024 * 1024, {
+      message: "File size should be less than 5MB",
+    })
+    .refine((file) => ['image/jpeg', 'image/png'].includes(file.type), {
+      message: "Only JPEG and PNG images are allowed.",
+    }),
+});
+
+export async function POST(request: Request) {
+  const session = await auth();
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  
+  if (!request.body) {
+    return new Response("Request body is empty", { status: 400 });
+  }
+
+  try {
+    const formData = await request.formData();
+    const file = formData.get("file") as Blob;
+    if (!file) {
+      return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
+    }
+    
+    const validatedFile = FileSchema.safeParse({ file });
+    if (!validatedFile.success) {
+      const errorMessage = validatedFile.error.errors.map(err => err.message).join(", ");
+      return NextResponse.json({ error: errorMessage }, { status: 400 });
+    }
+
+    // Get filename (Blob does not include a name by default).
+    const filename = (formData.get("file") as File).name;
+    const fileBuffer = await file.arrayBuffer();
+
+    try {
+      const data = await put(`${filename}`, fileBuffer, { access: "public" });
+      return NextResponse.json(data);
+    } catch (error) {
+      return NextResponse.json({ error: "Upload failed" }, { status: 500 });
+    }
+  } catch (error) {
+    return NextResponse.json({ error: "Failed to process request" }, { status: 500 });
+  }
+}
+```
+
+## Artifacts & Custom Content
+- **Artifacts:**  
+  We support artefacts (e.g. text, image, sheet). Client and server logic are separated, with interactive client components and streaming server actions.
+  
+- **Guidelines:**  
+  Define each artifact in a module (such as in `artifacts/image/server.ts`) and provide clear actions (like version changes or updates).  
+  Use icons and toolbar actions from our `components/icons.tsx`.
+
+**Example: Image Artifact Server Handler**
+```ts
+import { myProvider } from "@/lib/ai/models";
+import { createDocumentHandler } from "@/lib/artifacts/server";
+
+export const imageDocumentHandler = createDocumentHandler<'image'>({
+  kind: "image",
+  onCreateDocument: async ({ title, dataStream }) => {
+    const { image } = await experimental_generateImage({
+      model: myProvider.imageModel("small-model"),
+      prompt: title,
+      n: 1,
+    });
+    dataStream.writeData({ type: "image-delta", content: image.base64 });
+    return image.base64;
+  },
+  onUpdateDocument: async ({ description, dataStream }) => {
+    const { image } = await experimental_generateImage({
+      model: myProvider.imageModel("small-model"),
+      prompt: description,
+      n: 1,
+    });
+    dataStream.writeData({ type: "image-delta", content: image.base64 });
+    return image.base64;
+  },
+});
+```
+
+## Authentication & Actions
+- **Auth Actions:**  
+  Validate user credentials using Zod and implement registration or login as server actions (see our auth actions).  
+  Never leak sensitive data, and always check session details before mutating data.
+
+## Comments & Documentation
+- Include meaningful inline comments that explain complex logic.  
+- Avoid deleting outdated comments unless they are clearly wrong.
+- Update documentation as features evolve.
+
+## Testing & Deployment
+- Test every new feature manually.  
+- Verify that changes to server actions, UI components, and storage functions work as intended.  
+- Check that environment variables are set up correctly in `.env.local`.
+- Use proper logging for errors in production.
+
+## Final Notes
+Maintain simplicity and focus on core functionality. These guidelines help everyone on the team keep the codebase consistent. Review and update this document periodically as the project grows.
+
+---
+
+Remember: clarity, consistency, and modularity are key to a scalable codebase.
+```
+
+This updated document is based on our own code examples and practices. It avoids a mere copy/paste of examples and instead shows how to apply these principles to the parts of our codebase—from file uploads and artifacts to authentication and server actions.
