@@ -15,6 +15,8 @@ import {
   type Message,
   message,
   vote,
+  payment,
+  type Payment,
 } from './schema';
 import { ArtifactKind } from '@/components/artifact';
 
@@ -342,6 +344,73 @@ export async function updateChatVisiblityById({
     return await db.update(chat).set({ visibility }).where(eq(chat.id, chatId));
   } catch (error) {
     console.error('Failed to update chat visibility in database');
+    throw error;
+  }
+}
+
+export async function createPayment({
+  orderId,
+  amount,
+  userId,
+  snapToken,
+}: {
+  orderId: string;
+  amount: string;
+  userId: string;
+  snapToken: string;
+}): Promise<Payment> {
+  try {
+    const [newPayment] = await db.insert(payment).values({
+      orderId,
+      amount,
+      userId,
+      snapToken,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }).returning();
+    return newPayment;
+  } catch (error) {
+    console.error('Failed to create payment in database', error);
+    throw error;
+  }
+}
+
+export async function updatePaymentStatus({
+  orderId,
+  status,
+  paymentType,
+  transactionId,
+}: {
+  orderId: string;
+  status: 'pending' | 'success' | 'failed' | 'expired';
+  paymentType?: string;
+  transactionId?: string;
+}) {
+  try {
+    const [updatedPayment] = await db.update(payment)
+      .set({
+        status,
+        paymentType,
+        transactionId,
+        updatedAt: new Date(),
+      })
+      .where(eq(payment.orderId, orderId))
+      .returning();
+    return updatedPayment;
+  } catch (error) {
+    console.error('Failed to update payment status in database', error);
+    throw error;
+  }
+}
+
+export async function getPaymentByOrderId(orderId: string): Promise<Payment | undefined> {
+  try {
+    const [paymentData] = await db.select()
+      .from(payment)
+      .where(eq(payment.orderId, orderId));
+    return paymentData;
+  } catch (error) {
+    console.error('Failed to get payment from database', error);
     throw error;
   }
 }

@@ -113,3 +113,20 @@ export const suggestion = pgTable(
 );
 
 export type Suggestion = InferSelectModel<typeof suggestion>;
+
+export const payment = pgTable('Payment', {
+  id: uuid('id').primaryKey().notNull().defaultRandom(),
+  orderId: varchar('orderId', { length: 64 }).notNull(),
+  amount: varchar('amount', { length: 20 }).notNull(),
+  status: varchar('status', { enum: ['pending', 'success', 'failed', 'expired'] }).notNull().default('pending'),
+  snapToken: text('snapToken'),
+  paymentType: varchar('paymentType', { length: 50 }),
+  transactionId: varchar('transactionId', { length: 100 }),
+  userId: uuid('userId')
+    .notNull()
+    .references(() => user.id),
+  createdAt: timestamp('createdAt').notNull().defaultNow(),
+  updatedAt: timestamp('updatedAt').notNull().defaultNow(),
+});
+
+export type Payment = InferSelectModel<typeof payment>;
