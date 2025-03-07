@@ -25,6 +25,20 @@ import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 import { MessageEditor } from './message-editor';
 import { DocumentPreview } from './document-preview';
 import { MessageReasoning } from './message-reasoning';
+import { SearchResults } from './search-results';
+import { SearchProgress, type SearchStatus } from './search-progress';
+
+// Tambahkan interface untuk data pencarian
+interface SearchData {
+  type: 'search-status' | 'search-results';
+  status: SearchStatus;
+  query: string;
+  error?: string;
+  results?: any[];
+  answer?: string;
+  images?: any[];
+  responseTime?: number;
+}
 
 const PurePreviewMessage = ({
   chatId,
@@ -48,6 +62,17 @@ const PurePreviewMessage = ({
   isReadonly: boolean;
 }) => {
   const [mode, setMode] = useState<'view' | 'edit'>('view');
+  
+  // Parse search data if available
+  const searchData = useMemo(() => {
+    if (typeof message.content === 'object' && message.content !== null) {
+      const content = message.content as any;
+      if (content.type === 'search-status' || content.type === 'search-results') {
+        return content as SearchData;
+      }
+    }
+    return null;
+  }, [message.content]);
 
   return (
     <AnimatePresence>
@@ -93,7 +118,28 @@ const PurePreviewMessage = ({
               />
             )}
 
-            {(message.content || message.reasoning) && mode === 'view' && (
+            {/* Render search status or results if available */}
+            {searchData && (
+              <div className="w-full">
+                {searchData.type === 'search-status' ? (
+                  <SearchProgress 
+                    status={searchData.status}
+                    query={searchData.query}
+                    error={searchData.error}
+                  />
+                ) : searchData.type === 'search-results' && searchData.results ? (
+                  <SearchResults 
+                    results={searchData.results}
+                    query={searchData.query}
+                    answer={searchData.answer}
+                    images={searchData.images}
+                    responseTime={searchData.responseTime}
+                  />
+                ) : null}
+              </div>
+            )}
+
+            {(message.content && typeof message.content === 'string' || message.reasoning) && mode === 'view' && (
               <div className="flex flex-row gap-2 items-start">
                 {message.role === 'user' && !isReadonly && (
                   <Tooltip>
@@ -118,12 +164,14 @@ const PurePreviewMessage = ({
                       message.role === 'user',
                   })}
                 >
-                  <Markdown>{message.content as string}</Markdown>
+                  {typeof message.content === 'string' && (
+                    <Markdown>{message.content}</Markdown>
+                  )}
                 </div>
               </div>
             )}
 
-            {message.content && mode === 'edit' && (
+            {message.content && typeof message.content === 'string' && mode === 'edit' && (
               <div className="flex flex-row gap-2 items-start">
                 <div className="size-8" />
 
@@ -166,6 +214,14 @@ const PurePreviewMessage = ({
                             result={result}
                             isReadonly={isReadonly}
                           />
+                        ) : toolName === 'search' ? (
+                          <SearchResults
+                            results={result.results}
+                            query={result.query}
+                            answer={result.answer}
+                            images={result.images}
+                            responseTime={result.responseTime}
+                          />
                         ) : (
                           <pre>{JSON.stringify(result, null, 2)}</pre>
                         )}
@@ -176,7 +232,7 @@ const PurePreviewMessage = ({
                     <div
                       key={toolCallId}
                       className={cx({
-                        skeleton: ['getWeather'].includes(toolName),
+                        skeleton: ['getWeather', 'search'].includes(toolName),
                       })}
                     >
                       {toolName === 'getWeather' ? (
@@ -194,6 +250,11 @@ const PurePreviewMessage = ({
                           type="request-suggestions"
                           args={args}
                           isReadonly={isReadonly}
+                        />
+                      ) : toolName === 'search' ? (
+                        <SearchProgress
+                          status="searching"
+                          query={args.query}
                         />
                       ) : null}
                     </div>

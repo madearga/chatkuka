@@ -26,7 +26,7 @@ export function SidebarPayment() {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton className="bg-primary text-primary-foreground hover:bg-primary/90">
-              <CreditCard className="h-4 w-4" />
+              <CreditCard className="size-4" />
               <span>Try Payment</span>
             </SidebarMenuButton>
           </SidebarMenuItem>

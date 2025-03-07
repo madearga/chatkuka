@@ -29,6 +29,15 @@ import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
 import { SuggestedActions } from './suggested-actions';
 import equal from 'fast-deep-equal';
+import { AIInputWithSearch } from './ui/ai-input-with-search';
+import { Globe } from 'lucide-react';
+
+// Define the interface for the Tavily search options
+interface TavilySearchOptions {
+  searchDepth?: 'basic' | 'advanced';
+  includeAnswer?: boolean;
+  maxResults?: number;
+}
 
 function PureMultimodalInput({
   chatId,
@@ -67,6 +76,9 @@ function PureMultimodalInput({
 }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { width } = useWindowSize();
+  const [useAIInput, setUseAIInput] = useState(false);
+  const [searchEnabled, setSearchEnabled] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -120,6 +132,7 @@ function PureMultimodalInput({
   const submitForm = useCallback(() => {
     window.history.replaceState({}, '', `/chat/${chatId}`);
 
+    // Standard submission without search
     handleSubmit(undefined, {
       experimental_attachments: attachments,
     });
@@ -193,6 +206,68 @@ function PureMultimodalInput({
     [setAttachments],
   );
 
+  const handleAIInputSubmit = (value: string, withSearch: boolean) => {
+    // Pastikan nilai tidak kosong dan tidak sedang dalam proses submit
+    if (!value.trim() || isSubmitting) return;
+    
+    setIsSubmitting(true);
+    setInput(value);
+    setSearchEnabled(withSearch);
+    
+    window.history.replaceState({}, '', `/chat/${chatId}`);
+
+    try {
+      // Kirim ke server dengan parameter yang sesuai
+      handleSubmit(undefined, {
+        experimental_attachments: attachments,
+        body: {
+          useSearch: withSearch,
+          searchQuery: value,
+          searchOptions: {
+            searchDepth: 'basic',
+            includeAnswer: true,
+            maxResults: 5
+          }
+        }
+      });
+
+      // Reset state setelah submit
+      setAttachments([]);
+      setLocalStorageInput('');
+      
+      // Tampilkan toast jika search diaktifkan
+      if (withSearch) {
+        toast.success('Searching the web for information...', {
+          id: 'search-toast',
+          duration: 3000,
+        });
+      }
+    } catch (error) {
+      console.error('Error submitting message:', error);
+      toast.error('Failed to send message. Please try again.');
+    } finally {
+      // Reset submission state setelah beberapa saat
+      setTimeout(() => {
+        setIsSubmitting(false);
+      }, 500);
+    }
+  };
+
+  const handleAIFileSelect = (file: File) => {
+    if (fileInputRef.current) {
+      // Create a DataTransfer object
+      const dataTransfer = new DataTransfer();
+      dataTransfer.items.add(file);
+      
+      // Set the files property of the input element
+      fileInputRef.current.files = dataTransfer.files;
+      
+      // Trigger the onChange event handler
+      const event = new Event('change', { bubbles: true });
+      fileInputRef.current.dispatchEvent(event);
+    }
+  };
+
   return (
     <div className="relative w-full flex flex-col gap-4">
       {messages.length === 0 &&
@@ -230,45 +305,77 @@ function PureMultimodalInput({
         </div>
       )}
 
-      <Textarea
-        ref={textareaRef}
-        placeholder="Send a message..."
-        value={input}
-        onChange={handleInput}
-        className={cx(
-          'min-h-[24px] max-h-[calc(75dvh)] overflow-hidden resize-none rounded-2xl !text-base bg-muted pb-10 dark:border-zinc-700',
-          className,
-        )}
-        rows={2}
-        autoFocus
-        onKeyDown={(event) => {
-          if (event.key === 'Enter' && !event.shiftKey) {
-            event.preventDefault();
-
-            if (isLoading) {
-              toast.error('Please wait for the model to finish its response!');
-            } else {
-              submitForm();
-            }
-          }
-        }}
-      />
-
-      <div className="absolute bottom-0 p-2 w-fit flex flex-row justify-start">
-        <AttachmentsButton fileInputRef={fileInputRef} isLoading={isLoading} />
-      </div>
-
-      <div className="absolute bottom-0 right-0 p-2 w-fit flex flex-row justify-end">
-        {isLoading ? (
-          <StopButton stop={stop} setMessages={setMessages} />
-        ) : (
-          <SendButton
-            input={input}
-            submitForm={submitForm}
-            uploadQueue={uploadQueue}
+      {useAIInput ? (
+        <div className="relative">
+          <AIInputWithSearch 
+            placeholder="Send a message..."
+            onSubmit={handleAIInputSubmit}
+            onFileSelect={handleAIFileSelect}
+            className="pb-0"
+            defaultSearchEnabled={searchEnabled}
           />
-        )}
-      </div>
+          <Button
+            className="absolute top-4 right-4 rounded-full p-1.5 h-fit border dark:border-zinc-600 z-10"
+            onClick={() => setUseAIInput(false)}
+            variant="ghost"
+            disabled={isSubmitting}
+          >
+            <Globe size={14} />
+          </Button>
+        </div>
+      ) : (
+        <>
+          <Textarea
+            ref={textareaRef}
+            placeholder="Send a message..."
+            value={input}
+            onChange={handleInput}
+            className={cx(
+              'min-h-[24px] max-h-[calc(75dvh)] overflow-hidden resize-none rounded-2xl !text-base bg-muted pb-10 dark:border-zinc-700',
+              className,
+            )}
+            rows={2}
+            autoFocus
+            disabled={isSubmitting}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+
+                if (isLoading) {
+                  toast.error('Please wait for the model to finish its response!');
+                } else {
+                  submitForm();
+                }
+              }
+            }}
+          />
+
+          <div className="absolute bottom-0 p-2 w-fit flex flex-row justify-start">
+            <AttachmentsButton fileInputRef={fileInputRef} isLoading={isLoading || isSubmitting} />
+            <Button
+              className="rounded-md rounded-bl-lg p-[7px] h-fit dark:border-zinc-700 hover:dark:bg-zinc-900 hover:bg-zinc-200 ml-2"
+              onClick={() => setUseAIInput(true)}
+              disabled={isLoading || isSubmitting}
+              variant="ghost"
+            >
+              <Globe size={14} />
+            </Button>
+          </div>
+
+          <div className="absolute bottom-0 right-0 p-2 w-fit flex flex-row justify-end">
+            {isLoading ? (
+              <StopButton stop={stop} setMessages={setMessages} />
+            ) : (
+              <SendButton
+                input={input}
+                submitForm={submitForm}
+                uploadQueue={uploadQueue}
+                isSubmitting={isSubmitting}
+              />
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -335,10 +442,12 @@ function PureSendButton({
   submitForm,
   input,
   uploadQueue,
+  isSubmitting,
 }: {
   submitForm: () => void;
   input: string;
   uploadQueue: Array<string>;
+  isSubmitting?: boolean;
 }) {
   return (
     <Button
@@ -347,7 +456,7 @@ function PureSendButton({
         event.preventDefault();
         submitForm();
       }}
-      disabled={input.length === 0 || uploadQueue.length > 0}
+      disabled={input.length === 0 || uploadQueue.length > 0 || isSubmitting}
     >
       <ArrowUpIcon size={14} />
     </Button>
@@ -358,5 +467,6 @@ const SendButton = memo(PureSendButton, (prevProps, nextProps) => {
   if (prevProps.uploadQueue.length !== nextProps.uploadQueue.length)
     return false;
   if (prevProps.input !== nextProps.input) return false;
+  if (prevProps.isSubmitting !== nextProps.isSubmitting) return false;
   return true;
 });

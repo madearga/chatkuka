@@ -1,0 +1,199 @@
+---
+title: 'Cursor Project Rules'
+description: 'Comprehensive guidelines for the AI Chatbot project'
+---
+
+# AI Chatbot Project Rules
+
+## Code Organization & Structure
+
+### Component Hierarchy
+- Limit component nesting to 3 levels deep for better readability
+- Extract complex UI logic into custom hooks
+- Keep component files under 150 lines; split larger components
+
+### File Naming Conventions
+- Use PascalCase for React components (e.g., `ChatMessage.tsx`)
+- Use camelCase for utility functions and hooks (e.g., `useMessageStore.ts`)
+- Use kebab-case for CSS modules (e.g., `chat-interface.module.css`)
+- Add type suffix for type definitions (e.g., `message.types.ts`)
+
+### Import Organization
+- Group imports in this order: React/Next.js, external libraries, internal components, types, styles
+- Sort imports alphabetically within each group
+- Use absolute imports for project modules
+
+## AI Implementation
+
+### Prompt Engineering
+- Document all prompt templates with version numbers
+- Keep system prompts in separate configuration files
+- Implement A/B testing framework for prompt variations
+- Create a prompt library with reusable components
+
+### Model Management
+- Implement graceful fallbacks between models (e.g., if GPT-4 fails, try GPT-3.5)
+- Cache responses for identical or similar queries
+- Track token usage per request for cost optimization
+- Set up model version control to ensure consistency
+
+### Response Handling
+- Validate AI responses against expected schemas
+- Implement content filtering for inappropriate responses
+- Add retry logic with exponential backoff for failed requests
+- Store conversation context efficiently to minimize token usage
+
+## Performance Optimization
+
+### Client-Side Efficiency
+- Implement virtualization for long chat histories
+- Use React.memo for components that render frequently
+- Optimize re-renders with useMemo and useCallback
+- Implement progressive loading for chat history
+
+### Server-Side Optimization
+- Use edge functions for latency-sensitive operations
+- Implement staggered loading patterns for initial page load
+- Cache static assets with appropriate Cache-Control headers
+- Optimize database queries with proper indexing
+
+### Network Efficiency
+- Compress request/response payloads
+- Implement connection pooling for database operations
+- Use HTTP/2 for multiplexed connections
+- Implement request batching where appropriate
+
+## User Experience & Accessibility
+
+### Chat Interface Guidelines
+- Provide clear visual distinction between user and AI messages
+- Implement typing indicators during AI response generation
+- Support keyboard navigation throughout the interface
+- Design mobile-first responsive layouts
+
+### Accessibility Requirements
+- Maintain WCAG 2.1 AA compliance for all interfaces
+- Implement proper focus management for screen readers
+- Provide alternative text for all visual elements
+- Support high contrast mode and reduced motion preferences
+
+### Error Handling
+- Display user-friendly error messages
+- Implement automatic recovery from transient errors
+- Log detailed error information for debugging
+- Provide helpful suggestions when errors occur
+
+## Security & Privacy
+
+### Data Protection
+- Implement end-to-end encryption for sensitive conversations
+- Provide user options to delete conversation history
+- Set automatic data retention policies
+- Anonymize data used for model training
+
+### Authentication & Authorization
+- Implement proper role-based access control
+- Use secure HTTP-only cookies for session management
+- Enforce strong password policies
+- Implement rate limiting for authentication attempts
+
+### Input Validation
+- Sanitize all user inputs before processing
+- Validate file uploads for size and content type
+- Implement content moderation for user messages
+- Prevent prompt injection attacks
+
+## Testing & Quality Assurance
+
+### Test Coverage Requirements
+- Maintain 80%+ test coverage for core functionality
+- Write unit tests for all utility functions
+- Implement integration tests for AI service interactions
+- Create end-to-end tests for critical user flows
+
+### Performance Testing
+- Establish baseline performance metrics
+- Test under various network conditions
+- Simulate high load scenarios
+- Monitor memory usage during extended sessions
+
+### Accessibility Testing
+- Run automated accessibility audits in CI pipeline
+- Conduct manual testing with screen readers
+- Test keyboard navigation paths
+- Verify color contrast ratios
+
+## Documentation
+
+### Code Documentation
+- Add JSDoc comments for all exported functions
+- Document component props with TypeScript interfaces
+- Include examples for complex utility functions
+- Explain non-obvious implementation decisions
+
+### Project Documentation
+- Maintain up-to-date architecture diagrams
+- Document environment setup procedures
+- Create onboarding guides for new developers
+- Keep a changelog of significant changes
+
+### User Documentation
+- Provide clear usage instructions for end users
+- Document known limitations of AI models
+- Create FAQs for common issues
+- Include examples of effective prompts
+
+## Deployment & Operations
+
+### CI/CD Pipeline
+- Run linting, type checking, and tests before deployment
+- Implement canary deployments for new features
+- Set up automated rollbacks for failed deployments
+- Use environment-specific configuration
+
+### Monitoring & Alerting
+- Track API response times and error rates
+- Monitor token usage and costs
+- Set up alerts for abnormal usage patterns
+- Implement user feedback collection
+
+### Maintenance Procedures
+- Schedule regular dependency updates
+- Perform periodic security audits
+- Review and optimize database performance
+- Conduct regular code reviews
+
+## Fundamental Principles
+
+### Code Quality
+- Write clean, simple, readable code
+- Implement features in the simplest possible way
+- Keep files small and focused (<200 lines)
+- Test after every meaningful change
+- Focus on core functionality before optimization
+- Use clear, consistent naming
+
+### Development Process
+- Think thoroughly before coding
+- Write simple, clean and modular code
+- Use clear and easy-to-understand language
+- Write in short sentences
+
+### Error Fixing
+- Consider multiple possible causes before deciding
+- Explain problems in plain English
+- Make minimal necessary changes
+- Change as few lines of code as possible
+- For strange errors, perform web searches for up-to-date information
+
+### Building Process
+- Verify each new feature works by testing it
+- Opt for simple & modular approaches over complicated code
+- When unsure, perform web searches for guidance
+
+### Comments
+- Add helpful and explanatory comments to code
+- Never delete old comments unless obviously wrong/obsolete
+- Include explanatory comments in code
+- Document all changes and their reasoning in comments
+- Use clear, easy-to-understand language in short sentences 

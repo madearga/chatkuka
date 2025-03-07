@@ -34,8 +34,8 @@ export async function POST(request: Request) {
       orderId,
       amount: validatedData.amount,
       customer: {
-        id: session.user.id,
-        email: session.user.email ?? 'anonymous@user.com',
+        id: session.user?.id || 'anonymous',
+        email: session.user?.email ?? 'anonymous@user.com',
       },
       items: validatedData.items,
     });
@@ -44,7 +44,7 @@ export async function POST(request: Request) {
     await createPayment({
       orderId,
       amount: validatedData.amount.toString(),
-      userId: session.user.id,
+      userId: session.user?.id || 'anonymous',
       snapToken: transaction.token,
     });
 
