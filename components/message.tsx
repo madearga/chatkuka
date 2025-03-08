@@ -38,6 +38,8 @@ interface SearchData {
   answer?: string;
   images?: any[];
   responseTime?: number;
+  topic?: string;
+  timeRange?: string;
 }
 
 const PurePreviewMessage = ({
@@ -65,14 +67,38 @@ const PurePreviewMessage = ({
   
   // Parse search data if available
   const searchData = useMemo(() => {
+    // Check for direct search data in message content
     if (typeof message.content === 'object' && message.content !== null) {
       const content = message.content as any;
       if (content.type === 'search-status' || content.type === 'search-results') {
+        console.log('Found search data in message content:', content);
         return content as SearchData;
       }
     }
+    
+    // Check for search data in tool invocations
+    if (message.toolInvocations && message.toolInvocations.length > 0) {
+      for (const toolInvocation of message.toolInvocations) {
+        if (toolInvocation.toolName === 'search' && toolInvocation.state === 'result') {
+          const result = toolInvocation.result;
+          console.log('Found search data in tool invocation:', result);
+          return {
+            type: 'search-results',
+            status: 'complete',
+            query: result.query,
+            results: result.results || [],
+            answer: result.answer,
+            images: result.images,
+            responseTime: result.responseTime,
+            topic: result.topic || 'general',
+            timeRange: result.timeRange
+          } as SearchData;
+        }
+      }
+    }
+    
     return null;
-  }, [message.content]);
+  }, [message.content, message.toolInvocations]);
 
   return (
     <AnimatePresence>
@@ -127,7 +153,7 @@ const PurePreviewMessage = ({
                     query={searchData.query}
                     error={searchData.error}
                   />
-                ) : searchData.type === 'search-results' && searchData.results ? (
+                ) : searchData.type === 'search-results' && Array.isArray(searchData.results) ? (
                   <SearchResults 
                     results={searchData.results}
                     query={searchData.query}

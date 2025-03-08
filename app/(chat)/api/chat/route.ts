@@ -47,6 +47,13 @@ export async function POST(request: Request) {
         searchDepth?: 'basic' | 'advanced';
         includeAnswer?: boolean;
         maxResults?: number;
+        includeDomains?: string[];
+        excludeDomains?: string[];
+        includeImages?: boolean;
+        includeImageDescriptions?: boolean;
+        topic?: string;
+        timeRange?: string;
+        days?: number;
       };
     } = await request.json();
 
@@ -152,7 +159,15 @@ export async function POST(request: Request) {
                 query: searchQuery,
                 search_depth: searchOptions?.searchDepth || 'basic',
                 include_answer: searchOptions?.includeAnswer !== false,
-                max_results: searchOptions?.maxResults || 5,
+                max_results: searchOptions?.maxResults || 10,
+                include_raw_content: false,
+                include_images: searchOptions?.includeImages || false,
+                include_image_descriptions: searchOptions?.includeImageDescriptions || false,
+                topic: searchOptions?.topic || 'general',
+                time_range: searchOptions?.timeRange || null,
+                days: searchOptions?.days || 3,
+                include_domains: searchOptions?.includeDomains || [],
+                exclude_domains: searchOptions?.excludeDomains || [],
               }),
             });
             
@@ -161,13 +176,14 @@ export async function POST(request: Request) {
             }
             
             searchResults = await response.json();
+            console.log('Search results from Tavily:', searchResults);
             
             // Send search results to client
             dataStream.writeData({
               type: 'search-results',
               status: 'complete',
               query: searchQuery,
-              results: searchResults.results,
+              results: searchResults.results || [],
               answer: searchResults.answer,
               images: searchResults.images,
               responseTime: searchResults.responseTime,
@@ -179,11 +195,20 @@ export async function POST(request: Request) {
               systemMessage += `Summary: ${searchResults.answer}\n\n`;
             }
             
-            searchResults.results.forEach((result: any, index: number) => {
-              systemMessage += `Source ${index + 1}: ${result.title}\n`;
-              systemMessage += `URL: ${result.url}\n`;
-              systemMessage += `Content: ${result.content}\n\n`;
-            });
+            if (Array.isArray(searchResults.results) && searchResults.results.length > 0) {
+              systemMessage += `Sources:\n`;
+              searchResults.results.forEach((result: any, index: number) => {
+                systemMessage += `Source ${index + 1}: ${result.title}\n`;
+                systemMessage += `URL: ${result.url}\n`;
+                systemMessage += `Content: ${result.content}\n\n`;
+              });
+              
+              // Add citation instructions
+              systemMessage += `\nWhen referencing the above search results in your response, please cite the sources using markdown links in this format: [Source Title](URL).\n`;
+              systemMessage += `For example: "According to [${searchResults.results[0].title}](${searchResults.results[0].url}), ..."\n\n`;
+            } else {
+              systemMessage += `No search results found.\n\n`;
+            }
             
             systemMessage += `Please use these search results to provide a comprehensive response to the user's query.`;
             

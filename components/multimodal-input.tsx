@@ -37,6 +37,13 @@ interface TavilySearchOptions {
   searchDepth?: 'basic' | 'advanced';
   includeAnswer?: boolean;
   maxResults?: number;
+  includeDomains?: string[];
+  excludeDomains?: string[];
+  includeImages?: boolean;
+  includeImageDescriptions?: boolean;
+  topic?: 'general' | 'news';
+  timeRange?: string;
+  days?: number;
 }
 
 function PureMultimodalInput({
@@ -79,6 +86,7 @@ function PureMultimodalInput({
   const [useAIInput, setUseAIInput] = useState(false);
   const [searchEnabled, setSearchEnabled] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [lastInputValue, setLastInputValue] = useState("");
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -123,6 +131,7 @@ function PureMultimodalInput({
 
   const handleInput = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInput(event.target.value);
+    setLastInputValue(event.target.value);
     adjustHeight();
   };
 
@@ -212,6 +221,7 @@ function PureMultimodalInput({
     
     setIsSubmitting(true);
     setInput(value);
+    setLastInputValue(value);
     setSearchEnabled(withSearch);
     
     window.history.replaceState({}, '', `/chat/${chatId}`);
@@ -226,7 +236,14 @@ function PureMultimodalInput({
           searchOptions: {
             searchDepth: 'basic',
             includeAnswer: true,
-            maxResults: 5
+            maxResults: 10,
+            includeDomains: [],
+            excludeDomains: [],
+            includeImages: true,
+            includeImageDescriptions: true,
+            topic: 'general',
+            timeRange: null,
+            days: 3
           }
         }
       });
@@ -313,10 +330,14 @@ function PureMultimodalInput({
             onFileSelect={handleAIFileSelect}
             className="pb-0"
             defaultSearchEnabled={searchEnabled}
+            initialValue={lastInputValue}
           />
           <Button
             className="absolute top-4 right-4 rounded-full p-1.5 h-fit border dark:border-zinc-600 z-10"
-            onClick={() => setUseAIInput(false)}
+            onClick={() => {
+              setUseAIInput(false);
+              setInput(lastInputValue);
+            }}
             variant="ghost"
             disabled={isSubmitting}
           >
@@ -354,7 +375,9 @@ function PureMultimodalInput({
             <AttachmentsButton fileInputRef={fileInputRef} isLoading={isLoading || isSubmitting} />
             <Button
               className="rounded-md rounded-bl-lg p-[7px] h-fit dark:border-zinc-700 hover:dark:bg-zinc-900 hover:bg-zinc-200 ml-2"
-              onClick={() => setUseAIInput(true)}
+              onClick={() => {
+                setUseAIInput(true);
+              }}
               disabled={isLoading || isSubmitting}
               variant="ghost"
             >

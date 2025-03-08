@@ -1,8 +1,9 @@
 import Link from 'next/link';
-import React, { memo } from 'react';
+import React, { memo, useMemo } from 'react';
 import ReactMarkdown, { type Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { CodeBlock } from './code-block';
+import { processSourceReferences } from './source-reference';
 
 const components: Partial<Components> = {
   // @ts-expect-error
@@ -91,14 +92,52 @@ const components: Partial<Components> = {
       </h6>
     );
   },
+  p: ({ node, children, ...props }) => {
+    // Check if children contains source references
+    const childrenArray = React.Children.toArray(children);
+    const hasSourceReference = childrenArray.some(
+      child => typeof child === 'string' && child.includes('[Source')
+    );
+
+    if (hasSourceReference) {
+      // Process the paragraph text to replace source references with components
+      const processedChildren = childrenArray.map((child, index) => {
+        if (typeof child === 'string' && child.includes('[Source')) {
+          return <React.Fragment key={index}>{processSourceReferences(child)}</React.Fragment>;
+        }
+        return child;
+      });
+
+      return (
+        <p {...props}>
+          {processedChildren}
+        </p>
+      );
+    }
+
+    return <p {...props}>{children}</p>;
+  },
 };
 
 const remarkPlugins = [remarkGfm];
 
 const NonMemoizedMarkdown = ({ children }: { children: string }) => {
+  // Pre-process the markdown to handle source references outside of paragraphs
+  const processedMarkdown = useMemo(() => {
+    if (!children) return '';
+    
+    // Check if the markdown contains source references
+    if (children.includes('[Source')) {
+      // We'll let the paragraph component handle it
+      return children;
+    }
+    
+    return children;
+  }, [children]);
+
   return (
     <ReactMarkdown remarkPlugins={remarkPlugins} components={components}>
-      {children}
+      {processedMarkdown}
     </ReactMarkdown>
   );
 };

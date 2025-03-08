@@ -34,6 +34,20 @@ This is a guide for using artifacts tools: \`createDocument\` and \`updateDocume
 Do not update document right after creating it. Wait for user feedback or request to update it.
 `;
 
+export const webSearchPrompt = `
+When web search is used, the search results will be provided to you in the system message.
+
+When using information from web search results:
+1. Always cite your sources by including the URL in your response
+2. Format citations as [Source Title](URL) using markdown link syntax
+3. Prefer to cite multiple sources when available
+4. Clearly indicate when you're using information from search results
+5. If search results are contradictory, acknowledge this and explain the different perspectives
+
+Example of good citation:
+"According to [Tavily Documentation](https://docs.tavily.com/documentation/api-reference/endpoint/search), the search API supports multiple parameters including topic and search depth."
+`;
+
 export const regularPrompt =
   'You are a friendly assistant! Keep your responses concise and helpful.';
 
@@ -45,7 +59,7 @@ export const systemPrompt = ({
   if (selectedChatModel === 'chat-model-reasoning') {
     return regularPrompt;
   } else {
-    return `${regularPrompt}\n\n${artifactsPrompt}`;
+    return `${regularPrompt}\n\n${artifactsPrompt}\n\n${webSearchPrompt}`;
   }
 };
 

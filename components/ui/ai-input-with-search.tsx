@@ -16,6 +16,7 @@ interface AIInputWithSearchProps {
   onFileSelect?: (file: File) => void;
   className?: string;
   defaultSearchEnabled?: boolean;
+  initialValue?: string;
 }
 
 export function AIInputWithSearch({
@@ -26,9 +27,10 @@ export function AIInputWithSearch({
   onSubmit,
   onFileSelect,
   className,
-  defaultSearchEnabled = true
+  defaultSearchEnabled = true,
+  initialValue = ""
 }: AIInputWithSearchProps) {
-  const [value, setValue] = useState("");
+  const [value, setValue] = useState(initialValue);
   const { textareaRef, adjustHeight } = useAutoResizeTextarea({
     minHeight,
     maxHeight,
@@ -36,7 +38,13 @@ export function AIInputWithSearch({
   const [showSearch, setShowSearch] = useState(defaultSearchEnabled);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Reset isSubmitting state when value changes
+  useEffect(() => {
+    if (initialValue) {
+      setValue(initialValue);
+      adjustHeight();
+    }
+  }, [initialValue]);
+
   useEffect(() => {
     if (isSubmitting && value.trim() === "") {
       setIsSubmitting(false);
@@ -47,13 +55,11 @@ export function AIInputWithSearch({
     if (value.trim() && !isSubmitting) {
       setIsSubmitting(true);
       
-      // Provide visual feedback that submission is happening
       try {
         onSubmit?.(value, showSearch);
         setValue("");
         adjustHeight(true);
       } finally {
-        // Reset submission state after a short delay
         setTimeout(() => {
           setIsSubmitting(false);
         }, 500);
