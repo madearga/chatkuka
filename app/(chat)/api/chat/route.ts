@@ -59,9 +59,25 @@ export async function POST(request: Request) {
 
     const session = await auth();
 
-    if (!session || !session.user || !session.user.id) {
-      return new Response('Unauthorized', { status: 401 });
+    // Enhanced session validation
+    if (!session) {
+      console.error('No session found');
+      return new Response('Unauthorized - No session', { status: 401 });
     }
+    
+    if (!session.user) {
+      console.error('No user in session');
+      return new Response('Unauthorized - No user in session', { status: 401 });
+    }
+    
+    if (!session.user.id) {
+      console.error('No user ID in session');
+      return new Response('Unauthorized - No user ID in session', { status: 401 });
+    }
+
+    // Log session info for debugging
+    console.log('Session user ID:', session.user.id);
+    console.log('Session user email:', session.user.email);
 
     const userMessage = getMostRecentUserMessage(messages);
 
@@ -69,17 +85,44 @@ export async function POST(request: Request) {
       return new Response('No user message found', { status: 400 });
     }
 
-    const chat = await getChatById({ id });
-
-    if (!chat) {
-      const title = await generateTitleFromUserMessage({ message: userMessage });
-      await saveChat({ id, userId: session.user.id, title });
+    // Check if chat exists
+    let chat;
+    try {
+      chat = await getChatById({ id });
+      console.log('Existing chat found:', chat);
+    } catch (error) {
+      console.error('Error fetching chat:', error);
+      return new Response('Error fetching chat', { status: 500 });
     }
 
-    // Simpan pesan pengguna ke database
-    await saveMessages({
-      messages: [{ ...userMessage, createdAt: new Date(), chatId: id }],
-    });
+    // Create new chat if it doesn't exist
+    if (!chat) {
+      try {
+        const title = await generateTitleFromUserMessage({ message: userMessage });
+        console.log('Creating new chat with title:', title);
+        console.log('User ID from session:', session.user.id);
+        
+        await saveChat({ id, userId: session.user.id, title });
+        console.log('Successfully created new chat with ID:', id);
+      } catch (error) {
+        console.error('Failed to save chat in database', error);
+        // Return detailed error information
+        return new Response(`Failed to create chat - database error: ${error instanceof Error ? error.message : String(error)}`, { 
+          status: 500 
+        });
+      }
+    }
+
+    // Save user message to database
+    try {
+      await saveMessages({
+        messages: [{ ...userMessage, createdAt: new Date(), chatId: id }],
+      });
+      console.log('Successfully saved user message');
+    } catch (error) {
+      console.error('Failed to save user message', error);
+      // Continue execution even if message saving fails
+    }
 
     // Get Tavily API key from environment variables
     const tavilyApiKey = process.env.TAVILY_API_KEY;

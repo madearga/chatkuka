@@ -17,6 +17,7 @@ import {
   vote,
   payment,
   type Payment,
+  UserOAuthAccountTable,
 } from './schema';
 import { ArtifactKind } from '@/components/artifact';
 
@@ -34,6 +35,30 @@ export async function getUser(email: string): Promise<Array<User>> {
   } catch (error) {
     console.error('Failed to get user from database');
     throw error;
+  }
+}
+
+// Get user by email, including OAuth account information
+export async function getUserByEmail(email: string) {
+  try {
+    // Find user by email
+    const users = await db.select().from(user).where(eq(user.email, email));
+    if (users.length === 0) return null;
+    
+    // Check if user has OAuth account
+    const oauthAccounts = await db
+      .select()
+      .from(UserOAuthAccountTable)
+      .where(eq(UserOAuthAccountTable.userId, users[0].id));
+    
+    // Return user with OAuth account info
+    return {
+      ...users[0],
+      oauthAccounts: oauthAccounts,
+    };
+  } catch (error) {
+    console.error('Failed to get user with OAuth info from database', error);
+    return null;
   }
 }
 

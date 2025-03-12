@@ -15,9 +15,28 @@ export const user = pgTable('User', {
   id: uuid('id').primaryKey().notNull().defaultRandom(),
   email: varchar('email', { length: 64 }).notNull(),
   password: varchar('password', { length: 64 }),
+  role: varchar('role', { enum: ['user', 'admin'] }).notNull().default('user'),
+  name: varchar('name', { length: 100 }),
 });
 
 export type User = InferSelectModel<typeof user>;
+
+// Define OAuth providers enum
+export const oAuthProviders = ['google'] as const;
+export type OAuthProvider = typeof oAuthProviders[number];
+
+// Create UserOAuthAccount table
+export const UserOAuthAccountTable = pgTable('UserOAuthAccount', {
+  id: uuid('id').primaryKey().notNull().defaultRandom(),
+  provider: varchar('provider', { enum: oAuthProviders }).notNull(),
+  providerAccountId: varchar('providerAccountId', { length: 255 }).notNull(),
+  userId: uuid('userId')
+    .notNull()
+    .references(() => user.id),
+  createdAt: timestamp('createdAt').notNull().defaultNow(),
+});
+
+export type UserOAuthAccount = InferSelectModel<typeof UserOAuthAccountTable>;
 
 export const chat = pgTable('Chat', {
   id: uuid('id').primaryKey().notNull().defaultRandom(),
