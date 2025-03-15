@@ -394,80 +394,51 @@ const PureToolbar = ({
   return (
     <TooltipProvider delayDuration={0}>
       <motion.div
-        className="cursor-pointer absolute right-6 bottom-6 p-1.5 border rounded-full shadow-lg bg-background flex flex-col justify-end"
+        className="cursor-pointer absolute right-3 sm:right-6 bottom-3 sm:bottom-6 p-1.5 border rounded-full shadow-lg bg-background flex flex-col justify-end z-20 mobile-safe-area"
         initial={{ opacity: 0, y: -20, scale: 1 }}
         animate={
           isToolbarVisible
-            ? selectedTool === 'adjust-reading-level'
-              ? {
-                  opacity: 1,
-                  y: 0,
-                  height: 6 * 43,
-                  transition: { delay: 0 },
-                  scale: 0.95,
-                }
-              : {
-                  opacity: 1,
-                  y: 0,
-                  height: toolsByArtifactKind.length * 50,
-                  transition: { delay: 0 },
-                  scale: 1,
-                }
-            : { opacity: 1, y: 0, height: 54, transition: { delay: 0 } }
+            ? {
+                opacity: 1,
+                y: 0,
+                scale: 1,
+                transition: {
+                  duration: 0.2,
+                },
+              }
+            : {
+                opacity: 1,
+                y: 0,
+                scale: 1,
+                transition: {
+                  duration: 0.2,
+                },
+              }
         }
-        exit={{ opacity: 0, y: -20, transition: { duration: 0.1 } }}
-        transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-        onHoverStart={() => {
-          if (isLoading) return;
-
-          cancelCloseTimer();
-          setIsToolbarVisible(true);
-        }}
-        onHoverEnd={() => {
-          if (isLoading) return;
-
-          startCloseTimer();
-        }}
-        onAnimationStart={() => {
-          setIsAnimating(true);
-        }}
-        onAnimationComplete={() => {
-          setIsAnimating(false);
-        }}
+        onMouseEnter={cancelCloseTimer}
+        onMouseLeave={startCloseTimer}
         ref={toolbarRef}
       >
-        {isLoading ? (
-          <motion.div
-            key="stop-icon"
-            initial={{ scale: 1 }}
-            animate={{ scale: 1.4 }}
-            exit={{ scale: 1 }}
-            className="p-3"
+        <Tools
+          isToolbarVisible={isToolbarVisible}
+          selectedTool={selectedTool}
+          setSelectedTool={setSelectedTool}
+          append={append}
+          isAnimating={isAnimating}
+          setIsToolbarVisible={setIsToolbarVisible}
+          tools={toolsByArtifactKind}
+        />
+
+        {isLoading && (
+          <div
+            className="absolute -top-12 right-0 p-2 rounded-full bg-background border shadow-lg"
             onClick={() => {
               stop();
               setMessages((messages) => sanitizeUIMessages(messages));
             }}
           >
             <StopIcon />
-          </motion.div>
-        ) : selectedTool === 'adjust-reading-level' ? (
-          <ReadingLevelSelector
-            key="reading-level-selector"
-            append={append}
-            setSelectedTool={setSelectedTool}
-            isAnimating={isAnimating}
-          />
-        ) : (
-          <Tools
-            key="tools"
-            append={append}
-            isAnimating={isAnimating}
-            isToolbarVisible={isToolbarVisible}
-            selectedTool={selectedTool}
-            setIsToolbarVisible={setIsToolbarVisible}
-            setSelectedTool={setSelectedTool}
-            tools={toolsByArtifactKind}
-          />
+          </div>
         )}
       </motion.div>
     </TooltipProvider>

@@ -303,7 +303,7 @@ function PureMultimodalInput({
       />
 
       {(attachments.length > 0 || uploadQueue.length > 0) && (
-        <div className="flex flex-row gap-2 overflow-x-scroll items-end">
+        <div className="flex flex-row gap-2 overflow-x-auto pb-2 items-end w-full max-w-full">
           {attachments.map((attachment) => (
             <PreviewAttachment key={attachment.url} attachment={attachment} />
           ))}
@@ -352,7 +352,7 @@ function PureMultimodalInput({
             value={input}
             onChange={handleInput}
             className={cx(
-              'min-h-[24px] max-h-[calc(75dvh)] overflow-hidden resize-none rounded-2xl !text-base bg-muted pb-10 dark:border-zinc-700',
+              'min-h-[24px] max-h-[calc(75dvh)] overflow-hidden resize-none rounded-2xl !text-base bg-muted pb-10 dark:border-zinc-700 w-full',
               className,
             )}
             rows={2}
@@ -371,7 +371,7 @@ function PureMultimodalInput({
             }}
           />
 
-          <div className="absolute bottom-0 p-2 w-fit flex flex-row justify-start">
+          <div className="absolute bottom-0 left-0 p-2 w-fit flex flex-row justify-start z-10">
             <AttachmentsButton fileInputRef={fileInputRef} isLoading={isLoading || isSubmitting} />
             <Button
               className="rounded-md rounded-bl-lg p-[7px] h-fit dark:border-zinc-700 hover:dark:bg-zinc-900 hover:bg-zinc-200 ml-2"
@@ -385,7 +385,7 @@ function PureMultimodalInput({
             </Button>
           </div>
 
-          <div className="absolute bottom-0 right-0 p-2 w-fit flex flex-row justify-end">
+          <div className="absolute bottom-0 right-0 p-2 w-fit flex flex-row justify-end z-10">
             {isLoading ? (
               <StopButton stop={stop} setMessages={setMessages} />
             ) : (
