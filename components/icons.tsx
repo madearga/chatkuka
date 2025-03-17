@@ -359,7 +359,7 @@ export const LoaderIcon = ({ size = 16 }: { size?: number }) => {
   );
 };
 
-export const UploadIcon = ({ size = 16 }: { size?: number }) => {
+export const UploadIcon = ({ size = 16, className }: { size?: number, className?: string }) => {
   return (
     <svg
       data-testid="geist-icon"
@@ -368,6 +368,7 @@ export const UploadIcon = ({ size = 16 }: { size?: number }) => {
       viewBox="0 0 16 16"
       width={size}
       style={{ color: 'currentcolor' }}
+      className={className}
     >
       <path
         fillRule="evenodd"

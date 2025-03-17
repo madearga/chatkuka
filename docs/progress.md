@@ -232,3 +232,372 @@ If you have any questions about these changes or need help implementing similar 
 
 ---
 Last updated: 2024-03-21
+
+## Image Upload & Edit Enhancement (March 21, 2024)
+
+### Overview
+We've significantly improved the image upload and editing experience, focusing on better user feedback and smoother interactions. These changes make it easier for users to manage and edit their images without needing to manually track image IDs.
+
+### Core Changes
+
+#### 1. Image Editor Component Enhancement (`components/image-editor.tsx`)
+**Before:**
+```typescript
+export function ImageEditor({
+  title,
+  content,
+  status,
+  isInline,
+  onSaveContent,
+}: ImageEditorProps) {
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  return (
+    <div className="relative w-full flex flex-col items-center">
+      <picture>
+        <img
+          className="w-full h-fit max-w-[800px]"
+          src={`data:image/png;base64,${content}`}
+          alt={title}
+        />
+      </picture>
+      {!isInline && onSaveContent && (
+        <button onClick={handleUploadClick}>
+          <UploadIcon size={16} />
+          Upload New Image
+        </button>
+      )}
+    </div>
+  );
+}
+```
+
+**After:**
+```typescript
+export function ImageEditor({
+  title,
+  content,
+  status,
+  isInline,
+  onSaveContent,
+  documentId,
+}: ImageEditorProps) {
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [lastUploadedId, setLastUploadedId] = useState<string>('');
+  
+  // Added localStorage integration
+  useEffect(() => {
+    const savedId = localStorage.getItem('lastUploadedImageId');
+    if (savedId) {
+      setLastUploadedId(savedId);
+    }
+  }, []);
+  
+  // Added clipboard functionality
+  const copyIdToClipboard = (id: string) => {
+    navigator.clipboard.writeText(id);
+    toast.success('ID copied to clipboard');
+  };
+
+  const effectiveDocId = documentId || lastUploadedId;
+  
+  return (
+    <div className="relative w-full flex flex-col items-center">
+      <picture>
+        <img
+          className={cn('w-full h-fit max-w-[800px]', {
+            'p-0 md:p-20': !isInline,
+          })}
+          src={`data:image/png;base64,${content}`}
+          alt={title}
+        />
+      </picture>
+      {!isInline && (
+        <>
+          {effectiveDocId && (
+            <div className="flex items-center gap-2 mt-2 text-sm text-muted-foreground doc-id-display">
+              <span>Image ID: {effectiveDocId}</span>
+              <button 
+                onClick={() => copyIdToClipboard(effectiveDocId)}
+                className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded"
+                title="Copy ID to clipboard"
+              >
+                <CopyIcon size={14} />
+              </button>
+            </div>
+          )}
+          {onSaveContent && (
+            <button
+              onClick={handleUploadClick}
+              className="mt-4 flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+            >
+              <UploadIcon size={16} />
+              Upload New Image
+            </button>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+```
+
+#### 2. Image Artifact Client Enhancement (`artifacts/image/client.tsx`)
+**Before:**
+```typescript
+onClick: async ({ handleVersionChange }) => {
+  try {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('id', nanoid());
+      formData.append('kind', 'image');
+      
+      const response = await fetch('/api/files/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to upload image');
+      }
+      
+      handleVersionChange('latest');
+      toast.success('Image uploaded successfully');
+    };
+    
+    input.click();
+  } catch (error) {
+    console.error('Error uploading image:', error);
+    toast.error('Failed to upload image');
+  }
+}
+```
+
+**After:**
+```typescript
+onClick: async ({ handleVersionChange }) => {
+  try {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    
+    input.onchange = async (e: Event) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      
+      try {
+        const loadingToast = toast.loading('Uploading image...');
+        
+        // First convert file to base64 for immediate preview
+        const reader = new FileReader();
+        reader.onload = async (e: ProgressEvent<FileReader>) => {
+          const base64String = (e.target?.result as string).split(',')[1];
+          
+          // Handle upload to server
+          const formData = new FormData();
+          const docId = nanoid();
+          formData.append('file', file);
+          formData.append('id', docId);
+          formData.append('kind', 'image');
+          
+          const response = await fetch('/api/files/upload', {
+            method: 'POST',
+            body: formData,
+          });
+          
+          toast.dismiss(loadingToast);
+          
+          if (!response.ok) {
+            throw new Error('Failed to upload image');
+          }
+          
+          const data = await response.json();
+          const uploadedDocId = data.documentId || docId;
+          
+          // Update UI immediately
+          const img = document.createElement('img');
+          img.src = `data:image/png;base64,${base64String}`;
+          img.alt = 'Uploaded image';
+          img.className = 'w-full h-fit max-w-[800px] p-0 md:p-20';
+          
+          // Show ID below image
+          const docIdDisplay = document.createElement('div');
+          docIdDisplay.textContent = `Image ID: ${uploadedDocId}`;
+          docIdDisplay.className = 'text-sm text-muted-foreground mt-2';
+          
+          const imgContainer = document.querySelector('.image-editor-container picture');
+          if (imgContainer) {
+            imgContainer.innerHTML = '';
+            imgContainer.appendChild(img);
+            
+            const parentContainer = imgContainer.parentElement;
+            if (parentContainer) {
+              const existingIdDisplay = parentContainer.querySelector('.doc-id-display');
+              if (existingIdDisplay) {
+                existingIdDisplay.textContent = `Image ID: ${uploadedDocId}`;
+              } else {
+                docIdDisplay.className += ' doc-id-display';
+                parentContainer.appendChild(docIdDisplay);
+              }
+            }
+          }
+          
+          // Store ID for persistence
+          localStorage.setItem('lastUploadedImageId', uploadedDocId);
+          
+          toast.success(`Image uploaded successfully. ID: ${uploadedDocId}`);
+          
+          setTimeout(() => {
+            handleVersionChange('latest');
+          }, 500);
+        };
+        
+        reader.onerror = () => {
+          toast.error('Failed to read image file');
+        };
+        
+        reader.readAsDataURL(file);
+      } catch (error) {
+        console.error('Error uploading image:', error);
+        toast.error('Failed to upload image');
+      }
+    };
+    
+    input.click();
+  } catch (error) {
+    console.error('Error initiating upload:', error);
+    toast.error('Failed to initiate upload');
+  }
+}
+```
+
+#### 3. Server-Side Improvements (`artifacts/image/server.ts`)
+**Before:**
+```typescript
+onUpdateDocument: async ({ description, dataStream, document }) => {
+  let draftContent = '';
+  try {
+    const currentContent = document.content;
+    if (!description || !currentContent) {
+      throw new Error("Missing required data");
+    }
+    // ... rest of the code
+  } catch (error) {
+    console.error("Error editing image:", error);
+    dataStream.writeData({
+      type: 'error',
+      message: 'Error occurred during image editing',
+    });
+  }
+  return draftContent;
+}
+```
+
+**After:**
+```typescript
+onUpdateDocument: async ({ description, dataStream, document }) => {
+  let draftContent = '';
+  try {
+    const currentContent = document.content;
+    
+    // Enhanced validation with specific messages
+    if (!description) {
+      throw new Error("Editing prompt cannot be empty");
+    }
+    if (!currentContent) {
+      throw new Error("No existing image to edit");
+    }
+    
+    // Added user feedback
+    dataStream.writeData({
+      type: 'info',
+      message: `Editing image with ID: ${document.id}`,
+    });
+    
+    // ... rest of the code
+  } catch (error) {
+    console.error("Error editing image:", error instanceof Error ? error.message : String(error));
+    dataStream.writeData({
+      type: 'error',
+      message: error instanceof Error ? error.message : 'Unknown error occurred during image editing',
+    });
+  }
+  return draftContent;
+}
+```
+
+### UI/UX Improvements
+
+1. **ID Display**
+   - Added persistent ID display below images
+   - Implemented copy-to-clipboard functionality
+   - Visual feedback for successful operations
+
+2. **Upload Flow**
+   - Immediate image preview after upload
+   - Progress indication during upload
+   - Clear success/error notifications
+
+3. **Edit Experience**
+   - Automatic ID tracking between sessions
+   - Clear feedback about which image is being edited
+   - Smoother transitions between states
+
+### Best Practices Implemented
+
+1. **State Management**
+   - Local storage for persistence
+   - Proper state handling for uploads
+   - Clear state transitions
+
+2. **Error Handling**
+   - Comprehensive error messages
+   - Graceful fallbacks
+   - User-friendly error notifications
+
+3. **Performance**
+   - Immediate UI updates
+   - Efficient image loading
+   - Smooth transitions
+
+### How to Test
+
+1. **Upload Testing**
+   - Try uploading various image types
+   - Verify ID is displayed and copyable
+   - Check toast notifications
+
+2. **Edit Testing**
+   - Verify ID persistence between sessions
+   - Test edit functionality with stored ID
+   - Check error scenarios
+
+3. **UI Testing**
+   - Verify responsive behavior
+   - Test copy-to-clipboard functionality
+   - Check all feedback messages
+
+### Known Issues & TODOs
+
+1. [ ] Add image compression for large uploads
+2. [ ] Implement batch upload functionality
+3. [ ] Add image preview in edit mode
+4. [ ] Improve error recovery scenarios
+5. [ ] Add upload progress indicator
+
+### Questions?
+
+If you have any questions about these changes or need help implementing similar features in your components, feel free to reach out to the team. We're here to help! 🚀
+
+---
+Last updated: 2024-03-21

@@ -100,6 +100,12 @@ export const imageDocumentHandler = createDocumentHandler<'image'>({
         throw new Error("No existing image to edit");
       }
       
+      // Inform user about the document being edited
+      dataStream.writeData({
+        type: 'info',
+        message: `Editing image with ID: ${document.id}`,
+      });
+      
       try {
         // Skip Gemini if API key is not provided
         if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {

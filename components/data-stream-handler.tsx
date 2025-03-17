@@ -17,8 +17,11 @@ export type DataStreamDelta = {
     | 'suggestion'
     | 'clear'
     | 'finish'
-    | 'kind';
+    | 'kind'
+    | 'info'
+    | 'error';
   content: string | Suggestion;
+  message?: string; // For info and error types
 };
 
 export function DataStreamHandler({ id }: { id: string }) {

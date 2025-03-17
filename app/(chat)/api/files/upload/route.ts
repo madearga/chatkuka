@@ -3,6 +3,8 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { auth } from '@/app/(auth)/auth';
+import { saveDocument } from '@/lib/db/queries';
+import { ArtifactKind } from '@/components/artifact';
 
 // Use Blob instead of File since File is not available in Node.js environment
 const FileSchema = z.object({
@@ -12,15 +14,15 @@ const FileSchema = z.object({
       message: 'File size should be less than 5MB',
     })
     // Update the file type based on the kind of files you want to accept
-    .refine((file) => ['image/jpeg', 'image/png'].includes(file.type), {
-      message: 'File type should be JPEG or PNG',
+    .refine((file) => ['image/jpeg', 'image/png', 'image/gif', 'image/webp'].includes(file.type), {
+      message: 'File type should be JPEG, PNG, GIF, or WEBP',
     }),
 });
 
 export async function POST(request: Request) {
   const session = await auth();
 
-  if (!session) {
+  if (!session || !session.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -31,9 +33,14 @@ export async function POST(request: Request) {
   try {
     const formData = await request.formData();
     const file = formData.get('file') as Blob;
-
-    if (!file) {
-      return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
+    const id = formData.get('id') as string;
+    const kind = formData.get('kind') as ArtifactKind;
+    
+    // Check for required fields
+    if (!file || !id || !kind) {
+      return NextResponse.json({ 
+        error: 'Missing required fields (file, id, kind)' 
+      }, { status: 400 });
     }
 
     const validatedFile = FileSchema.safeParse({ file });
@@ -46,20 +53,39 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: errorMessage }, { status: 400 });
     }
 
-    // Get filename from formData since Blob doesn't have name property
-    const filename = (formData.get('file') as File).name;
+    // Convert file to base64 for storage
     const fileBuffer = await file.arrayBuffer();
-
+    const base64Content = Buffer.from(fileBuffer).toString('base64');
+    
+    // Get filename from formData
+    const filename = (formData.get('file') as File).name;
+    
     try {
-      const data = await put(`${filename}`, fileBuffer, {
+      // Save the file as a document
+      await saveDocument({
+        id,
+        title: filename || 'Uploaded Image',
+        content: base64Content,
+        kind,
+        userId: session.user.id,
+      });
+      
+      // Also upload to Vercel Blob for redundancy
+      await put(`${id}-${filename}`, fileBuffer, {
         access: 'public',
       });
 
-      return NextResponse.json(data);
+      return NextResponse.json({ 
+        success: true, 
+        documentId: id,
+        message: 'File uploaded and saved successfully' 
+      });
     } catch (error) {
+      console.error('Upload error:', error);
       return NextResponse.json({ error: 'Upload failed' }, { status: 500 });
     }
   } catch (error) {
+    console.error('Request processing error:', error);
     return NextResponse.json(
       { error: 'Failed to process request' },
       { status: 500 },
