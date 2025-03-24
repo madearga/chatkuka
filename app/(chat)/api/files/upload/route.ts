@@ -71,13 +71,16 @@ export async function POST(request: Request) {
       });
       
       // Also upload to Vercel Blob for redundancy
-      await put(`${id}-${filename}`, fileBuffer, {
+      const blobResponse = await put(`${id}-${filename}`, fileBuffer, {
         access: 'public',
       });
 
       return NextResponse.json({ 
         success: true, 
         documentId: id,
+        url: blobResponse.url,
+        pathname: filename,
+        contentType: file.type,
         message: 'File uploaded and saved successfully' 
       });
     } catch (error) {

@@ -2,6 +2,7 @@ import { LoaderIcon, UploadIcon, CopyIcon } from './icons';
 import cn from 'classnames';
 import { useState, useRef, useEffect } from 'react';
 import { toast } from 'sonner';
+import { generateUUID } from '@/lib/utils';
 
 interface ImageEditorProps {
   title: string;
@@ -46,8 +47,39 @@ export function ImageEditor({
     }
     
     try {
+      const loadingToast = toast.loading('Uploading image...');
+      
       // Convert the file to base64
       const base64 = await readFileAsBase64(file);
+      
+      // Create form data for server upload
+      const formData = new FormData();
+      const docId = generateUUID();
+      formData.append('file', file);
+      formData.append('id', docId);
+      formData.append('kind', 'image');
+      
+      // Upload the image to server
+      const response = await fetch('/api/files/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      
+      toast.dismiss(loadingToast);
+      
+      // Parse response once
+      const responseData = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(responseData.error || 'Failed to upload image');
+      }
+      
+      // Use the already parsed response data
+      const uploadedDocId = responseData.documentId || docId;
+      
+      // Store the document ID in local storage
+      localStorage.setItem('lastUploadedImageId', uploadedDocId);
+      setLastUploadedId(uploadedDocId);
       
       // Save the content
       if (onSaveContent) {
@@ -57,7 +89,7 @@ export function ImageEditor({
       toast.success('Image uploaded successfully');
     } catch (error) {
       console.error('Error uploading image:', error);
-      toast.error('Error uploading image');
+      toast.error(error instanceof Error ? error.message : 'Error uploading image');
     }
   };
   
@@ -95,8 +127,39 @@ export function ImageEditor({
     }
     
     try {
+      const loadingToast = toast.loading('Uploading image...');
+      
       // Convert the file to base64
       const base64 = await readFileAsBase64(file);
+      
+      // Create form data for server upload
+      const formData = new FormData();
+      const docId = generateUUID();
+      formData.append('file', file);
+      formData.append('id', docId);
+      formData.append('kind', 'image');
+      
+      // Upload the image to server
+      const response = await fetch('/api/files/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      
+      toast.dismiss(loadingToast);
+      
+      // Parse response once
+      const responseData = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(responseData.error || 'Failed to upload image');
+      }
+      
+      // Use the already parsed response data
+      const uploadedDocId = responseData.documentId || docId;
+      
+      // Store the document ID in local storage
+      localStorage.setItem('lastUploadedImageId', uploadedDocId);
+      setLastUploadedId(uploadedDocId);
       
       // Save the content
       if (onSaveContent) {
@@ -106,7 +169,7 @@ export function ImageEditor({
       toast.success('Image uploaded successfully');
     } catch (error) {
       console.error('Error uploading image:', error);
-      toast.error('Error uploading image');
+      toast.error(error instanceof Error ? error.message : 'Error uploading image');
     }
   };
   

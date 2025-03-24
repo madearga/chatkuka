@@ -20,8 +20,9 @@ import {
 } from 'react';
 import { toast } from 'sonner';
 import { useLocalStorage, useWindowSize } from 'usehooks-ts';
+import { nanoid } from 'nanoid';
 
-import { sanitizeUIMessages } from '@/lib/utils';
+import { sanitizeUIMessages, generateUUID } from '@/lib/utils';
 
 import { ArrowUpIcon, PaperclipIcon, StopIcon } from './icons';
 import { PreviewAttachment } from './preview-attachment';
@@ -164,7 +165,12 @@ function PureMultimodalInput({
 
   const uploadFile = async (file: File) => {
     const formData = new FormData();
+    
+    // Add the required fields for the upload
+    const docId = generateUUID();
     formData.append('file', file);
+    formData.append('id', docId);
+    formData.append('kind', 'image'); // Assuming uploads are always images for now
 
     try {
       const response = await fetch('/api/files/upload', {
@@ -172,20 +178,27 @@ function PureMultimodalInput({
         body: formData,
       });
 
+      // Parse the response JSON once
+      const responseData = await response.json();
+      
       if (response.ok) {
-        const data = await response.json();
-        const { url, pathname, contentType } = data;
+        const { url, pathname, contentType } = responseData;
 
         return {
           url,
           name: pathname,
           contentType: contentType,
+          id: responseData.documentId || docId, // Store document ID for reference
         };
       }
-      const { error } = await response.json();
-      toast.error(error);
+      
+      // If we get here, there was an error
+      toast.error(responseData.error || 'Unknown error occurred');
+      return undefined;
     } catch (error) {
+      console.error('Upload error:', error);
       toast.error('Failed to upload file, please try again!');
+      return undefined;
     }
   };
 

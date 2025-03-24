@@ -2,7 +2,7 @@ import { Artifact } from '@/components/create-artifact';
 import { CopyIcon, RedoIcon, UndoIcon, UploadIcon } from '@/components/icons';
 import { ImageEditor } from '@/components/image-editor';
 import { toast } from 'sonner';
-import { nanoid } from 'nanoid';
+import { generateUUID } from '@/lib/utils';
 
 export const imageArtifact = new Artifact({
   kind: 'image',
@@ -82,7 +82,7 @@ export const imageArtifact = new Artifact({
                 
                 // Now handle the upload to server
                 const formData = new FormData();
-                const docId = nanoid();
+                const docId = generateUUID();
                 formData.append('file', file);
                 formData.append('id', docId);
                 formData.append('kind', 'image');
@@ -95,13 +95,15 @@ export const imageArtifact = new Artifact({
                 
                 toast.dismiss(loadingToast);
                 
+                // Parse response once
+                const responseData = await response.json();
+                
                 if (!response.ok) {
-                  throw new Error('Failed to upload image');
+                  throw new Error(responseData.error || 'Failed to upload image');
                 }
                 
-                // Parse response to get the document ID
-                const data = await response.json();
-                const uploadedDocId = data.documentId || docId;
+                // Use already parsed response data
+                const uploadedDocId = responseData.documentId || docId;
                 
                 // Display the ID for easy reference
                 toast.success(`Image uploaded successfully. ID: ${uploadedDocId}`);
