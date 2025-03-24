@@ -1,7 +1,9 @@
 // This file will contain the client-side logic for the Diagram artifact
-import { Artifact } from "@/components/create-artifact";
+import { Artifact, ArtifactActionContext, ArtifactToolbarContext } from "@/components/create-artifact";
+import { DataStreamDelta } from "@/components/data-stream-handler";
 import { useState, useEffect } from "react";
 import mermaid from "mermaid";
+import { UIArtifact } from "@/components/artifact";
 
 // Initialize Mermaid globally
 mermaid.initialize({
@@ -22,24 +24,70 @@ const MermaidRenderer: React.FC<{ content: string }> = ({ content }) => {
           setError(null);
           return;
         }
-        const { svg } = await mermaid.render("diagram-" + Math.random().toString(36).substring(7), content);
+
+        // Preprocess the content to handle common errors
+        let processedContent = cleanMermaidSyntax(content);
+        
+        // Generate a unique ID for this render
+        const id = "diagram-" + Math.random().toString(36).substring(7);
+        
+        const { svg } = await mermaid.render(id, processedContent);
         setDiagramSvg(svg);
         setError(null);
       } catch (e) {
         setError(`Error rendering diagram: ${(e as Error).message}`);
         setDiagramSvg(null);
+        console.error("Mermaid error:", e);
+        console.error("Problematic content:", content);
       }
     };
     renderDiagram();
   }, [content]);
 
   if (error) {
-    return <div style={{ color: "red" }}>{error}</div>;
+    return (
+      <div>
+        <div style={{ color: "red", marginBottom: "10px" }}>{error}</div>
+        <div style={{ fontFamily: "monospace", whiteSpace: "pre-wrap", background: "#f5f5f5", padding: "10px", borderRadius: "4px" }}>
+          {content}
+        </div>
+      </div>
+    );
   }
   if (!diagramSvg) {
     return <div>No diagram content to render.</div>;
   }
   return <div dangerouslySetInnerHTML={{ __html: diagramSvg }} />;
+};
+
+// Clean Mermaid syntax to prepare it for rendering
+const cleanMermaidSyntax = (content: string): string => {
+  // Step 1: Remove any markdown code fences and mermaid markers
+  let cleaned = content.replace(/```(?:mermaid)?\s*\n?/g, '');
+  cleaned = cleaned.replace(/^\s*mermaid\s*\n/i, '');
+  
+  // Step 2: Handle duplicate graph declarations, keeping only the first one
+  const graphMatch = cleaned.match(/^\s*(graph|flowchart)\s+(TD|TB|BT|RL|LR)/i);
+  if (graphMatch) {
+    const prefix = graphMatch[0];
+    // Remove any subsequent graph declarations
+    cleaned = prefix + cleaned.substring(prefix.length).replace(/(graph|flowchart)\s+(TD|TB|BT|RL|LR)/gi, '');
+  }
+  
+  // Step 3: Ensure there's exactly one valid declaration at the start
+  if (!cleaned.match(/^\s*(graph|flowchart|sequenceDiagram|classDiagram|stateDiagram|erDiagram|gantt|pie|gitGraph)/i)) {
+    cleaned = "graph TD\n" + cleaned;
+  }
+  
+  // Step 4: Clean up whitespace
+  cleaned = cleaned.trim();
+  
+  return cleaned;
+};
+
+// Normalize Mermaid content for saving
+const normalizeMermaidContent = (content: string): string => {
+  return cleanMermaidSyntax(content);
 };
 
 // Define metadata interface for diagram artifact
@@ -55,12 +103,11 @@ export const diagramArtifact = new Artifact<"diagram", DiagramMetadata>({
     setMetadata({});
   },
   
-  onStreamPart: ({ streamPart, setMetadata, setArtifact }) => {
-    // Handle text delta updates
+  onStreamPart: ({ streamPart, setArtifact, setMetadata }) => {
     if (streamPart.type === "text-delta") {
-      setArtifact((draftArtifact) => ({
-        ...draftArtifact,
-        content: draftArtifact.content + streamPart.content,
+      setArtifact((draft: UIArtifact) => ({
+        ...draft,
+        content: draft.content + (streamPart.content as string),
         status: "streaming",
       }));
     }
@@ -75,10 +122,18 @@ export const diagramArtifact = new Artifact<"diagram", DiagramMetadata>({
     
     const isEditable = status !== "streaming";
     
+    // Handle content generation
     if (content === "" && status === "streaming") {
       return <div>Generating diagram...</div>;
     }
-    
+
+    // Save content with validation
+    const handleSave = () => {
+      // Normalize content before saving
+      const normalizedContent = normalizeMermaidContent(editedContent);
+      onSaveContent(normalizedContent, true);
+    };
+
     return (
       <div>
         <textarea
@@ -90,7 +145,7 @@ export const diagramArtifact = new Artifact<"diagram", DiagramMetadata>({
         />
         <MermaidRenderer content={editedContent} />
         <button
-          onClick={() => onSaveContent(editedContent, true)}
+          onClick={handleSave}
           disabled={!isEditable}
           style={{ marginTop: "10px" }}
         >
@@ -104,9 +159,8 @@ export const diagramArtifact = new Artifact<"diagram", DiagramMetadata>({
     {
       icon: <span>⟳</span>,
       description: "Request AI to update the diagram",
-      onClick: (context) => {
+      onClick: (context: ArtifactActionContext<DiagramMetadata>) => {
         // Use the context to append a message
-        // This will be called with the proper context from the artifact component
         const appendMessage = (context as any).appendMessage;
         if (appendMessage) {
           appendMessage({ 
