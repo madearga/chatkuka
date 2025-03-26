@@ -1,7 +1,7 @@
 // This file will contain the client-side logic for the Diagram artifact
 import { Artifact, ArtifactActionContext, ArtifactToolbarContext } from "@/components/create-artifact";
 import { DataStreamDelta } from "@/components/data-stream-handler";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import mermaid from "mermaid";
 import { UIArtifact } from "@/components/artifact";
 
@@ -91,7 +91,54 @@ const normalizeMermaidContent = (content: string): string => {
 };
 
 // Define metadata interface for diagram artifact
-interface DiagramMetadata {}
+interface DiagramMetadata {
+  textareaId?: string;
+}
+
+// Function to find and focus textarea in the document
+const focusDiagramTextarea = () => {
+  // Try different strategies to find the textarea
+  
+  // Strategy 1: Find by specific ID pattern
+  const textareas = document.querySelectorAll('textarea[id^="diagram-textarea-"]');
+  if (textareas.length > 0) {
+    const textarea = textareas[0] as HTMLTextAreaElement;
+    textarea.focus();
+    textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+    console.log("Found and focused textarea by ID pattern");
+    return true;
+  }
+  
+  // Strategy 2: Find the first textarea in diagram artifact container
+  const artifactContainers = document.querySelectorAll('[data-artifact-kind="diagram"]');
+  for (const container of artifactContainers) {
+    const textareas = container.querySelectorAll('textarea');
+    if (textareas.length > 0) {
+      const textarea = textareas[0] as HTMLTextAreaElement;
+      textarea.focus();
+      textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+      console.log("Found and focused textarea in diagram container");
+      return true;
+    }
+  }
+  
+  // Strategy 3: Look for any textarea with mermaid-like content
+  const allTextareas = document.querySelectorAll('textarea');
+  for (const textareaElem of allTextareas) {
+    const textarea = textareaElem as HTMLTextAreaElement;
+    if (textarea.value.includes('graph') || 
+        textarea.value.includes('flowchart') || 
+        textarea.value.includes('sequenceDiagram')) {
+      textarea.focus();
+      textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+      console.log("Found and focused textarea with mermaid content");
+      return true;
+    }
+  }
+  
+  console.log("Could not find diagram textarea");
+  return false;
+};
 
 // Define the diagram artifact
 export const diagramArtifact = new Artifact<"diagram", DiagramMetadata>({
@@ -99,8 +146,10 @@ export const diagramArtifact = new Artifact<"diagram", DiagramMetadata>({
   description: "An artifact for creating and editing diagrams using Mermaid syntax.",
   
   initialize: ({ documentId, setMetadata }) => {
-    // Initialize with empty metadata
-    setMetadata({});
+    // Initialize with empty metadata and a unique ID for the textarea
+    setMetadata({
+      textareaId: `diagram-textarea-${documentId}`
+    });
   },
   
   onStreamPart: ({ streamPart, setArtifact, setMetadata }) => {
@@ -113,12 +162,23 @@ export const diagramArtifact = new Artifact<"diagram", DiagramMetadata>({
     }
   },
   
-  content: ({ content, status, onSaveContent }) => {
+  content: ({ content, status, onSaveContent, metadata, setMetadata }) => {
     const [editedContent, setEditedContent] = useState(content);
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
     
     useEffect(() => {
       setEditedContent(content);
     }, [content]);
+    
+    // Generate a unique ID for the textarea if not already set in metadata
+    useEffect(() => {
+      if (!metadata.textareaId) {
+        setMetadata(prev => ({
+          ...prev,
+          textareaId: `diagram-textarea-${Date.now()}`
+        }));
+      }
+    }, [metadata.textareaId, setMetadata]);
     
     const isEditable = status !== "streaming";
     
@@ -135,13 +195,16 @@ export const diagramArtifact = new Artifact<"diagram", DiagramMetadata>({
     };
 
     return (
-      <div>
+      <div data-artifact-kind="diagram">
         <textarea
+          id={metadata.textareaId}
+          ref={textareaRef}
           value={editedContent}
           onChange={(e) => setEditedContent(e.target.value)}
           readOnly={!isEditable}
           style={{ width: "100%", height: "200px", fontFamily: "monospace" }}
           placeholder="Enter Mermaid syntax here (e.g., 'graph TD; A-->B;')"
+          data-diagram-editor="true"
         />
         <MermaidRenderer content={editedContent} />
         <button
@@ -156,29 +219,41 @@ export const diagramArtifact = new Artifact<"diagram", DiagramMetadata>({
   },
   
   actions: [
-    {
-      icon: <span>⟳</span>,
-      description: "Request AI to update the diagram",
-      onClick: (context: ArtifactActionContext<DiagramMetadata>) => {
-        // Use the context to append a message
-        const appendMessage = (context as any).appendMessage;
-        if (appendMessage) {
-          appendMessage({ 
-            role: "user", 
-            content: "Please update the diagram based on the current content." 
-          });
-        }
-      },
-    },
+    // The "Request AI to update the diagram" action has been removed
   ],
   
   toolbar: [
     {
       icon: <span>✎</span>,
       description: "Edit diagram",
-      onClick: () => {
-        const textarea = document.querySelector("textarea");
-        if (textarea) textarea.focus();
+      onClick: ({ appendMessage }: ArtifactToolbarContext) => {
+        // Try to find and focus the textarea using our helper function
+        const found = focusDiagramTextarea();
+        
+        if (!found) {
+          // If textarea not found, send a chat message to inform the user
+          appendMessage({
+            id: Date.now().toString(),
+            role: "user",
+            content: "I'd like to edit the diagram.",
+            createdAt: new Date(),
+          });
+          console.log("Textarea element not found, sending chat message instead");
+        }
+      },
+    },
+    {
+      icon: <span>⟳</span>,
+      description: "Update diagram with AI",
+      onClick: ({ appendMessage }: ArtifactToolbarContext) => {
+        // Send a message to update the diagram using the chat interface
+        appendMessage({
+          id: Date.now().toString(),
+          role: "user",
+          content: "Please enhance and update this diagram to make it more comprehensive and visually clear.",
+          createdAt: new Date(),
+        });
+        console.log("Diagram update requested via chat");
       },
     },
   ],
