@@ -97,8 +97,11 @@ export function PureMultimodalInput({
   const [lastInputValue, setLastInputValue] = useState("");
   const [isUploading, setIsUploading] = useState(false);
   const [showFilePicker, setShowFilePicker] = useState(false);
+  const [isHydrated, setIsHydrated] = useState(false);
 
   useEffect(() => {
+    setIsHydrated(true);
+    
     if (textareaRef.current) {
       adjustHeight();
     }
@@ -124,20 +127,23 @@ export function PureMultimodalInput({
   );
 
   useEffect(() => {
-    if (textareaRef.current) {
-      const domValue = textareaRef.current.value;
-      // Prefer DOM value over localStorage to handle hydration
-      const finalValue = domValue || localStorageInput || '';
+    if (!isHydrated || !textareaRef.current) return;
+    
+    const domValue = textareaRef.current.value;
+    const finalValue = domValue || localStorageInput || '';
+    
+    if (finalValue !== input) {
       setInput(finalValue);
-      adjustHeight();
     }
-    // Only run once after hydration
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    
+    adjustHeight();
+  }, [isHydrated, localStorageInput, setInput]);
 
   useEffect(() => {
-    setLocalStorageInput(input);
-  }, [input, setLocalStorageInput]);
+    if (isHydrated && input) {
+      setLocalStorageInput(input);
+    }
+  }, [input, setLocalStorageInput, isHydrated]);
 
   const handleInput = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInput(event.target.value);
@@ -390,13 +396,30 @@ export function PureMultimodalInput({
   return (
     <div className={`flex gap-2 flex-col w-full max-h-[400px] overflow-y-auto ${className || ''}`}>
       <div className="flex flex-col w-full gap-2 relative">
-        <div className="relative w-full chat-input-container shadow-sm mb-1">
+        <div
+          className={cn(
+            'relative w-full p-0 overflow-hidden rounded-lg border bg-background flex flex-col',
+            'focus-within:ring-1 focus-within:ring-ring focus-within:border-input',
+            'dark:border-zinc-700',
+            className,
+          )}
+        >
           <Textarea
             ref={textareaRef}
             tabIndex={0}
-            placeholder={isSearchEnabled ? "Search the web..." : "Send a message..."}
+            placeholder="Send a message..."
+            name="message"
             value={input}
-            className="chat-textarea bg-transparent w-full"
+            className={cn(
+              'min-h-[24px] w-full resize-none border-0 bg-transparent py-4 pr-20 focus-visible:ring-0 focus-visible:ring-transparent', 
+              'text-sm sm:text-base placeholder:text-muted-foreground',
+              input.length === 0 && 'min-h-[48px]'
+            )}
+            spellCheck={false}
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="off"
+            rows={1}
             data-state={isLoading ? 'disabled' : 'enabled'}
             onChange={handleInput}
             data-gramm="false"
@@ -404,9 +427,10 @@ export function PureMultimodalInput({
             data-enable-grammarly="false"
             disabled={isLoading || uploadQueue.length > 0}
             onKeyDown={handleKeyDown}
+            suppressHydrationWarning
           />
           
-          {/* Button container with DeepSeek-inspired styling */}
+          {/* Always show button container with DeepSeek-inspired styling */}
           <div className="absolute right-1 bottom-1 flex items-center chat-input-buttons">
             {/* Search web button - now toggles search mode instead of component */}
             <button
@@ -414,9 +438,9 @@ export function PureMultimodalInput({
               aria-label={isSearchEnabled ? "Disable web search" : "Enable web search"}
               onClick={() => setIsSearchEnabled(!isSearchEnabled)}
               title={isSearchEnabled ? "Disable web search" : "Enable web search"}
-              className={isSearchEnabled ? "text-blue-500" : ""}
+              className={cn("p-1.5 rounded-full", isSearchEnabled ? "text-blue-500" : "text-muted-foreground hover:text-foreground")}
             >
-              <Globe className={isSearchEnabled ? "text-blue-500" : "text-foreground"} />
+              <Globe className={isSearchEnabled ? "text-blue-500" : ""} size={18} />
             </button>
             
             {/* Upload button */}
@@ -430,8 +454,9 @@ export function PureMultimodalInput({
                   fileInputRef.current.click();
                 }
               }}
+              className="p-1.5 rounded-full text-muted-foreground hover:text-foreground"
             >
-              <PaperclipIcon />
+              <PaperclipIcon size={18} />
             </button>
             
             {/* Send/Stop button */}
@@ -444,21 +469,25 @@ export function PureMultimodalInput({
                   stop();
                   setMessages((messages) => sanitizeUIMessages(messages));
                 }}
+                className="p-1.5 rounded-full bg-primary/10 text-primary hover:bg-primary/20"
               >
-                <X />
+                <X size={18} />
               </button>
             ) : (
               <button
                 type="button"
                 aria-label={isSearchEnabled ? "Search web" : "Send message"}
-                className={input.trim() ? 'bg-blue-600 text-white hover:bg-blue-700' : ''}
+                className={cn(
+                  "p-1.5 rounded-full", 
+                  input.trim() ? 'bg-primary text-primary-foreground hover:bg-primary/90' : 'text-muted-foreground bg-primary/10'
+                )}
                 onClick={(event) => {
                   event.preventDefault();
                   submitForm();
                 }}
                 disabled={input.length === 0 || uploadQueue.length > 0 || isSubmitting}
               >
-                <ArrowUp />
+                <ArrowUp size={18} />
               </button>
             )}
           </div>

@@ -19,7 +19,10 @@ export function SidebarToggle({
     <Tooltip>
       <TooltipTrigger asChild>
         <Button
-          onClick={toggleSidebar}
+          onClick={(e) => {
+            e.preventDefault();
+            toggleSidebar();
+          }}
           variant="outline"
           className="md:px-2 md:h-fit"
         >

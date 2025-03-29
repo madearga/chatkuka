@@ -90,36 +90,38 @@ const PurePreviewMessage = ({
 }) => {
   const [mode, setMode] = useState<'view' | 'edit'>('view');
   
-  // Parse search data if available
+  // Parse search data if available - simplify to avoid hydration issues
   const searchData = useMemo(() => {
-    // Check for direct search data in message content
-    if (typeof message.content === 'object' && message.content !== null) {
-      const content = message.content as any;
-      if (content.type === 'search-status' || content.type === 'search-results') {
-        console.log('Found search data in message content:', content);
-        return content as SearchData;
-      }
-    }
-    
-    // Check for search data in tool invocations
-    if (message.toolInvocations && message.toolInvocations.length > 0) {
-      for (const toolInvocation of message.toolInvocations) {
-        if (toolInvocation.toolName === 'search' && toolInvocation.state === 'result') {
-          const result = toolInvocation.result;
-          console.log('Found search data in tool invocation:', result);
-          return {
-            type: 'search-results',
-            status: 'complete',
-            query: result.query,
-            results: result.results || [],
-            answer: result.answer,
-            images: result.images,
-            responseTime: result.responseTime,
-            topic: result.topic || 'general',
-            timeRange: result.timeRange
-          } as SearchData;
+    try {
+      // Check for direct search data in message content
+      if (typeof message.content === 'object' && message.content !== null) {
+        const content = message.content as any;
+        if (content.type === 'search-status' || content.type === 'search-results') {
+          return content as SearchData;
         }
       }
+      
+      // Check for search data in tool invocations
+      if (message.toolInvocations && Array.isArray(message.toolInvocations) && message.toolInvocations.length > 0) {
+        for (const toolInvocation of message.toolInvocations) {
+          if (toolInvocation.toolName === 'search' && toolInvocation.state === 'result' && toolInvocation.result) {
+            const result = toolInvocation.result;
+            return {
+              type: 'search-results',
+              status: 'complete',
+              query: result.query || '',
+              results: result.results || [],
+              answer: result.answer || '',
+              images: result.images || [],
+              responseTime: result.responseTime || 0,
+              topic: result.topic || 'general',
+              timeRange: result.timeRange || ''
+            } as SearchData;
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error parsing search data:', error);
     }
     
     return null;
@@ -241,33 +243,50 @@ const PurePreviewMessage = ({
               </div>
             )}
 
-            {(message.content && typeof message.content === 'string' || message.reasoning) && mode === 'view' && (
-              <div className="flex flex-row gap-2 items-start">
+            {(message.content && typeof message.content === 'string' || (message.reasoning && Array.isArray(message.reasoning))) && mode === 'view' && (
+              <div className="flex flex-row gap-2 items-start w-full overflow-hidden">
                 {message.role === 'user' && !isReadonly && (
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button
                         variant="ghost"
-                        className="px-2 h-fit rounded-full text-muted-foreground opacity-0 group-hover/message:opacity-100"
-                        onClick={() => {
-                          setMode('edit');
-                        }}
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={() => setMode('edit')}
                       >
                         <PencilEditIcon />
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent>Edit message</TooltipContent>
+                    <TooltipContent>Edit</TooltipContent>
                   </Tooltip>
                 )}
 
-                <div
-                  className={cn('flex flex-col gap-4 break-words max-w-full', {
-                    'bg-primary text-primary-foreground px-3 py-2 rounded-xl':
-                      message.role === 'user',
-                  })}
-                >
-                  {typeof message.content === 'string' && (
-                    <Markdown>{message.content}</Markdown>
+                <div className={cn('flex flex-col gap-4 break-words max-w-full overflow-hidden', {
+                  'bg-primary text-primary-foreground px-3 py-2 rounded-xl':
+                    message.role === 'user',
+                })}>
+                  {message.reasoning && Array.isArray(message.reasoning) && message.reasoning.length > 0 && (
+                    <div className="text-muted-foreground w-full overflow-hidden text-ellipsis">
+                      <div className="flex">
+                        <div className="flex-1" />
+                        <span className="prose p-0.5 px-1 text-xs ">Reasoning</span>
+                      </div>
+                      <div className="text-sm italic mb-4">
+                        {message.reasoning.map((reason, index) => (
+                          <div key={index} className="my-2 max-w-full break-words">
+                            {reason}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {typeof message.content === 'string' && message.content.trim() !== '' && (
+                    <div className="w-full overflow-hidden break-words">
+                      <Markdown>
+                        {message.content}
+                      </Markdown>
+                    </div>
                   )}
                 </div>
               </div>

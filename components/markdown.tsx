@@ -4,6 +4,7 @@ import ReactMarkdown, { type Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { CodeBlock } from './code-block';
 import { processSourceReferences } from './source-reference';
+import { cn } from '@/lib/utils';
 
 const components: Partial<Components> = {
   // @ts-expect-error
@@ -121,28 +122,52 @@ const components: Partial<Components> = {
 
 const remarkPlugins = [remarkGfm];
 
-const NonMemoizedMarkdown = ({ children }: { children: string }) => {
-  // Pre-process the markdown to handle source references outside of paragraphs
+// Update interface to support multiple ways to pass markdown content
+interface MarkdownProps {
+  children?: string;
+  content?: string;
+  className?: string;
+  // Explicitly omit props we don't need to avoid hydration issues
+  [key: string]: any;
+}
+
+const NonMemoizedMarkdown = ({ 
+  children, 
+  content,
+  className,
+  ...props // Capture other props but don't use them
+}: MarkdownProps) => {
+  // Use either content or children, prioritizing children
+  const markdownText = children || content || '';
+  
+  // Pre-process the markdown to handle source references
   const processedMarkdown = useMemo(() => {
-    if (!children) return '';
+    if (!markdownText) return '';
     
     // Check if the markdown contains source references
-    if (children.includes('[Source')) {
+    if (markdownText.includes('[Source')) {
       // We'll let the paragraph component handle it
-      return children;
+      return markdownText;
     }
     
-    return children;
-  }, [children]);
+    return markdownText;
+  }, [markdownText]);
 
   return (
-    <ReactMarkdown remarkPlugins={remarkPlugins} components={components}>
-      {processedMarkdown}
-    </ReactMarkdown>
+    <div className={cn("w-full", className)}>
+      <ReactMarkdown remarkPlugins={remarkPlugins} components={components}>
+        {processedMarkdown}
+      </ReactMarkdown>
+    </div>
   );
 };
 
+// Update memo comparison to check for either children or content
 export const Markdown = memo(
   NonMemoizedMarkdown,
-  (prevProps, nextProps) => prevProps.children === nextProps.children,
+  (prevProps, nextProps) => {
+    const prevText = prevProps.children || prevProps.content || '';
+    const nextText = nextProps.children || nextProps.content || '';
+    return prevText === nextText && prevProps.className === nextProps.className;
+  }
 );

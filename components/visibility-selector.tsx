@@ -74,12 +74,12 @@ export function VisibilitySelector({
           className="hidden md:flex md:px-2 md:h-[34px]"
         >
           {selectedVisibility?.icon}
-          {selectedVisibility?.label}
-          <ChevronDownIcon />
+          <span className="ml-1">{selectedVisibility?.label}</span>
+          <ChevronDownIcon size={14} />
         </Button>
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent align="start" className="min-w-[300px]">
+      <DropdownMenuContent align="end" className="min-w-[200px] sm:min-w-[300px]">
         {visibilities.map((visibility) => (
           <DropdownMenuItem
             key={visibility.id}
@@ -87,18 +87,21 @@ export function VisibilitySelector({
               setVisibilityType(visibility.id);
               setOpen(false);
             }}
-            className="gap-4 group/item flex flex-row justify-between items-center"
+            className="gap-2 sm:gap-4 group/item flex flex-row justify-between items-center"
             data-active={visibility.id === visibilityType}
           >
-            <div className="flex flex-col gap-1 items-start">
-              {visibility.label}
-              {visibility.description && (
-                <div className="text-xs text-muted-foreground">
-                  {visibility.description}
-                </div>
-              )}
+            <div className="flex flex-row items-center gap-2">
+              {visibility.icon}
+              <div className="flex flex-col gap-1 items-start">
+                <div>{visibility.label}</div>
+                {visibility.description && (
+                  <div className="text-xs text-muted-foreground">
+                    {visibility.description}
+                  </div>
+                )}
+              </div>
             </div>
-            <div className="text-foreground dark:text-foreground opacity-0 group-data-[active=true]/item:opacity-100">
+            <div className="text-foreground dark:text-foreground opacity-0 group-data-[active=true]/item:opacity-100 flex-shrink-0">
               <CheckCircleFillIcon />
             </div>
           </DropdownMenuItem>

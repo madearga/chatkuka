@@ -30,10 +30,18 @@ export function PureMessageActions({
   const { mutate } = useSWRConfig();
   const [_, copyToClipboard] = useCopyToClipboard();
 
+  // Early returns with consistent null rendering to avoid hydration mismatches
   if (isLoading) return null;
   if (message.role === 'user') return null;
-  if (message.toolInvocations && message.toolInvocations.length > 0)
-    return null;
+  if (message.toolInvocations && message.toolInvocations.length > 0) return null;
+  if (typeof message.content !== 'string') return null;
+
+  const handleCopy = async () => {
+    if (typeof message.content !== 'string') return;
+    
+    await copyToClipboard(message.content);
+    toast.success('Copied to clipboard!');
+  };
 
   return (
     <TooltipProvider delayDuration={0}>
@@ -43,10 +51,7 @@ export function PureMessageActions({
             <Button
               className="py-1 px-2 h-fit text-muted-foreground"
               variant="outline"
-              onClick={async () => {
-                await copyToClipboard(message.content as string);
-                toast.success('Copied to clipboard!');
-              }}
+              onClick={handleCopy}
             >
               <CopyIcon />
             </Button>

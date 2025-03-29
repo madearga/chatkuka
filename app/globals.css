@@ -45,10 +45,43 @@
         scroll-padding-bottom: 20px;
     }
     
+    /* Enhanced mobile tap targets */
+    .mobile-tap-target {
+        min-height: 44px;
+        min-width: 44px;
+    }
+    
+    /* Handle API credential logs display */
+    .prose pre:has(code) {
+        overflow-x: auto;
+        max-width: 100%;
+        white-space: pre-wrap;
+        word-break: break-all;
+    }
+    
+    /* Fix for API URL/credential display */
+    .prose code {
+        word-break: break-all;
+        overflow-wrap: break-word;
+    }
+    
     /* Fix for iOS input zoom */
     @media screen and (max-width: 640px) {
         input, select, textarea {
             font-size: 16px !important;
+        }
+        
+        /* Fix for message overflow on mobile */
+        .prose {
+            max-width: 100% !important;
+            overflow-wrap: break-word;
+        }
+        
+        /* Ensure code blocks don't overflow */
+        pre, code {
+            max-width: calc(100vw - 2rem);
+            white-space: pre-wrap;
+            word-break: break-word;
         }
     }
 }
@@ -87,6 +120,20 @@
     /* Bottom navigation fixes */
     .bottom-nav {
         padding-bottom: env(safe-area-inset-bottom, 16px);
+    }
+
+    /* Fix for API credential/token display in logs */
+    .message-log, .api-log {
+        max-width: calc(100vw - 2rem);
+        overflow-x: auto;
+        overflow-wrap: break-word;
+        word-break: break-all;
+    }
+
+    /* Ensure all user content fits on screen */
+    [data-role="user"] > div {
+        max-width: calc(100vw - 2rem) !important;
+        width: 100% !important;
     }
 }
 
