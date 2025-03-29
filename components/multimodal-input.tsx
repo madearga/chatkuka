@@ -21,17 +21,25 @@ import {
 import { toast } from 'sonner';
 import { useLocalStorage, useWindowSize } from 'usehooks-ts';
 import { nanoid } from 'nanoid';
-
-import { sanitizeUIMessages, generateUUID } from '@/lib/utils';
-
-import { ArrowUpIcon, PaperclipIcon, StopIcon } from './icons';
-import { PreviewAttachment } from './preview-attachment';
-import { Button } from './ui/button';
-import { Textarea } from './ui/textarea';
-import { SuggestedActions } from './suggested-actions';
+import { cn, sanitizeUIMessages, generateUUID } from '@/lib/utils';
+import {
+  Paperclip,
+  SendIcon,
+  X,
+  Globe,
+  ArrowUp,
+  Loader,
+  X as CloseIcon,
+} from 'lucide-react';
+import { ALLOWED_FILE_EXTENSIONS } from '@/lib/constants';
+import {
+  ArrowUpIcon,
+  PaperclipIcon,
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
 import equal from 'fast-deep-equal';
-import { AIInputWithSearch } from './ui/ai-input-with-search';
-import { Globe } from 'lucide-react';
+import { AIInputWithSearch } from '@/components/ui/ai-input-with-search';
 
 // Define the interface for the Tavily search options
 interface TavilySearchOptions {
@@ -47,7 +55,7 @@ interface TavilySearchOptions {
   days?: number;
 }
 
-function PureMultimodalInput({
+export function PureMultimodalInput({
   chatId,
   input,
   setInput,
@@ -84,10 +92,11 @@ function PureMultimodalInput({
 }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { width } = useWindowSize();
-  const [useAIInput, setUseAIInput] = useState(false);
-  const [searchEnabled, setSearchEnabled] = useState(true);
+  const [isSearchEnabled, setIsSearchEnabled] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [lastInputValue, setLastInputValue] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
+  const [showFilePicker, setShowFilePicker] = useState(false);
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -142,10 +151,36 @@ function PureMultimodalInput({
   const submitForm = useCallback(() => {
     window.history.replaceState({}, '', `/chat/${chatId}`);
 
-    // Standard submission without search
+    // Standard submission with or without search based on isSearchEnabled flag
     handleSubmit(undefined, {
       experimental_attachments: attachments,
+      ...(isSearchEnabled && {
+        body: {
+          useSearch: true,
+          searchQuery: input,
+          searchOptions: {
+            searchDepth: 'basic',
+            includeAnswer: true,
+            maxResults: 10,
+            includeDomains: [],
+            excludeDomains: [],
+            includeImages: true,
+            includeImageDescriptions: true,
+            topic: 'general',
+            timeRange: null,
+            days: 3
+          }
+        }
+      })
     });
+
+    // Show toast if search is enabled
+    if (isSearchEnabled) {
+      toast.success('Searching the web for information...', {
+        id: 'search-toast',
+        duration: 3000,
+      });
+    }
 
     setAttachments([]);
     setLocalStorageInput('');
@@ -161,71 +196,89 @@ function PureMultimodalInput({
     setLocalStorageInput,
     width,
     chatId,
+    input,
+    isSearchEnabled,
   ]);
 
-  const uploadFile = async (file: File) => {
+  const uploadFile = useCallback(async (file: File) => {
     const formData = new FormData();
     
     // Add the required fields for the upload
-    const docId = generateUUID();
     formData.append('file', file);
-    formData.append('id', docId);
-    formData.append('kind', 'image'); // Assuming uploads are always images for now
-
+    formData.append('chatId', chatId); // Add chatId for message attachment
+    
     try {
       const response = await fetch('/api/files/upload', {
         method: 'POST',
         body: formData,
       });
 
-      // Parse the response JSON once
-      const responseData = await response.json();
-      
-      if (response.ok) {
-        const { url, pathname, contentType } = responseData;
-
-        return {
-          url,
-          name: pathname,
-          contentType: contentType,
-          id: responseData.documentId || docId, // Store document ID for reference
-        };
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Upload failed with status: ${response.status}`);
       }
-      
-      // If we get here, there was an error
-      toast.error(responseData.error || 'Unknown error occurred');
-      return undefined;
+
+      // Parse the response JSON
+      const responseData = await response.json();
+      const { url, pathname, contentType } = responseData;
+
+      // Return the attachment information
+      return {
+        url,
+        name: pathname,
+        contentType: contentType,
+      };
     } catch (error) {
       console.error('Upload error:', error);
-      toast.error('Failed to upload file, please try again!');
+      toast.error(`Failed to upload ${file.name}: ${error instanceof Error ? error.message : 'Unknown error'}`);
       return undefined;
     }
-  };
+  }, [chatId]);
 
   const handleFileChange = useCallback(
     async (event: ChangeEvent<HTMLInputElement>) => {
       const files = Array.from(event.target.files || []);
+      
+      if (files.length === 0) return;
 
       setUploadQueue(files.map((file) => file.name));
 
       try {
-        const uploadPromises = files.map((file) => uploadFile(file));
-        const uploadedAttachments = await Promise.all(uploadPromises);
-        const successfullyUploadedAttachments = uploadedAttachments.filter(
-          (attachment) => attachment !== undefined,
-        );
+        // Process files one by one to show individual progress
+        const uploadedAttachments: Attachment[] = [];
+        
+        for (const file of files) {
+          const attachment = await uploadFile(file);
+          if (attachment) {
+            uploadedAttachments.push(attachment);
+          }
+        }
 
-        setAttachments((currentAttachments) => [
-          ...currentAttachments,
-          ...successfullyUploadedAttachments,
-        ]);
+        if (uploadedAttachments.length > 0) {
+          setAttachments((currentAttachments) => [
+            ...currentAttachments,
+            ...uploadedAttachments,
+          ]);
+          
+          // Show toast on successful upload
+          toast.success(
+            uploadedAttachments.length === 1
+              ? `File uploaded successfully: ${uploadedAttachments[0].name?.split('/').pop()}`
+              : `Uploaded ${uploadedAttachments.length} files successfully`
+          );
+        }
       } catch (error) {
         console.error('Error uploading files!', error);
+        toast.error('Error uploading files. Please try again.');
       } finally {
         setUploadQueue([]);
+        // Clear the file input value so the same file can be selected again
+        if (event.target.value) {
+          event.target.value = '';
+        }
       }
     },
-    [setAttachments],
+    [uploadFile, setAttachments],
   );
 
   const handleAIInputSubmit = (value: string, withSearch: boolean) => {
@@ -235,7 +288,7 @@ function PureMultimodalInput({
     setIsSubmitting(true);
     setInput(value);
     setLastInputValue(value);
-    setSearchEnabled(withSearch);
+    setIsSearchEnabled(withSearch);
     
     window.history.replaceState({}, '', `/chat/${chatId}`);
 
@@ -298,120 +351,173 @@ function PureMultimodalInput({
     }
   };
 
+  const handleFormSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    submitForm();
+  };
+
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (
+      event.key === 'Enter' &&
+      !event.shiftKey &&
+      !isLoading &&
+      input.trim()
+    ) {
+      event.preventDefault();
+      handleFormSubmit(event);
+    }
+  };
+
+  const handleFileUpload = async (file: File) => {
+    setIsUploading(true);
+    try {
+      const uploadedAttachment = await uploadFile(file);
+      if (uploadedAttachment) {
+        setAttachments((currentAttachments) => [
+          ...currentAttachments,
+          uploadedAttachment,
+        ]);
+      }
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      toast.error('Failed to upload file. Please try again.');
+    } finally {
+      setIsUploading(false);
+      setShowFilePicker(false);
+    }
+  };
+
   return (
-    <div className="relative w-full flex flex-col gap-4">
-      {messages.length === 0 &&
-        attachments.length === 0 &&
-        uploadQueue.length === 0 && (
-          <SuggestedActions append={append} chatId={chatId} />
-        )}
-
-      <input
-        type="file"
-        className="fixed -top-4 -left-4 size-0.5 opacity-0 pointer-events-none"
-        ref={fileInputRef}
-        multiple
-        onChange={handleFileChange}
-        tabIndex={-1}
-      />
-
-      {(attachments.length > 0 || uploadQueue.length > 0) && (
-        <div className="flex flex-row gap-2 overflow-x-auto pb-2 items-end w-full max-w-full">
-          {attachments.map((attachment) => (
-            <PreviewAttachment key={attachment.url} attachment={attachment} />
-          ))}
-
-          {uploadQueue.map((filename) => (
-            <PreviewAttachment
-              key={filename}
-              attachment={{
-                url: '',
-                name: filename,
-                contentType: '',
-              }}
-              isUploading={true}
-            />
-          ))}
-        </div>
-      )}
-
-      {useAIInput ? (
-        <div className="relative">
-          <AIInputWithSearch 
-            placeholder="Send a message..."
-            onSubmit={handleAIInputSubmit}
-            onFileSelect={handleAIFileSelect}
-            className="pb-0"
-            defaultSearchEnabled={searchEnabled}
-            initialValue={lastInputValue}
-          />
-          <Button
-            className="absolute top-4 right-4 rounded-full p-1.5 h-fit border dark:border-zinc-600 z-10"
-            onClick={() => {
-              setUseAIInput(false);
-              setInput(lastInputValue);
-            }}
-            variant="ghost"
-            disabled={isSubmitting}
-          >
-            <Globe size={14} />
-          </Button>
-        </div>
-      ) : (
-        <>
+    <div className={`flex gap-2 flex-col w-full max-h-[400px] overflow-y-auto ${className || ''}`}>
+      <div className="flex flex-col w-full gap-2 relative">
+        <div className="relative w-full chat-input-container shadow-sm mb-1">
           <Textarea
             ref={textareaRef}
-            placeholder="Send a message..."
+            tabIndex={0}
+            placeholder={isSearchEnabled ? "Search the web..." : "Send a message..."}
             value={input}
+            className="chat-textarea bg-transparent w-full"
+            data-state={isLoading ? 'disabled' : 'enabled'}
             onChange={handleInput}
-            className={cx(
-              'min-h-[24px] max-h-[calc(75dvh)] overflow-hidden resize-none rounded-2xl !text-base bg-muted pb-10 dark:border-zinc-700 w-full',
-              className,
-            )}
-            rows={2}
-            autoFocus
-            disabled={isSubmitting}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter' && !event.shiftKey) {
-                event.preventDefault();
-
-                if (isLoading) {
-                  toast.error('Please wait for the model to finish its response!');
-                } else {
-                  submitForm();
-                }
-              }
-            }}
+            data-gramm="false"
+            data-gramm_editor="false"
+            data-enable-grammarly="false"
+            disabled={isLoading || uploadQueue.length > 0}
+            onKeyDown={handleKeyDown}
           />
-
-          <div className="absolute bottom-0 left-0 p-2 w-fit flex flex-row justify-start z-10">
-            <AttachmentsButton fileInputRef={fileInputRef} isLoading={isLoading || isSubmitting} />
-            <Button
-              className="rounded-md rounded-bl-lg p-[7px] h-fit dark:border-zinc-700 hover:dark:bg-zinc-900 hover:bg-zinc-200 ml-2"
-              onClick={() => {
-                setUseAIInput(true);
-              }}
-              disabled={isLoading || isSubmitting}
-              variant="ghost"
+          
+          {/* Button container with DeepSeek-inspired styling */}
+          <div className="absolute right-1 bottom-1 flex items-center chat-input-buttons">
+            {/* Search web button - now toggles search mode instead of component */}
+            <button
+              type="button"
+              aria-label={isSearchEnabled ? "Disable web search" : "Enable web search"}
+              onClick={() => setIsSearchEnabled(!isSearchEnabled)}
+              title={isSearchEnabled ? "Disable web search" : "Enable web search"}
+              className={isSearchEnabled ? "text-blue-500" : ""}
             >
-              <Globe size={14} />
-            </Button>
-          </div>
-
-          <div className="absolute bottom-0 right-0 p-2 w-fit flex flex-row justify-end z-10">
+              <Globe className={isSearchEnabled ? "text-blue-500" : "text-foreground"} />
+            </button>
+            
+            {/* Upload button */}
+            <button
+              type="button"
+              aria-label="Upload file"
+              disabled={isLoading}
+              onClick={(e) => {
+                e.preventDefault();
+                if (fileInputRef.current) {
+                  fileInputRef.current.click();
+                }
+              }}
+            >
+              <PaperclipIcon />
+            </button>
+            
+            {/* Send/Stop button */}
             {isLoading ? (
-              <StopButton stop={stop} setMessages={setMessages} />
+              <button
+                type="button"
+                aria-label="Stop generating"
+                onClick={(event) => {
+                  event.preventDefault();
+                  stop();
+                  setMessages((messages) => sanitizeUIMessages(messages));
+                }}
+              >
+                <X />
+              </button>
             ) : (
-              <SendButton
-                input={input}
-                submitForm={submitForm}
-                uploadQueue={uploadQueue}
-                isSubmitting={isSubmitting}
-              />
+              <button
+                type="button"
+                aria-label={isSearchEnabled ? "Search web" : "Send message"}
+                className={input.trim() ? 'bg-blue-600 text-white hover:bg-blue-700' : ''}
+                onClick={(event) => {
+                  event.preventDefault();
+                  submitForm();
+                }}
+                disabled={input.length === 0 || uploadQueue.length > 0 || isSubmitting}
+              >
+                <ArrowUp />
+              </button>
             )}
           </div>
-        </>
+        </div>
+      </div>
+
+      {/* Display search status indicator if search is enabled */}
+      {isSearchEnabled && !isLoading && (
+        <div className="text-xs text-blue-500 flex items-center gap-1 px-2">
+          <Globe size={12} />
+          <span>Web search enabled</span>
+        </div>
       )}
+
+      {/* Display selected files */}
+      {uploadQueue.length > 0 && <UploadProgress files={uploadQueue} />}
+      
+      {/* Display attached files ready to be sent */}
+      {attachments.length > 0 && (
+        <div className="flex flex-wrap gap-2 mt-2">
+          {attachments.map((attachment) => {
+            // Extract filename from the full path
+            const filename = attachment.name?.split('/').pop() || 'File';
+            // Get file extension for display
+            const extension = filename.split('.').pop()?.toUpperCase() || '';
+            
+            return (
+              <div 
+                key={attachment.url} 
+                className="bg-muted text-xs rounded-md p-2 flex items-center gap-2"
+              >
+                <div className="flex items-center justify-center w-5 h-5 rounded bg-primary/10 text-[10px] font-semibold">
+                  {extension}
+                </div>
+                <span className="truncate max-w-[150px]">{filename}</span>
+                <button
+                  type="button"
+                  className="ml-2 text-muted-foreground hover:text-foreground"
+                  onClick={() => {
+                    setAttachments(current => current.filter(a => a.url !== attachment.url));
+                  }}
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+      
+      {/* Hidden file input */}
+      <input
+        ref={fileInputRef}
+        className="hidden"
+        type="file"
+        accept={ALLOWED_FILE_EXTENSIONS}
+        onChange={handleFileChange}
+        multiple
+      />
     </div>
   );
 }
@@ -436,15 +542,18 @@ function PureAttachmentsButton({
 }) {
   return (
     <Button
-      className="rounded-md rounded-bl-lg p-[7px] h-fit dark:border-zinc-700 hover:dark:bg-zinc-900 hover:bg-zinc-200"
-      onClick={(event) => {
-        event.preventDefault();
-        fileInputRef.current?.click();
-      }}
-      disabled={isLoading}
+      type="button"
       variant="ghost"
+      size="icon"
+      className="rounded-full mobile-tap-target"
+      disabled={isLoading}
+      onClick={(e) => {
+        if (fileInputRef.current) {
+          fileInputRef.current.click();
+        }
+      }}
     >
-      <PaperclipIcon size={14} />
+      <Paperclip className="h-[18px] w-[18px]" />
     </Button>
   );
 }
@@ -460,14 +569,14 @@ function PureStopButton({
 }) {
   return (
     <Button
-      className="rounded-full p-1.5 h-fit border dark:border-zinc-600"
+      className="rounded-full p-1.5 h-fit border dark:border-zinc-600 mobile-tap-target"
       onClick={(event) => {
         event.preventDefault();
         stop();
         setMessages((messages) => sanitizeUIMessages(messages));
       }}
     >
-      <StopIcon size={14} />
+      <X className="h-[18px] w-[18px]" />
     </Button>
   );
 }
@@ -487,14 +596,14 @@ function PureSendButton({
 }) {
   return (
     <Button
-      className="rounded-full p-1.5 h-fit border dark:border-zinc-600"
+      className="rounded-full p-1.5 h-fit border dark:border-zinc-600 mobile-tap-target"
       onClick={(event) => {
         event.preventDefault();
         submitForm();
       }}
       disabled={input.length === 0 || uploadQueue.length > 0 || isSubmitting}
     >
-      <ArrowUpIcon size={14} />
+      <SendIcon className="h-[18px] w-[18px]" />
     </Button>
   );
 }
@@ -506,3 +615,59 @@ const SendButton = memo(PureSendButton, (prevProps, nextProps) => {
   if (prevProps.isSubmitting !== nextProps.isSubmitting) return false;
   return true;
 });
+
+function UploadProgress({ files }: { files: Array<string> }) {
+  return (
+    <div className="flex flex-col gap-1 mt-1">
+      <p className="text-xs text-muted-foreground">Uploading...</p>
+      {files.map((filename) => (
+        <div
+          key={filename}
+          className="text-xs bg-muted p-2 rounded-md flex items-center"
+        >
+          <span className="truncate max-w-[200px]">{filename}</span>
+          <span className="ml-auto flex-shrink-0">
+            <Loader size={12} className="animate-spin" />
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function FilePickerContent({
+  onPickFile,
+  onClose,
+}: {
+  onPickFile: (file: File) => void;
+  onClose: () => void;
+}) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
+    files.forEach((file) => onPickFile(file));
+  };
+
+  return (
+    <div className="flex flex-col gap-2">
+      <input
+        ref={fileInputRef}
+        className="hidden"
+        type="file"
+        accept={ALLOWED_FILE_EXTENSIONS}
+        onChange={handleFileChange}
+        multiple
+      />
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        className="h-9 w-9 rounded-full text-muted-foreground hover:text-foreground"
+        onClick={onClose}
+      >
+        <CloseIcon className="h-[18px] w-[18px]" />
+      </Button>
+    </div>
+  );
+}

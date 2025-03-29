@@ -21,6 +21,11 @@ import {
 } from './schema';
 import { ArtifactKind } from '@/components/artifact';
 
+// Extended message type for AI SDK attachments
+interface ExtendedMessage extends Message {
+  experimental_attachments?: Array<{ url: string; name: string; contentType: string }>;
+}
+
 // Optionally, if not using email/pass login, you can
 // use the Drizzle adapter for Auth.js / NextAuth
 // https://authjs.dev/reference/adapter/drizzle
@@ -131,7 +136,7 @@ export async function getChatById({ id }: { id: string }) {
   }
 }
 
-export async function saveMessages({ messages }: { messages: Array<Message> }) {
+export async function saveMessages({ messages }: { messages: Array<ExtendedMessage | any> }) {
   try {
     // Periksa apakah array pesan kosong
     if (!messages || messages.length === 0) {
@@ -139,7 +144,25 @@ export async function saveMessages({ messages }: { messages: Array<Message> }) {
       return { success: false, reason: 'empty_messages' };
     }
     
-    return await db.insert(message).values(messages);
+    // Process messages to handle attachmentUrl
+    const processedMessages = messages.map(message => {
+      // Create a new message object that includes all fields from the original message
+      const processedMessage = { ...message };
+      
+      // Ensure attachmentUrl is defined (either from message or from experimental_attachments)
+      if (!('attachmentUrl' in processedMessage) || processedMessage.attachmentUrl === undefined) {
+        // Extract attachmentUrl from experimental_attachments if present
+        if (message.experimental_attachments && message.experimental_attachments.length > 0) {
+          processedMessage.attachmentUrl = message.experimental_attachments[0].url;
+        } else {
+          processedMessage.attachmentUrl = null;
+        }
+      }
+      
+      return processedMessage;
+    });
+    
+    return await db.insert(message).values(processedMessages);
   } catch (error) {
     console.error('Failed to save messages in database', error);
     throw error;

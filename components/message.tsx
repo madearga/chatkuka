@@ -13,13 +13,14 @@ import {
   LoaderIcon,
   PencilEditIcon,
   SparklesIcon,
+  FileIcon,
 } from './icons';
 import { Markdown } from './markdown';
 import { MessageActions } from './message-actions';
 import { PreviewAttachment } from './preview-attachment';
 import { Weather } from './weather';
 import equal from 'fast-deep-equal';
-import { cn } from '@/lib/utils';
+import { cn, getFileTypeFromUrl } from '@/lib/utils';
 import { Button } from './ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 import { MessageEditor } from './message-editor';
@@ -27,6 +28,7 @@ import { DocumentPreview } from './document-preview';
 import { MessageReasoning } from './message-reasoning';
 import { SearchResults } from './search-results';
 import { SearchProgress, type SearchStatus } from './search-progress';
+import { File, FileText, FileSpreadsheet, FileCode } from 'lucide-react';
 
 // Tambahkan interface untuk data pencarian
 interface SearchData {
@@ -42,6 +44,29 @@ interface SearchData {
   timeRange?: string;
 }
 
+// Function to get file icon based on file type
+function getFileIcon(fileType: string): React.ReactNode {
+  switch (fileType) {
+    case 'pdf':
+    case 'document':
+      return <FileText size={16} />;
+    case 'spreadsheet':
+    case 'csv':
+      return <FileSpreadsheet size={16} />;
+    case 'code':
+      return <FileCode size={16} />;
+    case 'text':
+      return <FileText size={16} />;
+    default:
+      return <File size={16} />;
+  }
+}
+
+// Extended message type with attachmentUrl
+interface ExtendedMessage extends Message {
+  attachmentUrl?: string | null;
+}
+
 const PurePreviewMessage = ({
   chatId,
   message,
@@ -52,7 +77,7 @@ const PurePreviewMessage = ({
   isReadonly,
 }: {
   chatId: string;
-  message: Message;
+  message: ExtendedMessage;
   vote: Vote | undefined;
   isLoading: boolean;
   setMessages: (
@@ -100,6 +125,26 @@ const PurePreviewMessage = ({
     return null;
   }, [message.content, message.toolInvocations]);
 
+  // Get file information if attachment URL exists
+  const fileType = useMemo(() => {
+    if (message.attachmentUrl) {
+      return getFileTypeFromUrl(message.attachmentUrl);
+    }
+    return 'unknown';
+  }, [message.attachmentUrl]);
+
+  // Get the file name from the URL
+  const fileName = useMemo(() => {
+    if (message.attachmentUrl) {
+      // Extract filename from URL, removing the unique ID prefix
+      const fullName = message.attachmentUrl.split('/').pop() || 'file';
+      // Split by dash and remove the first part (usually a UUID)
+      const parts = fullName.split('-');
+      return parts.length > 1 ? parts.slice(1).join('-') : fullName;
+    }
+    return 'Attached file';
+  }, [message.attachmentUrl]);
+
   return (
     <AnimatePresence>
       <motion.div
@@ -126,6 +171,7 @@ const PurePreviewMessage = ({
           )}
 
           <div className="flex flex-col gap-4 w-full overflow-hidden max-w-full">
+            {/* Display experimental attachments */}
             {message.experimental_attachments && (
               <div className="flex flex-row flex-wrap justify-end gap-2 max-w-full">
                 {message.experimental_attachments.map((attachment) => (
@@ -134,6 +180,36 @@ const PurePreviewMessage = ({
                     attachment={attachment}
                   />
                 ))}
+              </div>
+            )}
+
+            {/* Display attachment from database */}
+            {message.attachmentUrl && (
+              <div className={cn(
+                "flex items-start gap-3 p-3 rounded-lg shadow-sm",
+                message.role === 'user' ? "bg-primary/5 ml-auto" : "bg-muted/80"
+              )}>
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center justify-center w-10 h-10 rounded-md bg-primary/10 shrink-0">
+                    {getFileIcon(fileType)}
+                  </div>
+                  <div className="flex flex-col overflow-hidden">
+                    <span className="text-sm font-medium truncate max-w-[150px] sm:max-w-[200px]">
+                      {fileName}
+                    </span>
+                    <span className="text-xs text-muted-foreground capitalize">
+                      {fileType} file
+                    </span>
+                  </div>
+                </div>
+                <a 
+                  href={message.attachmentUrl} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="mt-2 sm:mt-0 sm:ml-auto py-1.5 px-3 text-sm bg-primary/10 hover:bg-primary/20 text-primary rounded-md transition-colors"
+                >
+                  Open
+                </a>
               </div>
             )}
 
@@ -312,6 +388,8 @@ export const PreviewMessage = memo(
     if (prevProps.message.reasoning !== nextProps.message.reasoning)
       return false;
     if (prevProps.message.content !== nextProps.message.content) return false;
+    if (prevProps.message.attachmentUrl !== nextProps.message.attachmentUrl) 
+      return false;
     if (
       !equal(
         prevProps.message.toolInvocations,

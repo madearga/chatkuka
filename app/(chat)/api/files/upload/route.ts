@@ -5,17 +5,17 @@ import { z } from 'zod';
 import { auth } from '@/app/(auth)/auth';
 import { saveDocument } from '@/lib/db/queries';
 import { ArtifactKind } from '@/components/artifact';
+import { MAX_FILE_SIZE_BYTES, ALLOWED_MIME_TYPES } from '@/lib/constants';
 
 // Use Blob instead of File since File is not available in Node.js environment
 const FileSchema = z.object({
   file: z
     .instanceof(Blob)
-    .refine((file) => file.size <= 5 * 1024 * 1024, {
-      message: 'File size should be less than 5MB',
+    .refine((file) => file.size <= MAX_FILE_SIZE_BYTES, {
+      message: `File size should be less than ${MAX_FILE_SIZE_BYTES / (1024 * 1024)}MB`,
     })
-    // Update the file type based on the kind of files you want to accept
-    .refine((file) => ['image/jpeg', 'image/png', 'image/gif', 'image/webp'].includes(file.type), {
-      message: 'File type should be JPEG, PNG, GIF, or WEBP',
+    .refine((file) => ALLOWED_MIME_TYPES.includes(file.type), {
+      message: `File type should be one of the following: ${ALLOWED_MIME_TYPES.join(', ')}`,
     }),
 });
 
@@ -35,11 +35,19 @@ export async function POST(request: Request) {
     const file = formData.get('file') as Blob;
     const id = formData.get('id') as string;
     const kind = formData.get('kind') as ArtifactKind;
+    const chatId = formData.get('chatId') as string; // Add chat ID for message attachment
     
     // Check for required fields
-    if (!file || !id || !kind) {
+    if (!file) {
       return NextResponse.json({ 
-        error: 'Missing required fields (file, id, kind)' 
+        error: 'Missing required field: file' 
+      }, { status: 400 });
+    }
+
+    // Only require id and kind if we're saving as a document
+    if ((!id || !kind) && !chatId) {
+      return NextResponse.json({ 
+        error: 'Missing required fields: either (id and kind) or chatId must be provided' 
       }, { status: 400 });
     }
 
@@ -55,25 +63,30 @@ export async function POST(request: Request) {
 
     // Convert file to base64 for storage
     const fileBuffer = await file.arrayBuffer();
-    const base64Content = Buffer.from(fileBuffer).toString('base64');
     
     // Get filename from formData
     const filename = (formData.get('file') as File).name;
     
     try {
-      // Save the file as a document
-      await saveDocument({
-        id,
-        title: filename || 'Uploaded Image',
-        content: base64Content,
-        kind,
-        userId: session.user.id,
-      });
-      
-      // Also upload to Vercel Blob for redundancy
-      const blobResponse = await put(`${id}-${filename}`, fileBuffer, {
+      // Upload to Vercel Blob
+      const blobId = id || `chat-${chatId}-${Date.now()}`;
+      const blobResponse = await put(`${blobId}-${filename}`, fileBuffer, {
         access: 'public',
       });
+
+      // If it's a document artifact, save to document storage
+      if (id && kind) {
+        const base64Content = Buffer.from(fileBuffer).toString('base64');
+        
+        // Save the file as a document
+        await saveDocument({
+          id,
+          title: filename || 'Uploaded File',
+          content: base64Content,
+          kind,
+          userId: session.user.id,
+        });
+      }
 
       return NextResponse.json({ 
         success: true, 
@@ -81,7 +94,7 @@ export async function POST(request: Request) {
         url: blobResponse.url,
         pathname: filename,
         contentType: file.type,
-        message: 'File uploaded and saved successfully' 
+        message: 'File uploaded successfully' 
       });
     } catch (error) {
       console.error('Upload error:', error);

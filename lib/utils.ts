@@ -119,13 +119,39 @@ export function convertToUIMessages(
       }
     }
 
-    chatMessages.push({
+    // Create a base message
+    const newMessage: Message = {
       id: message.id,
       role: message.role as Message['role'],
       content: textContent,
       reasoning,
       toolInvocations,
-    });
+    };
+
+    // Add attachment if exists in the database message
+    if ('attachmentUrl' in message && message.attachmentUrl) {
+      // Get filename from URL
+      const fullName = message.attachmentUrl.split('/').pop() || 'file';
+      const parts = fullName.split('-');
+      const fileName = parts.length > 1 ? parts.slice(1).join('-') : fullName;
+      
+      // Get file type based on extension
+      const fileType = getFileTypeFromUrl(message.attachmentUrl);
+      
+      // Add experimental attachments
+      newMessage.experimental_attachments = [
+        {
+          url: message.attachmentUrl,
+          name: fileName,
+          contentType: `application/${fileType}`, // Approximate content type
+        },
+      ];
+      
+      // Also keep the original attachmentUrl for components that expect it
+      (newMessage as any).attachmentUrl = message.attachmentUrl;
+    }
+
+    chatMessages.push(newMessage);
 
     return chatMessages;
   }, []);
@@ -228,4 +254,38 @@ export function getDocumentTimestampByIndex(
   if (index > documents.length) return new Date();
 
   return documents[index].createdAt;
+}
+
+/**
+ * Determines the file type based on the URL or file name extension
+ * @param url The URL or file name to analyze
+ * @returns A string representing the file type ('pdf', 'document', 'spreadsheet', 'text', etc.)
+ */
+export function getFileTypeFromUrl(url: string): string {
+  if (!url) return 'unknown';
+  
+  const extension = url.split('.').pop()?.toLowerCase() || '';
+  
+  // Document types
+  if (extension === 'pdf') return 'pdf';
+  if (['doc', 'docx', 'rtf', 'odt'].includes(extension)) return 'document';
+  
+  // Spreadsheet types
+  if (['csv', 'xls', 'xlsx', 'ods'].includes(extension)) return 'spreadsheet';
+  
+  // Text types
+  if (['txt', 'md', 'markdown'].includes(extension)) return 'text';
+  
+  // Code types
+  if (['js', 'ts', 'py', 'java', 'c', 'cpp', 'cs', 'php', 'rb', 'go', 'html', 'css', 'json', 'xml'].includes(extension)) {
+    return 'code';
+  }
+  
+  // Image types
+  if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp'].includes(extension)) {
+    return 'image';
+  }
+  
+  // Default/unknown type
+  return 'unknown';
 }

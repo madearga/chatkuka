@@ -15,12 +15,10 @@ export const myProvider = customProvider({
   languageModels: {
     'chat-model-small': google('gemini-2.0-flash'),
     'chat-model-large': google('gemini-2.0-pro-exp-02-05'),
-    'chat-model-image-gen': google('gemini-2.0-flash'), // Added model for inline image generation
     'chat-model-reasoning': wrapLanguageModel({
       model: groq('deepseek-r1-distill-llama-70b'),
       middleware: extractReasoningMiddleware({ tagName: 'think' }),
     }),
-    'title-model': google('gemini-2.0-pro-exp-02-05'),
     'artifact-model': google('gemini-2.0-pro-exp-02-05'),
   },
   imageModels: {
@@ -50,10 +48,5 @@ export const chatModels: Array<ChatModel> = [
     id: 'chat-model-reasoning',
     name: 'Reasoning model',
     description: 'Uses advanced reasoning',
-  },
-  {
-    id: 'chat-model-image-gen',
-    name: 'Image generation model',
-    description: 'Specialized model for generating images inline'
   },
 ];

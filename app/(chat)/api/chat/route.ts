@@ -39,7 +39,7 @@ export async function POST(request: Request) {
       searchOptions,
     }: { 
       id: string; 
-      messages: Array<Message>; 
+      messages: Array<Message & { attachmentUrl?: string | null }>; 
       selectedChatModel: string;
       useSearch?: boolean;
       searchQuery?: string;
@@ -115,8 +115,16 @@ export async function POST(request: Request) {
 
     // Save user message to database
     try {
+      // Get attachmentUrl from message if available
+      const attachmentUrl = (userMessage as any).attachmentUrl || null;
+      
       await saveMessages({
-        messages: [{ ...userMessage, createdAt: new Date(), chatId: id }],
+        messages: [{ 
+          ...userMessage, 
+          createdAt: new Date(), 
+          chatId: id,
+          attachmentUrl 
+        }],
       });
       console.log('Successfully saved user message');
     } catch (error) {

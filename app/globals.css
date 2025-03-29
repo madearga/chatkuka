@@ -35,12 +35,14 @@
         overflow-wrap: break-word;
         word-wrap: break-word;
         word-break: break-word;
+        hyphens: auto;
     }
     
     /* Improve scrolling on mobile */
     .mobile-scroll {
         -webkit-overflow-scrolling: touch;
         scrollbar-width: thin;
+        scroll-padding-bottom: 20px;
     }
     
     /* Fix for iOS input zoom */
@@ -48,6 +50,43 @@
         input, select, textarea {
             font-size: 16px !important;
         }
+    }
+}
+
+/* Mobile-specific styles without causing hydration issues */
+@media screen and (max-width: 640px) {
+    /* Better tap targets for mobile */
+    .tap-target {
+        min-height: 44px;
+        min-width: 44px;
+    }
+    
+    /* Reduce margins and padding on small screens */
+    .compact-layout {
+        margin: 0.25rem !important;
+        padding: 0.5rem !important;
+    }
+    
+    /* Smaller text and tighter spacing on mobile */
+    .mobile-text {
+        font-size: 0.875rem;
+    }
+    
+    /* Ensure buttons are easy to tap */
+    button {
+        min-height: 36px;
+        min-width: 36px;
+    }
+    
+    /* Improved attachment layout */
+    .attachment-preview {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    /* Bottom navigation fixes */
+    .bottom-nav {
+        padding-bottom: env(safe-area-inset-bottom, 16px);
     }
 }
 
@@ -142,6 +181,55 @@
         --sidebar-border: 240 3.7% 15.9%;
         --sidebar-ring: 217.2 91.2% 59.8%;
     }
+
+    /* DeepSeek-inspired style for mobile buttons */
+    .chat-input-buttons button {
+        background-color: transparent;
+        border: none;
+        border-radius: 50%;
+        width: 36px;
+        height: 36px;
+        padding: 0;
+        margin: 0 2px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background-color 0.2s ease;
+    }
+
+    .chat-input-buttons button:hover {
+        background-color: rgba(0, 0, 0, 0.05);
+    }
+
+    .dark .chat-input-buttons button:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .chat-input-buttons button svg {
+        width: 18px;
+        height: 18px;
+    }
+
+    .chat-input-container {
+        border-radius: 1rem;
+        background-color: rgba(250, 250, 250, 0.85);
+        backdrop-filter: blur(8px);
+    }
+
+    .dark .chat-input-container {
+        background-color: rgba(39, 39, 42, 0.9);
+    }
+
+    .chat-textarea {
+        padding: 10px 12px;
+        padding-right: 110px;
+        min-height: 42px;
+        font-size: 15px;
+        line-height: 1.5;
+        border: none;
+        outline: none;
+        resize: none;
+    }
 }
 
 @layer base {
@@ -225,4 +313,183 @@
 
 .suggestion-highlight {
     @apply bg-blue-200 hover:bg-blue-300 dark:hover:bg-blue-400/50 dark:text-blue-50 dark:bg-blue-500/40;
+}
+
+/* Better mobile experience */
+button, 
+.btn,
+a[role="button"] {
+  min-height: 36px;
+  min-width: 36px;
+}
+
+/* Ensure icons are always visible in dark mode */
+.dark button svg {
+  color: hsl(var(--foreground)) !important;
+  opacity: 0.9 !important;
+}
+
+.dark button:hover svg {
+  opacity: 1 !important;
+}
+
+/* Make sure buttons are always visible, especially on initial page load */
+button[type="button"] {
+  z-index: 50 !important;
+  position: relative;
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+  color: var(--foreground);
+}
+
+/* Fixed positioning for button container to ensure visibility */
+.flex.items-center.justify-end.w-full.absolute {
+  z-index: 50 !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  position: absolute !important;
+  bottom: 1px !important;
+  right: 0 !important;
+  pointer-events: auto !important;
+}
+
+/* Always show bottom bar */
+.bg-card\/80.backdrop-blur-sm {
+  opacity: 1 !important;
+  visibility: visible !important;
+  display: flex !important;
+}
+
+/* Better touch targets for interactive elements */
+@media (max-width: 640px) {
+  /* Increase icon visibility especially in dark mode */
+  button svg {
+    width: 20px;
+    height: 20px;
+    opacity: 1 !important;
+    color: currentColor;
+    stroke-width: 2;
+  }
+  
+  /* Create better contrast for the button without borders */
+  button[type="button"] {
+    background-color: transparent !important;
+    color: var(--foreground) !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+  }
+  
+  /* Add subtle highlight on tap */
+  button[type="button"]:active {
+    background-color: var(--muted) !important;
+  }
+  
+  /* Initial page specific fixes */
+  .bottom-nav button {
+    opacity: 1 !important;
+    visibility: visible !important;
+    z-index: 100 !important;
+  }
+  
+  /* Ensure textarea has enough space for buttons */
+  .Textarea {
+    padding-bottom: 50px !important;
+  }
+  
+  /* Attachment styles for small screens */
+  .flex-col-mobile {
+    flex-direction: column !important;
+  }
+  
+  .items-start-mobile {
+    align-items: flex-start !important;
+  }
+}
+
+/* DeepSeek-inspired input styling */
+.rounded-2xl {
+  border-radius: 0.85rem;
+}
+
+.dark .bg-zinc-800\/90 {
+  background-color: rgba(39, 39, 42, 0.9);
+}
+
+/* Light mode input styling */
+.bg-card\/50 {
+  background-color: rgba(250, 250, 250, 0.85);
+}
+
+/* Make input area more responsive */
+.Textarea {
+  font-size: 15px !important;
+  line-height: 1.5 !important;
+  padding-top: 10px !important;
+  padding-bottom: 10px !important;
+}
+
+/* Fix the placeholder text color */
+.Textarea::placeholder {
+  color: var(--muted-foreground);
+  opacity: 0.7;
+}
+
+/* Style the active/hover states for buttons */
+button[type="button"]:hover {
+  opacity: 1 !important;
+}
+
+.bg-blue-600 {
+  background-color: #2563eb !important;
+}
+
+.bg-blue-600:hover {
+  background-color: #1d4ed8 !important;
+}
+
+/* Better touch targets for interactive elements */
+@media (max-width: 640px) {
+  /* More rounded corners on mobile */
+  .rounded-2xl {
+    border-radius: 1rem !important;
+  }
+  
+  /* Shadow for the input box */
+  .shadow-sm {
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.08);
+  }
+  
+  /* Proper icon sizing */
+  button svg {
+    width: 18px;
+    height: 18px;
+    opacity: 1 !important;
+    color: currentColor;
+    stroke-width: 2;
+  }
+  
+  /* Button styling */
+  button[type="button"] {
+    background-color: transparent !important;
+    color: var(--foreground) !important;
+    opacity: 0.8 !important;
+    visibility: visible !important;
+    transition: opacity 0.2s ease;
+    padding: 6px !important;
+  }
+  
+  /* Send button in blue */
+  button[type="button"].bg-blue-600,
+  button[type="button"].bg-blue-700 {
+    background-color: #2563eb !important;
+    color: white !important;
+    opacity: 1 !important;
+  }
+  
+  /* Active states */
+  button[type="button"]:active {
+    opacity: 1 !important;
+    transform: scale(0.97);
+  }
 }
