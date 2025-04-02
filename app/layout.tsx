@@ -10,6 +10,11 @@ export const metadata: Metadata = {
   metadataBase: new URL('https://www.chatkuka.com'),
   title: 'Chatkuka',
   description: 'Chatkuka.',
+  icons: {
+    icon: '/favicon.ico',
+    shortcut: '/favicon.ico',
+    apple: '/favicon.ico', // Or provide a specific apple-touch-icon if you have one
+  },
 };
 
 export const viewport = {
@@ -61,7 +66,6 @@ export default async function RootLayout({
             __html: THEME_COLOR_SCRIPT,
           }}
         />
-        <link rel="icon" href="/favicon.ico" sizes="any" />
       </head>
       <body className="antialiased">
         <Providers>
