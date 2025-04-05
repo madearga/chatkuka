@@ -30,7 +30,7 @@ function PureChatHeader({
   const isMobile = windowWidth < 640; // sm breakpoint
 
   return (
-    <header className="flex sticky top-0 z-10 bg-background py-1.5 items-center px-2 md:px-4 mobile-safe-area">
+    <header className="flex sticky top-0 z-10 bg-background py-1.5 items-center px-2 md:px-4 mobile-safe-area header-gold">
       {/* Left side - toggle and model selector */}
       <div className="flex items-center gap-1 sm:gap-2 min-w-0 flex-1">
         <SidebarToggle />
@@ -57,7 +57,7 @@ function PureChatHeader({
           <TooltipTrigger asChild>
             <Button
               variant="outline"
-              className="md:px-2 px-2 h-8 sm:h-9 flex-shrink-0"
+              className="md:px-2 px-2 h-8 sm:h-9 flex-shrink-0 btn-gold"
               onClick={() => {
                 router.push('/');
                 router.refresh();

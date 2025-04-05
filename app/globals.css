@@ -6,6 +6,13 @@
     --foreground-rgb: 0, 0, 0;
     --background-start-rgb: 214, 219, 220;
     --background-end-rgb: 255, 255, 255;
+    
+    /* Gold theme colors */
+    --gold-light: 255, 215, 0;     /* Standard gold */
+    --gold-medium: 218, 165, 32;   /* Golden rod */
+    --gold-dark: 184, 134, 11;     /* Dark goldenrod */
+    --gold-accent: 212, 175, 55;   /* Metallic gold */
+    --gold-highlight: 250, 250, 210; /* Light goldenrod yellow */
 }
 
 @media (prefers-color-scheme: dark) {
@@ -86,54 +93,82 @@
     }
 }
 
-/* Mobile-specific styles without causing hydration issues */
-@media screen and (max-width: 640px) {
-    /* Better tap targets for mobile */
-    .tap-target {
-        min-height: 44px;
-        min-width: 44px;
+@layer components {
+    /* Gold-themed components */
+    .gold-gradient {
+        background: linear-gradient(135deg, rgba(var(--gold-light), 0.8), rgba(var(--gold-medium), 0.9), rgba(var(--gold-dark), 0.8));
     }
     
-    /* Reduce margins and padding on small screens */
-    .compact-layout {
-        margin: 0.25rem !important;
-        padding: 0.5rem !important;
+    .gold-text {
+        color: rgb(var(--gold-medium));
     }
     
-    /* Smaller text and tighter spacing on mobile */
-    .mobile-text {
-        font-size: 0.875rem;
+    .gold-border {
+        border-color: rgb(var(--gold-accent));
     }
     
-    /* Ensure buttons are easy to tap */
-    button {
-        min-height: 36px;
-        min-width: 36px;
+    .gold-button {
+        background-color: rgb(var(--gold-medium));
+        color: #000;
+        border: 1px solid rgb(var(--gold-dark));
+        transition: all 0.3s ease;
     }
     
-    /* Improved attachment layout */
-    .attachment-preview {
-        flex-direction: column;
-        align-items: flex-start;
+    .gold-button:hover {
+        background-color: rgb(var(--gold-dark));
+        color: #fff;
+        box-shadow: 0 0 10px rgba(var(--gold-light), 0.5);
     }
     
-    /* Bottom navigation fixes */
-    .bottom-nav {
-        padding-bottom: env(safe-area-inset-bottom, 16px);
+    .gold-highlight {
+        background-color: rgba(var(--gold-highlight), 0.3);
     }
-
-    /* Fix for API credential/token display in logs */
-    .message-log, .api-log {
-        max-width: calc(100vw - 2rem);
-        overflow-x: auto;
-        overflow-wrap: break-word;
-        word-break: break-all;
+    
+    .gold-card {
+        background-color: #fff;
+        border: 1px solid rgb(var(--gold-accent));
+        box-shadow: 0 4px 8px rgba(var(--gold-medium), 0.2);
     }
-
-    /* Ensure all user content fits on screen */
-    [data-role="user"] > div {
-        max-width: calc(100vw - 2rem) !important;
-        width: 100% !important;
+    
+    .dark .gold-card {
+        background-color: rgba(30, 30, 30, 0.8);
+        border: 1px solid rgb(var(--gold-accent));
+        box-shadow: 0 4px 8px rgba(var(--gold-light), 0.2);
+    }
+    
+    /* Gold-themed components with subtle styling */
+    .gold-accent {
+        @apply border-amber-400 dark:border-amber-500;
+    }
+    
+    /* Gold accent for buttons */
+    .btn-gold {
+        @apply bg-amber-100 text-amber-900 border border-amber-300 hover:bg-amber-200 dark:bg-amber-900/20 dark:text-amber-200 dark:border-amber-700 dark:hover:bg-amber-800/30;
+    }
+    
+    /* Gold accent for header elements */
+    .header-gold {
+        @apply border-b border-amber-200/30 dark:border-amber-700/30;
+    }
+    
+    /* Gold accent for important UI elements */
+    .important-element {
+        @apply ring-1 ring-amber-300 dark:ring-amber-700;
+    }
+    
+    /* Gold highlight for active elements */
+    .active-gold {
+        @apply bg-amber-50 dark:bg-amber-900/20 border-l-2 border-amber-400 dark:border-amber-600;
+    }
+    
+    /* Gold text accent for important text */
+    .text-gold-accent {
+        @apply text-amber-600 dark:text-amber-400;
+    }
+    
+    /* Gold gradient for special elements */
+    .gold-gradient-subtle {
+        @apply bg-gradient-to-r from-amber-50 to-amber-100 dark:from-amber-900/10 dark:to-amber-800/20;
     }
 }
 
@@ -157,12 +192,7 @@
         --destructive-foreground: 0 0% 98%;
         --border: 240 5.9% 90%;
         --input: 240 5.9% 90%;
-        --ring: 240 10% 3.9%;
-        --chart-1: 12 76% 61%;
-        --chart-2: 173 58% 39%;
-        --chart-3: 197 37% 24%;
-        --chart-4: 43 74% 66%;
-        --chart-5: 27 87% 67%;
+        --ring: 240 5.9% 10%;
         --radius: 0.5rem;
         --sidebar-background: 0 0% 98%;
         --sidebar-foreground: 240 5.3% 26.1%;
@@ -176,8 +206,40 @@
         /* Add viewport units that work better on mobile */
         --vh: 1vh;
         --vw: 1vw;
+        
+        /* Gold accent colors for light theme */
+        --gold-accent-light: 45 100% 50%;
+        --gold-button-hover: 45 80% 50%;
+        --gold-border: 45 80% 60%;
     }
     
+    .dark {
+        --background: 240 10% 3.9%;
+        --foreground: 0 0% 98%;
+        --card: 240 10% 3.9%;
+        --card-foreground: 0 0% 98%;
+        --popover: 240 10% 3.9%;
+        --popover-foreground: 0 0% 98%;
+        --primary: 0 0% 98%;
+        --primary-foreground: 240 5.9% 10%;
+        --secondary: 240 3.7% 15.9%;
+        --secondary-foreground: 0 0% 98%;
+        --muted: 240 3.7% 15.9%;
+        --muted-foreground: 240 5% 64.9%;
+        --accent: 240 3.7% 15.9%;
+        --accent-foreground: 0 0% 98%;
+        --destructive: 0 62.8% 30.6%;
+        --destructive-foreground: 0 0% 98%;
+        --border: 240 3.7% 15.9%;
+        --input: 240 3.7% 15.9%;
+        --ring: 240 4.9% 83.9%;
+        
+        /* Gold accent colors for dark theme */
+        --gold-accent-dark: 45 80% 45%;
+        --gold-button-hover: 45 70% 40%;
+        --gold-border: 45 70% 50%;
+    }
+
     /* Ensure proper sizing on mobile */
     @media screen and (max-width: 640px) {
         html, body {
@@ -539,4 +601,55 @@ button[type="button"]:hover {
     opacity: 1 !important;
     transform: scale(0.97);
   }
+}
+
+/* Mobile-specific styles without causing hydration issues */
+@media screen and (max-width: 640px) {
+    /* Better tap targets for mobile */
+    .tap-target {
+        min-height: 44px;
+        min-width: 44px;
+    }
+    
+    /* Reduce margins and padding on small screens */
+    .compact-layout {
+        margin: 0.25rem !important;
+        padding: 0.5rem !important;
+    }
+    
+    /* Smaller text and tighter spacing on mobile */
+    .mobile-text {
+        font-size: 0.875rem;
+    }
+    
+    /* Ensure buttons are easy to tap */
+    button {
+        min-height: 36px;
+        min-width: 36px;
+    }
+    
+    /* Improved attachment layout */
+    .attachment-preview {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    /* Bottom navigation fixes */
+    .bottom-nav {
+        padding-bottom: env(safe-area-inset-bottom, 16px);
+    }
+
+    /* Fix for API credential/token display in logs */
+    .message-log, .api-log {
+        max-width: calc(100vw - 2rem);
+        overflow-x: auto;
+        overflow-wrap: break-word;
+        word-break: break-all;
+    }
+
+    /* Ensure all user content fits on screen */
+    [data-role="user"] > div {
+        max-width: calc(100vw - 2rem) !important;
+        width: 100% !important;
+    }
 }

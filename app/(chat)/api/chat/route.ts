@@ -37,6 +37,7 @@ export async function POST(request: Request) {
       useSearch,
       searchQuery,
       searchOptions,
+      systemPrompt: requestSystemPrompt, // Add systemPrompt from request
     }: { 
       id: string; 
       messages: Array<Message & { attachmentUrl?: string | null }>; 
@@ -55,6 +56,7 @@ export async function POST(request: Request) {
         timeRange?: string;
         days?: number;
       };
+      systemPrompt?: string; // Add systemPrompt type
     } = await request.json();
 
     const session = await auth();
@@ -187,7 +189,7 @@ export async function POST(request: Request) {
         };
 
         // If search is enabled, perform search before starting the AI response
-        let systemMessage = systemPrompt({ selectedChatModel });
+        let systemMessage = requestSystemPrompt || systemPrompt({ selectedChatModel });
         let searchResults = null;
         
         if (useSearch && searchToolAvailable && searchQuery && tavilyApiKey) {

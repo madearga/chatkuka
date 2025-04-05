@@ -2,7 +2,7 @@
 
 import type { Attachment, Message } from 'ai';
 import { useChat } from 'ai/react';
-import { useState } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import useSWR, { useSWRConfig } from 'swr';
 
 import { ChatHeader } from '@/components/chat-header';
@@ -15,6 +15,8 @@ import { Messages } from './messages';
 import { VisibilityType } from './visibility-selector';
 import { useArtifactSelector } from '@/hooks/use-artifact';
 import { toast } from 'sonner';
+import { SYSTEM_PROMPT_DEFAULT } from '@/lib/ai/config';
+import { PromptSystem } from '@/components/chat-input/prompt-system';
 
 export function Chat({
   id,
@@ -31,6 +33,8 @@ export function Chat({
 }) {
   const { mutate } = useSWRConfig();
 
+  const [selectedSystemPrompt, setSelectedSystemPrompt] = useState<string | undefined>(SYSTEM_PROMPT_DEFAULT);
+
   const {
     messages,
     setMessages,
@@ -41,9 +45,10 @@ export function Chat({
     isLoading,
     stop,
     reload,
+    data,
   } = useChat({
     id,
-    body: { id, selectedChatModel: selectedChatModel },
+    body: { id, selectedChatModel: selectedChatModel, systemPrompt: selectedSystemPrompt },
     initialMessages,
     experimental_throttle: 100,
     sendExtraMessageFields: true,
@@ -64,6 +69,26 @@ export function Chat({
   const [attachments, setAttachments] = useState<Array<Attachment>>([]);
   const isArtifactVisible = useArtifactSelector((state) => state.isVisible);
 
+  const handleSystemPromptSelect = useCallback((newSystemPrompt: string) => {
+    setSelectedSystemPrompt(newSystemPrompt || SYSTEM_PROMPT_DEFAULT);
+  }, []);
+
+  const handleSuggestion = useCallback(async (suggestion: string) => {
+    await append(
+      {
+        role: 'user',
+        content: suggestion,
+      },
+      {
+        body: { systemPrompt: selectedSystemPrompt },
+        data,
+      }
+    );
+    setInput('');
+  }, [append, setInput, selectedSystemPrompt, data]);
+
+  const showPromptSystem = useMemo(() => messages.length === 0 && !isLoading, [messages.length, isLoading]);
+
   return (
     <>
       <div className="flex flex-col min-w-0 w-full h-dvh bg-background overflow-hidden">
@@ -73,6 +98,17 @@ export function Chat({
           selectedVisibilityType={selectedVisibilityType}
           isReadonly={isReadonly}
         />
+
+        {showPromptSystem && (
+          <div className="px-2 sm:px-4 pb-2 sm:pb-4 md:pb-6">
+            <PromptSystem
+              onSelectSystemPrompt={handleSystemPromptSelect}
+              onSuggestion={handleSuggestion}
+              value={input}
+              systemPrompt={selectedSystemPrompt}
+            />
+          </div>
+        )}
 
         <Messages
           chatId={id}
@@ -91,14 +127,26 @@ export function Chat({
               chatId={id}
               input={input}
               setInput={setInput}
-              handleSubmit={handleSubmit}
+              handleSubmit={(e, chatRequestOptions) => {
+                handleSubmit(e, {
+                  ...chatRequestOptions,
+                  body: { ...chatRequestOptions?.body, systemPrompt: selectedSystemPrompt },
+                  data,
+                });
+              }}
               isLoading={isLoading}
               stop={stop}
               attachments={attachments}
               setAttachments={setAttachments}
               messages={messages}
               setMessages={setMessages}
-              append={append}
+              append={(message, chatRequestOptions) => {
+                return append(message, {
+                  ...chatRequestOptions,
+                  body: { ...chatRequestOptions?.body, systemPrompt: selectedSystemPrompt },
+                  data,
+                });
+              }}
               className="w-full"
             />
           )}
@@ -109,12 +157,24 @@ export function Chat({
         chatId={id}
         input={input}
         setInput={setInput}
-        handleSubmit={handleSubmit}
+        handleSubmit={(e, chatRequestOptions) => {
+          handleSubmit(e, {
+            ...chatRequestOptions,
+            body: { ...chatRequestOptions?.body, systemPrompt: selectedSystemPrompt },
+            data,
+          });
+        }}
         isLoading={isLoading}
         stop={stop}
         attachments={attachments}
         setAttachments={setAttachments}
-        append={append}
+        append={(message, chatRequestOptions) => {
+          return append(message, {
+            ...chatRequestOptions,
+            body: { ...chatRequestOptions?.body, systemPrompt: selectedSystemPrompt },
+            data,
+          });
+        }}
         messages={messages}
         setMessages={setMessages}
         reload={reload}
