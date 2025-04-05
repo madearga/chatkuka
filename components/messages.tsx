@@ -37,6 +37,7 @@ function PureMessages({
     <div
       ref={messagesContainerRef}
       className="flex flex-col min-w-0 w-full gap-6 flex-1 overflow-y-auto px-2 sm:px-4 pt-4 mobile-scroll"
+      style={{ scrollbarGutter: 'stable both-edges' }}
     >
       {messages.length === 0 && <Overview />}
 

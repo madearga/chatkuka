@@ -36,11 +36,13 @@ export const PromptSystem = memo(function PromptSystem({
         <AnimatePresence mode="popLayout">
           {isPersonaMode ? (
             <Personas
+              key="personas"
               onSelectSystemPrompt={onSelectSystemPrompt}
               systemPrompt={systemPrompt}
             />
           ) : (
             <Suggestions
+              key="suggestions"
               onSuggestion={onSuggestion}
               value={value}
             />

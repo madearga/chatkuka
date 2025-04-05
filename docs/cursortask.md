@@ -1,384 +1,59 @@
-Okay, let's integrate the "Personas" and "Suggestions" features from the Zola inspiration into your `madearga-chatkuka` codebase.
+Okay, let's integrate the `Conversation` component structure from the Zola inspiration codebase into your `madearga-chatkuka` project. This will involve replacing your existing `Messages` component and adapting the individual message rendering.
 
-We'll follow these steps:
+Here's the plan:
 
-- [x] **Configuration:** Add `PERSONAS` and `SUGGESTIONS` data structures.
-- [x] **Backend API:** Modify the chat API route to accept and use a `systemPrompt`.
-- [x] **Chat Component State:** Add state management for the selected system prompt in the main chat component.
-- [x] **UI Components:** Port and adapt the necessary React components from Zola (`Personas`, `Suggestions`, `PromptSystem`).
-- [x] **Integration:** Add the new UI components to the chat interface, specifically when the chat is empty.
-- [x] **Styling:** Adjust styles to match your existing theme.
+1.  **Copy Necessary Components:** We'll copy `Conversation`, `Message`, `MessageAssistant`, `MessageUser`, `ChatContainer`, `ScrollButton`, and `Loader` from the Zola codebase into your project structure.
+2.  **Adapt `components/chat.tsx`:** Replace the usage of your `Messages` component with the new `Conversation` component and provide the necessary props.
+3.  **Adapt Message Rendering:** Modify the new `components/chat/message.tsx`, `message-assistant.tsx`, and `message-user.tsx` files to incorporate the features from your existing `components/message.tsx` (like tool calls, reasoning, voting, attachments from DB).
+4.  **Update Imports & Dependencies:** Ensure all imports point to the correct locations within your project and use your existing UI components (`Button`, `Tooltip`, etc.).
 
 ---
 
-**Step 1: Configuration Data**
+**Step 1: Copy Files**
 
-1.  **Create `lib/ai/config.ts`:** This file will hold the configurations for personas and suggestions.
-2.  **Add Icons:** We'll need icons. Let's assume you'll add corresponding icons to `components/icons.tsx` or use existing ones from `lucide-react`. We'll use placeholders for now in the config.
-3.  **Populate `lib/ai/config.ts`:**
+Copy the following files from the **Zola inspiration codebase** into your `madearga-chatkuka/components/` directory (create subdirectories as needed):
 
-```typescript
-// @/lib/ai/config.ts
-import {
-  BookOpenText,
-  Brain,
-  // ChalkboardTeacher, // Example: Find Lucide equivalent or add
-  MessageSquareText, // Lucide equivalent for ChatTeardropText
-  Code,
-  Palette, // Lucide equivalent for CookingPot/PaintBrush
-  HeartPulse, // Lucide equivalent for Heartbeat
-  Lightbulb,
-  Search, // Lucide equivalent for MagnifyingGlass
-  NotebookPen, // Lucide equivalent for Notepad/PenNib
-  Sparkles,
-  Bot, // Placeholder for generic assistant
-} from "lucide-react";
+*   `app/components/chat/conversation.tsx` -> `components/chat/conversation.tsx`
+*   `app/components/chat/message.tsx` -> `components/chat/message.tsx` (This will **overwrite** your existing `message.tsx`. Make a backup if needed!)
+*   `app/components/chat/message-assistant.tsx` -> `components/chat/message-assistant.tsx`
+*   `app/components/chat/message-user.tsx` -> `components/chat/message-user.tsx`
+*   `components/prompt-kit/chat-container.tsx` -> `components/prompt-kit/chat-container.tsx` (Create `prompt-kit` folder)
+*   `components/motion-primitives/scroll-button.tsx` -> `components/motion-primitives/scroll-button.tsx` (Create `motion-primitives` folder)
+*   `components/prompt-kit/loader.tsx` -> `components/prompt-kit/loader.tsx`
 
-// --- PERSONAS ---
-export const PERSONAS = [
-  {
-    id: "companion",
-    label: "Companion",
-    prompt: `You're a thoughtful friend who offers genuine support and conversation. Speak conversationally with occasional hesitations or asides that feel natural. Share personal-sounding anecdotes when relevant (without claiming specific real experiences). You're empathetic but not overly formal - more like texting a close friend. Ask follow-up questions to show you're engaged. Occasionally use casual phrasing like "hmm" or "you know?" to sound more natural. Your tone should be warm and authentic rather than overly polished.`,
-    icon: MessageSquareText,
-  },
-  {
-    id: "researcher",
-    label: "Researcher",
-    prompt: `You're a seasoned research analyst with expertise across multiple disciplines. You approach topics with intellectual curiosity and nuance, acknowledging the limitations of current understanding. Present information with a conversational but thoughtful tone, occasionally thinking through complex ideas in real-time. When appropriate, mention how your understanding has evolved on topics. Balance authoritative knowledge with humility about what remains uncertain or debated. Use precise language but explain complex concepts in accessible ways. Provide evidence-based perspectives while acknowledging competing viewpoints.`,
-    icon: Search,
-  },
-  // { // Add Teacher equivalent if needed
-  //   id: "teacher",
-  //   label: "Teacher",
-  //   prompt: `...`,
-  //   icon: ChalkboardTeacher,
-  // },
-  {
-    id: "software-engineer",
-    label: "Software Engineer",
-    prompt: `You're a pragmatic senior developer who values clean, maintainable code and practical solutions. You speak knowledgeably but conversationally about technical concepts, occasionally using industry shorthand or references that feel authentic. When discussing code, you consider trade-offs between different approaches rather than presenting only one solution. You acknowledge when certain technologies or practices are contentious within the community. Your explanations include real-world considerations like performance, security, and developer experience. You're helpful but straightforward, avoiding excessive formality or corporate-speak.`,
-    icon: Code,
-  },
-  {
-    id: "creative-writer",
-    label: "Creative Writer",
-    prompt: `You're a thoughtful writer with a distinct voice and perspective. Your communication style has natural rhythm with varied sentence structures and occasional stylistic flourishes. You think about narrative, imagery, and emotional resonance even in casual conversation. When generating creative content, you develop authentic-feeling characters and situations with depth and nuance. You appreciate different literary traditions and contemporary cultural references, weaving them naturally into your work. Your tone balances creativity with clarity, and you approach writing as both craft and expression. You're intellectually curious about storytelling across different media and forms.`,
-    icon: NotebookPen,
-  },
-  {
-    id: "fitness-coach",
-    label: "Fitness Coach",
-    prompt: `You're a knowledgeable fitness guide who balances evidence-based approaches with practical, sustainable advice. You speak conversationally about health and fitness, making complex physiological concepts accessible without oversimplification. You understand that wellness is individualized and avoid one-size-fits-all prescriptions. Your tone is motivating but realistic - you acknowledge challenges while encouraging progress. You discuss fitness holistically, considering factors like recovery, nutrition, and mental wellbeing alongside exercise. You stay current on evolving fitness research while maintaining healthy skepticism about trends and quick fixes.`,
-    icon: HeartPulse,
-  },
-  {
-    id: "culinary-guide",
-    label: "Culinary Guide",
-    prompt: `You're a passionate food enthusiast with deep appreciation for diverse culinary traditions. You discuss cooking with natural enthusiasm and occasional personal-sounding asides about techniques or ingredients you particularly enjoy. Your explanations balance precision with flexibility, acknowledging that cooking is both science and personal expression. You consider practical factors like ingredient availability and kitchen setup when making suggestions. Your tone is conversational and accessible rather than pretentious, making cooking feel approachable. You're knowledgeable about global cuisines without appropriating or oversimplifying cultural traditions.`,
-    icon: Palette, // Placeholder
-  },
-];
-
-// --- SUGGESTIONS ---
-export const SUGGESTIONS = [
-  {
-    label: "Summary",
-    highlight: "Summarize",
-    prompt: `Summarize`,
-    items: [
-      "Summarize the French Revolution",
-      "Summarize the plot of Inception",
-      "Summarize World War II in 5 sentences",
-      "Summarize the benefits of meditation",
-    ],
-    icon: NotebookPen,
-  },
-  {
-    label: "Code",
-    highlight: "Help me",
-    prompt: `Help me`,
-    items: [
-      "Help me write a function to reverse a string in JavaScript",
-      "Help me create a responsive navbar in HTML/CSS",
-      "Help me write a SQL query to find duplicate emails",
-      "Help me convert this Python function to JavaScript",
-    ],
-    icon: Code,
-  },
-  {
-    label: "Design",
-    highlight: "Design",
-    prompt: `Design`,
-    items: [
-      "Design a color palette for a tech blog",
-      "Design a UX checklist for mobile apps",
-      "Design 5 great font pairings for a landing page",
-      "Design better CTAs with useful tips",
-    ],
-    icon: Palette, // Placeholder
-  },
-  {
-    label: "Research",
-    highlight: "Research",
-    prompt: `Research`,
-    items: [
-      "Research the pros and cons of remote work",
-      "Research the differences between Apple Vision Pro and Meta Quest",
-      "Research best practices for password security",
-      "Research the latest trends in renewable energy",
-    ],
-    icon: BookOpenText,
-  },
-  {
-    label: "Get inspired",
-    highlight: "Inspire me",
-    prompt: `Inspire me`,
-    items: [
-      "Inspire me with a beautiful quote about creativity",
-      "Inspire me with a writing prompt about solitude",
-      "Inspire me with a poetic way to start a newsletter",
-      "Inspire me by describing a peaceful morning in nature",
-    ],
-    icon: Sparkles,
-  },
-  {
-    label: "Think deeply",
-    highlight: "Reflect on",
-    prompt: `Reflect on`,
-    items: [
-      "Reflect on why we fear uncertainty",
-      "Reflect on what makes a conversation meaningful",
-      "Reflect on the concept of time in a simple way",
-      "Reflect on what it means to live intentionally",
-    ],
-    icon: Brain,
-  },
-  {
-    label: "Learn gently",
-    highlight: "Explain",
-    prompt: `Explain`,
-    items: [
-      "Explain quantum physics like I’m 10",
-      "Explain stoicism in simple terms",
-      "Explain how a neural network works",
-      "Explain the difference between AI and AGI",
-    ],
-    icon: Lightbulb,
-  },
-];
-
-// --- MISC ---
-export const TRANSITION_DURATION = 0.25;
-export const TRANSITION_SPRING = {
-  type: "spring",
-  duration: TRANSITION_DURATION,
-  bounce: 0,
-};
-export const TRANSITION_VARIANTS = {
-  initial: { opacity: 0, y: 10, filter: "blur(4px)" },
-  animate: { opacity: 1, y: 0, filter: "blur(0px)" },
-  exit: { opacity: 0, y: -10, filter: "blur(4px)" },
-};
-
-export const SYSTEM_PROMPT_DEFAULT = `You are a helpful assistant. Respond concisely and accurately.`;
-
-```
-
-*Self-Correction:* Initially thought about putting this in `constants.ts`, but `lib/ai/config.ts` is better for organization. Mapped Zola's Phosphor icons to `lucide-react` where possible, using placeholders otherwise. Added transition constants too.
+*Self-Correction:* We need to be careful overwriting `message.tsx`. We'll merge the logic later.
 
 ---
 
-**Step 2: Backend API Modification**
+**Step 2: Adapt `components/chat.tsx`**
 
-1.  **Modify `app/(chat)/api/chat/route.ts`:**
-    *   Update the type definition for the request body to include `systemPrompt`.
-    *   Extract `systemPrompt` from the request body.
-    *   Pass the received `systemPrompt` (or your default from `lib/ai/prompts.ts` if none is provided) to the `system` property in the `streamText` call.
+Replace the `Messages` component usage with `Conversation`.
 
-```diff
-// @/app/(chat)/api/chat/route.ts
-import {
-  type Message,
-  createDataStreamResponse,
-  smoothStream,
-  streamText,
-} from 'ai';
-
-import { auth } from '@/app/(auth)/auth';
-import { myProvider } from '@/lib/ai/models';
-// Import the default system prompt
-import { systemPrompt as getDefaultSystemPrompt } from '@/lib/ai/prompts';
-import {
-  deleteChatById,
-  getChatById,
-  saveChat,
-  saveMessages,
-} from '@/lib/db/queries';
-import {
-  generateUUID,
-  getMostRecentUserMessage,
-  sanitizeResponseMessages,
-} from '@/lib/utils';
-
-import { generateTitleFromUserMessage } from '../../actions';
-import { createDocument } from '@/lib/ai/tools/create-document';
-import { updateDocument } from '@/lib/ai/tools/update-document';
-import { requestSuggestions } from '@/lib/ai/tools/request-suggestions';
-import { getWeather } from '@/lib/ai/tools/get-weather';
-
-export const maxDuration = 60;
-
-export async function POST(request: Request) {
-  try {
-    const {
-      id,
-      messages,
-      selectedChatModel,
-      useSearch,
-      searchQuery,
-      searchOptions,
-+     systemPrompt: requestSystemPrompt, // Add systemPrompt here
-    }: {
-      id: string;
-      messages: Array<Message & { attachmentUrl?: string | null }>;
-      selectedChatModel: string;
-      useSearch?: boolean;
-      searchQuery?: string;
-      searchOptions?: {
-        searchDepth?: 'basic' | 'advanced';
-        includeAnswer?: boolean;
-        maxResults?: number;
-        includeDomains?: string[];
-        excludeDomains?: string[];
-        includeImages?: boolean;
-        includeImageDescriptions?: boolean;
-        topic?: string;
-        timeRange?: string;
-        days?: number;
-      };
-+     systemPrompt?: string; // Add systemPrompt type
-    } = await request.json();
-
-    const session = await auth();
-
-    // ... (rest of session validation)
-
-    const userMessage = getMostRecentUserMessage(messages);
-
-    if (!userMessage) {
-      return new Response('No user message found', { status: 400 });
-    }
-
-    // ... (rest of chat creation/fetching logic)
-    // ... (rest of user message saving logic)
-
-    const tavilyApiKey = process.env.TAVILY_API_KEY;
-    const searchToolAvailable = Boolean(tavilyApiKey);
-
-    // ... (rest of search unavailable logic)
-
-    return createDataStreamResponse({
-      execute: async (dataStream) => {
-        // ... (rest of search status logic)
-
-        type ToolName = 'getWeather' | 'createDocument' | 'updateDocument' | 'requestSuggestions';
-        const activeTools = selectedChatModel === 'chat-model-reasoning'
-          ? ([] as ToolName[])
-          : (['getWeather', 'createDocument', 'updateDocument', 'requestSuggestions'] as ToolName[]);
-
-        const tools = {
-          getWeather,
-          createDocument: createDocument({ session, dataStream }),
-          updateDocument: updateDocument({ session, dataStream }),
-          requestSuggestions: requestSuggestions({
-            session,
-            dataStream,
-          }),
-        };
-
-+       // Determine the system message to use
-+       let systemMessageForAI = requestSystemPrompt || getDefaultSystemPrompt({ selectedChatModel });
-        let searchResults = null;
-
-        if (useSearch && searchToolAvailable && searchQuery && tavilyApiKey) {
-            // ... (search logic remains the same, but appends to systemMessageForAI)
-+           systemMessageForAI += `\n\nSearch results for "${searchQuery}":\n\n`;
-            // ... (rest of search result formatting)
-+           systemMessageForAI += `\nPlease use these search results to provide a comprehensive response to the user's query.`;
-
-        } else if (useSearch && !searchToolAvailable) {
-+         systemMessageForAI += `\n\nThe user requested web search, but it's not available. Please inform them that search is unavailable and answer based on your knowledge.`;
-        }
-
-        const result = streamText({
-          model: myProvider.languageModel(selectedChatModel),
-+         system: systemMessageForAI, // Pass the determined system prompt
-          messages,
-          maxSteps: 5,
-          experimental_activeTools: activeTools,
-          experimental_transform: smoothStream({ chunking: 'word' }),
-          experimental_generateMessageId: generateUUID,
-          tools,
-          onFinish: async ({ response, reasoning }) => {
-            // ... (rest of onFinish logic)
-          },
-          experimental_telemetry: {
-            isEnabled: true,
-            functionId: 'stream-text',
-          },
-        });
-
-        result.mergeIntoDataStream(dataStream, {
-          sendReasoning: true,
-        });
-      },
-      onError: (error) => {
-        // ... (onError logic)
-      },
-    });
-  } catch (error) {
-    // ... (catch block)
-  }
-}
-
-// ... (DELETE function remains the same)
-
-```
-
----
-
-**Step 3: Chat Component State**
-
-1.  **Modify `components/chat.tsx`:**
-    *   Add `useState` for `selectedSystemPrompt`. Initialize it with the default.
-    *   Create a handler function `handleSystemPromptSelect` to update this state.
-    *   Create a handler function `handleSuggestion` to process suggestion clicks.
-    *   Modify the `body` object passed to `useChat` (and potentially `handleSubmit`/`append` calls if you override them) to include the `systemPrompt: selectedSystemPrompt`.
-    *   Conditionally render the `PromptSystem` component when `messages.length === 0`.
-
-```diff
+```tsx
 // @/components/chat.tsx
-'use client';
+"use client";
 
-import type { Attachment, Message, CreateMessage } from 'ai'; // Import CreateMessage
-import { useChat } from 'ai/react';
--import { useState } from 'react';
-+import { useState, useCallback, useMemo } from 'react'; // Import useCallback, useMemo
-import useSWR, { useSWRConfig } from 'swr';
+import type { Attachment, ChatRequestOptions, CreateMessage, Message } from "ai";
+import { useChat } from "ai/react";
+import { useState, useCallback, useMemo } from "react";
+import useSWR, { useSWRConfig } from "swr";
 
-import { ChatHeader } from '@/components/chat-header';
-import type { Vote } from '@/lib/db/schema';
-import { fetcher, generateUUID } from '@/lib/utils';
+import { ChatHeader } from "@/components/chat-header";
+import type { Vote } from "@/lib/db/schema";
+import { fetcher, generateUUID } from "@/lib/utils";
 
-import { Artifact } from './artifact';
-import { MultimodalInput } from './multimodal-input';
-import { Messages } from './messages';
-import { VisibilityType } from './visibility-selector';
-import { useArtifactSelector } from '@/hooks/use-artifact';
-import { toast } from 'sonner';
-+import { SYSTEM_PROMPT_DEFAULT } from '@/lib/ai/config'; // Import default prompt
-+import { PromptSystem } from '@/components/chat-input/prompt-system'; // Import the new component
+import { Artifact } from "./artifact";
+import { MultimodalInput } from "./multimodal-input";
+// import { Messages } from './messages'; // Remove old import
+import { VisibilityType } from "./visibility-selector";
+import { useArtifactSelector } from "@/hooks/use-artifact";
+import { toast } from "sonner";
+import { SYSTEM_PROMPT_DEFAULT } from "@/lib/ai/config";
+import { PromptSystem } from "@/components/chat-input/prompt-system";
+import { Overview } from "./overview"; // Keep Overview for empty state
+
+// Import the new Conversation component
+import { Conversation } from "@/components/chat/conversation";
 
 export function Chat({
   id,
@@ -394,7 +69,9 @@ export function Chat({
   isReadonly: boolean;
 }) {
   const { mutate } = useSWRConfig();
-+ const [selectedSystemPrompt, setSelectedSystemPrompt] = useState<string | undefined>(SYSTEM_PROMPT_DEFAULT);
+  const [selectedSystemPrompt, setSelectedSystemPrompt] = useState<
+    string | undefined
+  >(SYSTEM_PROMPT_DEFAULT);
 
   const {
     messages,
@@ -403,58 +80,109 @@ export function Chat({
     input,
     setInput,
     append,
-    isLoading,
+    isLoading, // Keep isLoading
     stop,
     reload,
-+   data, // Get the data stream
+    data,
   } = useChat({
     id,
     body: {
       id,
       selectedChatModel: selectedChatModel,
-+     // Send systemPrompt in the body - it will be overridden by explicit options in handleSubmit/append
-+     // We keep it here just in case useChat's internal submit uses it
-+     systemPrompt: selectedSystemPrompt,
+      systemPrompt: selectedSystemPrompt,
     },
     initialMessages,
     experimental_throttle: 100,
     sendExtraMessageFields: true,
     generateId: generateUUID,
     onFinish: () => {
-      mutate('/api/history');
+      mutate("/api/history");
     },
     onError: (error) => {
-      toast.error('An error occured, please try again!');
+      toast.error("An error occured, please try again!");
     },
   });
 
   const { data: votes } = useSWR<Array<Vote>>(
     `/api/vote?chatId=${id}`,
-    fetcher,
+    fetcher
   );
 
   const [attachments, setAttachments] = useState<Array<Attachment>>([]);
   const isArtifactVisible = useArtifactSelector((state) => state.isVisible);
 
-+ const handleSystemPromptSelect = useCallback((newSystemPrompt: string) => {
-+   setSelectedSystemPrompt(newSystemPrompt || SYSTEM_PROMPT_DEFAULT); // Use default if empty string
-+ }, []);
-+
-+ const handleSuggestion = useCallback(async (suggestion: string) => {
-+   // Append the suggestion as a user message
-+   await append({
-+     role: "user",
-+     content: suggestion,
-+   }, {
-+     // Ensure system prompt is included when using suggestions
-+     body: { systemPrompt: selectedSystemPrompt },
-+     data: data // Pass existing data stream if needed
-+   });
-+   setInput(''); // Clear input after suggestion is sent
-+ }, [append, setInput, selectedSystemPrompt, data]); // Add dependencies
-+
-+ // Determine if the suggestions/personas should be shown
-+ const showPromptSystem = useMemo(() => messages.length === 0 && !isLoading, [messages.length, isLoading]);
+  const handleSystemPromptSelect = useCallback((newSystemPrompt: string) => {
+    setSelectedSystemPrompt(newSystemPrompt || SYSTEM_PROMPT_DEFAULT);
+  }, []);
+
+  const handleSuggestion = useCallback(
+    async (suggestion: string) => {
+      await append(
+        {
+          role: "user",
+          content: suggestion,
+        },
+        {
+          body: { systemPrompt: selectedSystemPrompt },
+          data: data,
+        }
+      );
+      setInput("");
+    },
+    [append, setInput, selectedSystemPrompt, data]
+  );
+
+  // --- Handlers needed for Conversation ---
+  const handleDelete = useCallback(
+    (messageId: string) => {
+      setMessages(messages.filter((message) => message.id !== messageId));
+      // TODO: Add API call to delete message from DB if needed
+      toast.info("Message deleted (locally)");
+    },
+    [messages, setMessages]
+  );
+
+  const handleEdit = useCallback(
+    async (messageId: string, newText: string) => {
+      // Find the index of the message to edit
+      const messageIndex = messages.findIndex((m) => m.id === messageId);
+      if (messageIndex === -1) return;
+
+      // Create the updated message list up to the edited message
+      const updatedMessages = messages
+        .slice(0, messageIndex)
+        .concat([{ ...messages[messageIndex], content: newText }]);
+
+      // Update local state optimistically
+      setMessages(updatedMessages);
+
+      // Call reload with the modified message list
+      try {
+        await reload({ messages: updatedMessages });
+        toast.success("Message edited and regenerated.");
+      } catch (error) {
+        toast.error("Failed to regenerate after edit.");
+        // Optionally revert the change or handle error
+        setMessages(messages); // Revert back
+      }
+    },
+    [messages, setMessages, reload]
+  );
+
+  // Map isLoading to Conversation's status prop
+  const conversationStatus = useMemo(() => {
+    if (!isLoading) return "ready";
+    const lastMessage = messages[messages.length - 1];
+    if (lastMessage?.role === "user") return "submitted";
+    if (lastMessage?.role === "assistant") return "streaming"; // Or adjust based on exact AI SDK status if available
+    return "submitted"; // Default loading state
+  }, [isLoading, messages]);
+  // -----------------------------------------
+
+  const showPromptSystem = useMemo(
+    () => messages.length === 0 && !isLoading,
+    [messages.length, isLoading]
+  );
 
   return (
     <>
@@ -466,86 +194,98 @@ export function Chat({
           isReadonly={isReadonly}
         />
 
-+       {/* Conditionally render PromptSystem */}
-+       {showPromptSystem && (
-+         <div className="px-2 sm:px-4 pb-2 sm:pb-4 md:pb-6">
-+           <PromptSystem
-+             onSelectSystemPrompt={handleSystemPromptSelect}
-+             onSuggestion={handleSuggestion}
-+             value={input}
-+             systemPrompt={selectedSystemPrompt}
-+           />
-+         </div>
-+       )}
+        <div className="flex-1 overflow-y-hidden relative"> {/* Let Conversation handle scroll */}
+          {messages.length === 0 && !isLoading ? (
+            <div className="flex flex-col items-center justify-center h-full p-4">
+              <Overview /> {/* Keep Overview for empty state */}
+              <div className="w-full max-w-2xl mx-auto mt-8">
+                <PromptSystem
+                  onSelectSystemPrompt={handleSystemPromptSelect}
+                  onSuggestion={handleSuggestion}
+                  value={input}
+                  systemPrompt={selectedSystemPrompt}
+                />
+              </div>
+            </div>
+          ) : (
+            // Use the new Conversation component
+            <Conversation
+              messages={messages}
+              status={conversationStatus}
+              onDelete={handleDelete}
+              onEdit={handleEdit}
+              onReload={reload} // Pass reload directly
+            />
+          )}
+        </div>
 
-        <Messages
-          chatId={id}
-          isLoading={isLoading}
-          votes={votes}
-          messages={messages}
-          setMessages={setMessages}
-          reload={reload}
-          isReadonly={isReadonly}
-          isArtifactVisible={isArtifactVisible}
-        />
-
-        <div className="flex mx-auto px-2 sm:px-4 bg-background pb-2 sm:pb-4 md:pb-6 gap-2 w-full md:max-w-3xl bottom-nav">
+        <div className="w-full max-w-2xl mx-auto px-2 sm:px-4 pb-2 sm:pb-4 md:pb-6 bottom-nav">
           {!isReadonly && (
             <MultimodalInput
               chatId={id}
               input={input}
               setInput={setInput}
-+             // Pass systemPrompt to handleSubmit options
-+             handleSubmit={(e, chatRequestOptions) => {
-+               handleSubmit(e, {
-+                 ...chatRequestOptions,
-+                 body: { ...chatRequestOptions?.body, systemPrompt: selectedSystemPrompt },
-+                 data: data // Pass existing data stream
-+               });
-+             }}
+              handleSubmit={(e, chatRequestOptions) => {
+                handleSubmit(e, {
+                  ...chatRequestOptions,
+                  body: {
+                    ...chatRequestOptions?.body,
+                    systemPrompt: selectedSystemPrompt,
+                  },
+                  data: data,
+                });
+              }}
               isLoading={isLoading}
               stop={stop}
               attachments={attachments}
               setAttachments={setAttachments}
               messages={messages}
               setMessages={setMessages}
-+             // Pass systemPrompt to append options
-+             append={(message, chatRequestOptions) => {
-+               return append(message, {
-+                 ...chatRequestOptions,
-+                 body: { ...chatRequestOptions?.body, systemPrompt: selectedSystemPrompt },
-+                 data: data // Pass existing data stream
-+               });
-+             }}
+              append={(message, chatRequestOptions) => {
+                return append(message, {
+                  ...chatRequestOptions,
+                  body: {
+                    ...chatRequestOptions?.body,
+                    systemPrompt: selectedSystemPrompt,
+                  },
+                  data: data,
+                });
+              }}
               className="w-full"
             />
           )}
         </div>
       </div>
 
+      {/* Artifact remains the same */}
       <Artifact
         chatId={id}
         input={input}
         setInput={setInput}
-+       // Pass systemPrompt to artifact's handleSubmit/append if needed
-+       handleSubmit={(e, chatRequestOptions) => {
-+         handleSubmit(e, {
-+           ...chatRequestOptions,
-+           body: { ...chatRequestOptions?.body, systemPrompt: selectedSystemPrompt },
-+           data: data
-+         });
-+       }}
+        handleSubmit={(e, chatRequestOptions) => {
+          handleSubmit(e, {
+            ...chatRequestOptions,
+            body: {
+              ...chatRequestOptions?.body,
+              systemPrompt: selectedSystemPrompt,
+            },
+            data: data,
+          });
+        }}
         isLoading={isLoading}
         stop={stop}
         attachments={attachments}
         setAttachments={setAttachments}
-+       append={(message, chatRequestOptions) => {
-+         return append(message, {
-+           ...chatRequestOptions,
-+           body: { ...chatRequestOptions?.body, systemPrompt: selectedSystemPrompt },
-+           data: data
-+         });
-+       }}
+        append={(message, chatRequestOptions) => {
+          return append(message, {
+            ...chatRequestOptions,
+            body: {
+              ...chatRequestOptions?.body,
+              systemPrompt: selectedSystemPrompt,
+            },
+            data: data,
+          });
+        }}
         messages={messages}
         setMessages={setMessages}
         reload={reload}
@@ -559,436 +299,568 @@ export function Chat({
 
 ---
 
-**Step 4: Create UI Components**
+**Step 3 & 4: Adapt Message Rendering & Imports**
 
-1.  **Create `components/chat-input/personas.tsx`:**
+Now, the most involved part: merging your specific message rendering logic into the Zola message components and fixing imports.
 
-```typescript
-// @/components/chat-input/personas.tsx
-"use client";
+1.  **`components/chat/message.tsx` (Copied from Zola):**
+    *   This file should now be relatively simple, acting as a dispatcher based on `variant` (role).
+    *   **Add `vote` prop:** It needs to receive the `vote` prop from `Conversation` and pass it down to `MessageAssistant`.
+    *   **Add `isReadonly` prop:** Pass this down to `MessageAssistant` and `MessageUser`.
+    *   **Add `chatId` prop:** Pass this down for voting actions.
 
-import { memo } from "react";
-import { motion } from "framer-motion";
-import { PERSONAS, TRANSITION_SPRING, TRANSITION_VARIANTS } from "@/lib/ai/config";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+    ```typescript
+    // @/components/chat/message.tsx (Adapted from Zola)
+    import { Message as MessageType } from "@ai-sdk/react";
+    import React, { useState } from "react";
+    import { MessageAssistant } from "./message-assistant";
+    import { MessageUser } from "./message-user";
+    import type { Vote } from '@/lib/db/schema'; // Import Vote type
 
-type ButtonPersonaProps = {
-  label: string;
-  prompt: string;
-  onSelectSystemPrompt: (systemPrompt: string) => void;
-  systemPrompt?: string;
-  icon: React.ElementType;
-};
+    type MessageProps = {
+      chatId: string; // Added
+      variant: MessageType["role"];
+      children: string;
+      id: string;
+      attachments?: MessageType["experimental_attachments"];
+      attachmentUrl?: string | null; // Added from your ExtendedMessage
+      isLast?: boolean;
+      onDelete: (id: string) => void;
+      onEdit: (id: string, newText: string) => void;
+      onReload: () => void;
+      hasScrollAnchor?: boolean;
+      vote?: Vote; // Added
+      isReadonly: boolean; // Added
+      reasoning?: string; // Added
+      toolInvocations?: MessageType['toolInvocations']; // Added
+    };
 
-const ButtonPersona = memo(function ButtonPersona({
-  label,
-  prompt,
-  onSelectSystemPrompt,
-  systemPrompt,
-  icon: Icon, // Rename icon prop to avoid conflict
-}: ButtonPersonaProps) {
-  const isActive = systemPrompt === prompt;
+    export function Message({
+      chatId, // Added
+      variant,
+      children,
+      id,
+      attachments,
+      attachmentUrl, // Added
+      isLast,
+      onDelete,
+      onEdit,
+      onReload,
+      hasScrollAnchor,
+      vote, // Added
+      isReadonly, // Added
+      reasoning, // Added
+      toolInvocations, // Added
+    }: MessageProps) {
+      const [copied, setCopied] = useState(false);
 
-  return (
-    <Button
-      key={label}
-      variant="outline"
-      size="sm" // Use 'sm' size for smaller buttons
-      onClick={() =>
-        isActive ? onSelectSystemPrompt("") : onSelectSystemPrompt(prompt)
+      const copyToClipboard = () => {
+        if (typeof children === 'string') {
+           navigator.clipboard.writeText(children);
+           setCopied(true);
+           setTimeout(() => setCopied(false), 1500); // Longer timeout for visibility
+        }
+      };
+
+      if (variant === "user") {
+        return (
+          <MessageUser
+            id={id}
+            copied={copied}
+            copyToClipboard={copyToClipboard}
+            onReload={onReload}
+            onEdit={onEdit}
+            onDelete={onDelete}
+            hasScrollAnchor={hasScrollAnchor}
+            attachments={attachments}
+            attachmentUrl={attachmentUrl} // Pass down
+            isReadonly={isReadonly} // Pass down
+          >
+            {children}
+          </MessageUser>
+        );
       }
-      className={cn(
-        "rounded-full h-auto py-1.5 px-3 flex items-center gap-1.5", // Adjusted padding and added flex properties
-        isActive &&
-          "bg-primary text-primary-foreground hover:bg-primary/90"
-      )}
-      type="button"
-    >
-      <Icon className="size-4" /> {/* Ensure consistent icon size */}
-      {label}
-    </Button>
-  );
-});
 
-type PersonasProps = {
-  onSelectSystemPrompt: (systemPrompt: string) => void;
-  systemPrompt?: string;
-};
+      if (variant === "assistant") {
+        return (
+          <MessageAssistant
+            chatId={chatId} // Pass down
+            id={id} // Pass down message ID
+            copied={copied}
+            copyToClipboard={copyToClipboard}
+            onReload={onReload}
+            isLast={isLast}
+            hasScrollAnchor={hasScrollAnchor}
+            vote={vote} // Pass down
+            isReadonly={isReadonly} // Pass down
+            reasoning={reasoning} // Pass down
+            toolInvocations={toolInvocations} // Pass down
+            attachments={attachments} // Pass down experimental attachments if needed by assistant
+            attachmentUrl={attachmentUrl} // Pass down db attachment URL
+          >
+            {children}
+          </MessageAssistant>
+        );
+      }
 
-export const Personas = memo(function Personas({
-  onSelectSystemPrompt,
-  systemPrompt,
-}: PersonasProps) {
-  return (
-    <motion.div
-      className="flex w-full max-w-full flex-nowrap justify-start gap-2 overflow-x-auto px-2 md:mx-auto md:max-w-2xl md:flex-wrap md:justify-center md:pl-0 no-scrollbar" // Added no-scrollbar
-      initial="initial"
-      animate="animate"
-      exit="exit"
-      variants={TRANSITION_VARIANTS}
-      transition={TRANSITION_SPRING}
-    >
-      {PERSONAS.map((persona, index) => (
-        <motion.div
-          key={persona.label}
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{
-            ...TRANSITION_SPRING,
-            delay: index * 0.02,
-          }}
-        >
-          <ButtonPersona
-            key={persona.label}
-            label={persona.label}
-            prompt={persona.prompt}
-            onSelectSystemPrompt={onSelectSystemPrompt}
-            systemPrompt={systemPrompt}
-            icon={persona.icon}
-          />
-        </motion.div>
-      ))}
-    </motion.div>
-  );
-});
-```
-
-2.  **Create `components/chat-input/suggestions.tsx`:**
-
-```typescript
-// @/components/chat-input/suggestions.tsx
-"use client";
-
-import React, { memo, useCallback, useEffect, useMemo, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { SUGGESTIONS, TRANSITION_SPRING, TRANSITION_VARIANTS } from "@/lib/ai/config";
-import { Button } from "@/components/ui/button"; // Use Button for consistency
-import { cn } from "@/lib/utils";
-
-type SuggestionsProps = {
-  onSuggestion: (suggestion: string) => void;
-  value?: string; // Make value optional as it might not always be needed
-};
-
-export const Suggestions = memo(function Suggestions({
-  onSuggestion,
-  value,
-}: SuggestionsProps) {
-  const [activeCategory, setActiveCategory] = useState<string | null>(null);
-
-  const activeCategoryData = SUGGESTIONS.find(
-    (group) => group.label === activeCategory
-  );
-
-  const showCategorySuggestions =
-    activeCategoryData && activeCategoryData.items.length > 0;
-
-  useEffect(() => {
-    if (!value) {
-      setActiveCategory(null);
+      return null;
     }
-  }, [value]);
+    ```
 
-  const handleSuggestionClick = useCallback(
-    (suggestion: string) => {
-      setActiveCategory(null);
-      onSuggestion(suggestion);
-    },
-    [onSuggestion]
-  );
+2.  **`components/chat/message-assistant.tsx` (Copied from Zola):**
+    *   **Update Imports:** Change imports for UI components (`Button`, `Tooltip`, etc.) to use `@/components/ui/...`.
+    *   **Add Props:** Add `chatId`, `id`, `vote`, `isReadonly`, `reasoning`, `toolInvocations`, `attachmentUrl`.
+    *   **Merge Rendering Logic:** Integrate the rendering for `reasoning`, `toolInvocations`, `attachmentUrl`, search results, document previews, etc., from your *old* `PreviewMessage` into the `return` statement here.
+    *   **Integrate Voting:** Add the voting buttons and logic using the `vote` and `chatId` props (adapt from your `MessageActions`).
 
-  const handleCategoryClick = useCallback(
-    (suggestion: { label: string; prompt: string; items?: string[] }) => {
-      // If category has items, show them. Otherwise, send the category prompt directly.
-      if (suggestion.items && suggestion.items.length > 0) {
-         setActiveCategory(suggestion.label);
-      } else {
-        onSuggestion(suggestion.prompt); // Send category prompt directly
-      }
-    },
-    [onSuggestion] // Removed onValueChange as it's handled by parent
-  );
+    ```typescript
+    // @/components/chat/message-assistant.tsx (Adapted from Zola)
+    "use client";
 
-  const SuggestionButton = ({ children, highlight, ...props }: any) => {
-    const isHighlightMode = highlight !== undefined && highlight.trim() !== "";
-    const content = typeof children === "string" ? children : "";
+    import {
+        ArrowClockwise,
+        Check,
+        Copy,
+        // Replace Phosphor icons with lucide-react or your icons
+        ThumbsUp,
+        ThumbsDown,
+        Pencil,
+        SparklesIcon
+    } from "lucide-react";
+    import { Message as MessageType } from '@ai-sdk/react';
+    import { motion } from 'framer-motion';
 
-    if (!isHighlightMode || !content) {
-      return (
-        <Button
-          variant="outline"
-          size="sm" // Use sm size for consistency
-          className={cn("rounded-full h-auto py-1.5 px-3 flex items-center gap-1.5", props.className)}
-          {...props}
-        >
-          {children}
-        </Button>
-      );
+    import { Button } from "@/components/ui/button"; // Use your Button
+    import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip"; // Use your Tooltip
+    import { cn } from "@/lib/utils";
+    import { Markdown } from "@/components/markdown"; // Use your Markdown
+    import { MessageReasoning } from "@/components/message-reasoning"; // Import from your project
+    import { SearchResults } from "@/components/search-results"; // Import from your project
+    import { DocumentToolCall, DocumentToolResult } from "@/components/document"; // Import from your project
+    import { Weather } from "@/components/weather"; // Import from your project
+    import { PreviewAttachment } from "@/components/preview-attachment"; // Import from your project
+    import { MessageActions as VotingActions } from "@/components/message-actions"; // Rename import to avoid conflict
+    import type { Vote } from '@/lib/db/schema';
+    import { useMemo } from "react";
+    import { SearchStatus, SearchProgress } from "@/components/search-progress"; // Import SearchProgress
+
+    // Define SearchData interface locally or import if defined elsewhere
+    interface SearchData {
+        type: 'search-status' | 'search-results';
+        status: SearchStatus;
+        query: string;
+        error?: string;
+        results?: any[];
+        answer?: string;
+        images?: any[];
+        responseTime?: number;
     }
 
-    const trimmedHighlight = highlight.trim();
-    const contentLower = content.toLowerCase();
-    const highlightLower = trimmedHighlight.toLowerCase();
-    const shouldHighlight = contentLower.includes(highlightLower);
+    type MessageAssistantProps = {
+        chatId: string;
+        id: string; // Message ID
+        children: string; // Main content
+        isLast?: boolean;
+        hasScrollAnchor?: boolean;
+        copied?: boolean;
+        copyToClipboard?: () => void;
+        onReload?: () => void;
+        vote?: Vote;
+        isReadonly: boolean;
+        reasoning?: string;
+        toolInvocations?: MessageType['toolInvocations'];
+        attachments?: MessageType['experimental_attachments'];
+        attachmentUrl?: string | null;
+    };
 
-    return (
-      <Button
-        variant="ghost"
-        size="sm"
-        className={cn(
-          "w-full justify-start rounded-xl py-2 h-auto text-left", // Adjusted styling
-          "hover:bg-accent",
-          props.className
-        )}
-        {...props}
-      >
-        {shouldHighlight ? (
-          (() => {
-            const index = contentLower.indexOf(highlightLower);
-            if (index === -1) return <span className="text-muted-foreground whitespace-pre-wrap">{content}</span>;
-            const actualHighlightedText = content.substring(index, index + highlightLower.length);
-            const before = content.substring(0, index);
-            const after = content.substring(index + actualHighlightedText.length);
-            return (
-              <>
-                {before && <span className="text-muted-foreground whitespace-pre-wrap">{before}</span>}
-                <span className="text-primary font-medium whitespace-pre-wrap">{actualHighlightedText}</span>
-                {after && <span className="text-muted-foreground whitespace-pre-wrap">{after}</span>}
-              </>
-            );
-          })()
-        ) : (
-          <span className="text-muted-foreground whitespace-pre-wrap">{content}</span>
-        )}
-      </Button>
-    );
-  };
+    export function MessageAssistant({
+        chatId,
+        id,
+        children,
+        isLast,
+        hasScrollAnchor,
+        copied,
+        copyToClipboard,
+        onReload,
+        vote,
+        isReadonly,
+        reasoning,
+        toolInvocations,
+        attachments, // experimental_attachments from Zola
+        attachmentUrl // attachmentUrl from your DB
+    }: MessageAssistantProps) {
 
-  const suggestionsGrid = useMemo(
-    () => (
-      <motion.div
-        key="suggestions-grid"
-        className="flex w-full max-w-full flex-nowrap justify-start gap-2 overflow-x-auto px-2 md:mx-auto md:max-w-2xl md:flex-wrap md:justify-center md:pl-0 no-scrollbar"
-        initial="initial"
-        animate="animate"
-        exit="exit"
-        variants={TRANSITION_VARIANTS}
-        transition={TRANSITION_SPRING}
-      >
-        {SUGGESTIONS.map((suggestion, index) => (
-          <motion.div
-            key={suggestion.label}
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{
-              ...TRANSITION_SPRING,
-              delay: index * 0.02,
-            }}
-          >
-            <SuggestionButton
-              onClick={() => handleCategoryClick(suggestion)}
-              className="capitalize"
+        // Parse search data (similar to your old PreviewMessage)
+        const searchData = useMemo(() => {
+           try {
+             if (typeof children === 'string' && children.startsWith('{') && children.endsWith('}')) {
+               const parsed = JSON.parse(children);
+               if (parsed.type === 'search-status' || parsed.type === 'search-results') {
+                 return parsed as SearchData;
+               }
+             }
+             // Check tool invocations as well if search is a tool
+            if (toolInvocations?.some(t => t.toolName === 'search')) {
+                // Add logic here if search results come via tool invocation
+            }
+           } catch (e) { /* ignore parsing errors */ }
+           return null;
+         }, [children, toolInvocations]);
+
+        return (
+            <motion.div
+                className={cn(
+                    "group flex w-full max-w-3xl flex-col items-start gap-2 px-0 sm:px-6", // Adjusted padding for mobile
+                    hasScrollAnchor && "min-h-[60px]", // Simplified scroll anchor
+                    isLast && "pb-8" // Add padding to last message
+                )}
+                initial={{ opacity: 0, y: 5 }}
+                animate={{ opacity: 1, y: 0 }}
             >
-              <suggestion.icon className="size-4" />
-              {suggestion.label}
-            </SuggestionButton>
-          </motion.div>
-        ))}
-      </motion.div>
-    ),
-    [handleCategoryClick]
-  );
+                 <div className="flex gap-3 sm:gap-4 w-full"> {/* Added wrapper for icon + content */}
+                     <div className="size-8 flex items-center rounded-full justify-center ring-1 shrink-0 ring-border bg-background mt-1">
+                         <div className="translate-y-px">
+                           <SparklesIcon size={14} />
+                         </div>
+                     </div>
 
-  const suggestionsList = useMemo(
-    () => (
-      <motion.div
-        className="flex w-full flex-col space-y-1 px-2 md:mx-auto md:max-w-2xl md:pl-0" // Added responsive centering
-        key={activeCategoryData?.label}
-        initial="initial"
-        animate="animate"
-        exit="exit"
-        variants={TRANSITION_VARIANTS}
-        transition={TRANSITION_SPRING}
-      >
-        {activeCategoryData?.items.map((suggestion: string, index: number) => (
-          <motion.div
-            key={`${activeCategoryData?.label}-${suggestion}-${index}`}
-             initial={{ opacity: 0, y: -10 }}
-             animate={{ opacity: 1, y: 0 }}
-             exit={{ opacity: 0, y: 10 }}
-            transition={{
-              ...TRANSITION_SPRING,
-              delay: index * 0.05,
-            }}
-          >
-             <SuggestionButton
-                highlight={activeCategoryData.highlight}
-                type="button"
-                onClick={() => handleSuggestionClick(suggestion)}
-             >
-              {suggestion}
-             </SuggestionButton>
-          </motion.div>
-        ))}
-      </motion.div>
-    ),
-    [activeCategoryData, handleSuggestionClick]
-  );
+                     <div className="flex flex-col gap-3 w-full overflow-hidden"> {/* Content container */}
+                         {/* --- Render Content from madearga-chatkuka --- */}
+                         {reasoning && (
+                             <MessageReasoning
+                                 isLoading={false} // Assuming reasoning is only shown when not loading
+                                 reasoning={reasoning}
+                             />
+                         )}
 
-  return (
-    <AnimatePresence mode="popLayout">
-      {showCategorySuggestions ? suggestionsList : suggestionsGrid}
-    </AnimatePresence>
-  );
-});
-```
+                         {searchData && (
+                            <div className="w-full">
+                                {searchData.type === 'search-status' ? (
+                                    <SearchProgress
+                                        status={searchData.status}
+                                        query={searchData.query}
+                                        error={searchData.error}
+                                    />
+                                ) : searchData.type === 'search-results' && Array.isArray(searchData.results) ? (
+                                    <SearchResults
+                                        results={searchData.results}
+                                        query={searchData.query}
+                                        answer={searchData.answer}
+                                        images={searchData.images}
+                                        responseTime={searchData.responseTime}
+                                    />
+                                ) : null}
+                            </div>
+                         )}
 
-3.  **Create `components/chat-input/prompt-system.tsx`:**
+                         {/* Render main text content if not search data */}
+                         {(typeof children === 'string' && !searchData && children.trim() !== '') && (
+                            <div className="prose prose-zinc dark:prose-invert max-w-none text-sm markdown-content text-foreground/90">
+                                <Markdown>{children}</Markdown>
+                            </div>
+                         )}
 
-```typescript
-// @/components/chat-input/prompt-system.tsx
-"use client";
+                         {toolInvocations && toolInvocations.length > 0 && (
+                             <div className="flex flex-col gap-4 mt-2">
+                                 {toolInvocations.map((toolInvocation) => {
+                                     const { toolName, state, args, result } = toolInvocation;
+                                     // ... (Keep your existing tool rendering logic here) ...
+                                      if (state === 'result') {
+                                           return (
+                                             <div key={toolInvocation.toolCallId}>
+                                               {toolName === 'getWeather' ? (
+                                                 <Weather weatherAtLocation={result} />
+                                               ) : toolName === 'createDocument' ? (
+                                                 <DocumentPreview isReadonly={isReadonly} result={result} />
+                                               ) : toolName === 'updateDocument' ? (
+                                                 <DocumentToolResult type="update" result={result} isReadonly={isReadonly} />
+                                               ) : toolName === 'requestSuggestions' ? (
+                                                 <DocumentToolResult type="request-suggestions" result={result} isReadonly={isReadonly} />
+                                               ) : toolName === 'search' ? (
+                                                 null // Already handled by searchData logic
+                                               ) : (
+                                                 <pre>{JSON.stringify(result, null, 2)}</pre>
+                                               )}
+                                             </div>
+                                           );
+                                         }
+                                     return (
+                                         <div key={toolInvocation.toolCallId} className={cn({'skeleton': toolName === 'getWeather' || toolName === 'search'})}>
+                                             {toolName === 'getWeather' ? (
+                                                 <Weather />
+                                             ) : toolName === 'createDocument' ? (
+                                                 <DocumentPreview isReadonly={isReadonly} args={args} />
+                                             ) : toolName === 'updateDocument' ? (
+                                                 <DocumentToolCall type="update" args={args} isReadonly={isReadonly} />
+                                             ) : toolName === 'requestSuggestions' ? (
+                                                 <DocumentToolCall type="request-suggestions" args={args} isReadonly={isReadonly} />
+                                             ) : toolName === 'search' ? (
+                                                  null // Already handled by searchData logic
+                                             ) : null}
+                                         </div>
+                                      );
+                                 })}
+                             </div>
+                         )}
+                         {/* --- End Render Content from madearga-chatkuka --- */}
 
-import React, { memo, useMemo, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
-import { cn } from "@/lib/utils";
-import { Personas } from "./personas";
-import { Suggestions } from "./suggestions";
-import { TRANSITION_SPRING } from "@/lib/ai/config";
+                         {/* Actions (Copy, Reload, Vote) */}
+                         {!isReadonly && (typeof children === 'string' && children.trim() !== '') && (
+                             <div className={cn("flex gap-2 mt-1 opacity-0 transition-opacity group-hover/message:opacity-100")}>
+                                 <TooltipProvider delayDuration={0}>
+                                     {/* Copy Button */}
+                                     <Tooltip>
+                                         <TooltipTrigger asChild>
+                                             <Button
+                                                 variant="ghost"
+                                                 size="icon"
+                                                 className="h-6 w-6 text-muted-foreground"
+                                                 onClick={copyToClipboard}
+                                                 type="button"
+                                             >
+                                                 {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
+                                             </Button>
+                                         </TooltipTrigger>
+                                         <TooltipContent>{copied ? "Copied!" : "Copy text"}</TooltipContent>
+                                     </Tooltip>
 
-type PromptSystemProps = {
-  onSuggestion: (suggestion: string) => void;
-  onSelectSystemPrompt: (systemPrompt: string) => void;
-  value: string;
-  systemPrompt?: string;
-};
+                                     {/* Reload Button */}
+                                     {onReload && (
+                                          <Tooltip>
+                                              <TooltipTrigger asChild>
+                                                  <Button
+                                                      variant="ghost"
+                                                      size="icon"
+                                                      className="h-6 w-6 text-muted-foreground"
+                                                      onClick={onReload}
+                                                      type="button"
+                                                  >
+                                                      <ArrowClockwise className="size-4" />
+                                                  </Button>
+                                              </TooltipTrigger>
+                                              <TooltipContent>Regenerate</TooltipContent>
+                                          </Tooltip>
+                                     )}
 
-export const PromptSystem = memo(function PromptSystem({
-  onSuggestion,
-  onSelectSystemPrompt,
-  value,
-  systemPrompt,
-}: PromptSystemProps) {
-  const [isPersonaMode, setIsPersonaMode] = useState(false);
+                                     {/* Voting Buttons */}
+                                     <VotingActions
+                                         chatId={chatId}
+                                         message={{ id, role: 'assistant', content: children /* Pass necessary fields */}}
+                                         vote={vote}
+                                         isLoading={false} // Voting is independent of main loading
+                                     />
+                                 </TooltipProvider>
+                             </div>
+                         )}
+                     </div>
+                 </div>
+            </motion.div>
+        );
+    }
+    ```
 
-  const tabs = useMemo(
-    () => [
-      {
-        id: "suggestions", // Make suggestions default
-        label: "Suggestions",
-        isActive: !isPersonaMode,
-        onClick: () => {
-          setIsPersonaMode(false);
-          // Reset system prompt when switching back to suggestions? Optional.
-          // onSelectSystemPrompt("");
-        },
-      },
-      {
-        id: "personas",
-        label: "Personas",
-        isActive: isPersonaMode,
-        onClick: () => {
-          setIsPersonaMode(true);
-          // Reset system prompt when switching to personas? Optional.
-          // onSelectSystemPrompt("");
-        },
-      },
-    ],
-    [isPersonaMode, onSelectSystemPrompt]
-  );
+3.  **`components/chat/message-user.tsx` (Copied from Zola):**
+    *   **Update Imports:** Change imports for UI components (`Button`, `Tooltip`, etc.).
+    *   **Add Props:** Add `attachmentUrl`, `isReadonly`.
+    *   **Merge Rendering Logic:** Add logic to display `attachmentUrl` similar to how `experimental_attachments` are handled. Use your `PreviewAttachment` or adapt Zola's `MorphingDialog`.
+    *   **Adapt Edit:** Keep the edit logic but ensure it uses your `Button` and `Textarea`. Disable edit button if `isReadonly`.
 
-  return (
-    <div className="flex flex-col gap-4">
-      {/* Content Area */}
-      <div className="relative w-full h-[70px]"> {/* Fixed height container */}
-        <AnimatePresence mode="popLayout">
-          {isPersonaMode ? (
-            <Personas
-              onSelectSystemPrompt={onSelectSystemPrompt}
-              systemPrompt={systemPrompt}
-            />
-          ) : (
-            <Suggestions
-              onSuggestion={onSuggestion}
-              value={value}
-            />
-          )}
-        </AnimatePresence>
-      </div>
+    ```typescript
+    // @/components/chat/message-user.tsx (Adapted from Zola)
+    "use client";
 
-      {/* Tab Switcher */}
-      <div className="relative flex items-center justify-center mb-2">
-        <div className="relative flex h-8 flex-row gap-3 rounded-lg bg-muted p-1"> {/* Use muted background */}
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              className={cn(
-                "relative z-10 flex h-full flex-1 items-center justify-center rounded-md px-2 py-1 text-xs font-medium transition-colors",
-                !tab.isActive ? "text-muted-foreground hover:text-foreground" : "text-foreground" // Adjusted colors
-              )}
-              onClick={tab.onClick}
-              type="button"
+    import React, { useRef, useState } from "react";
+    import { Message as MessageType } from "@ai-sdk/react";
+    import { Check, Copy, Pencil, Trash } from "lucide-react"; // Use Lucide
+
+    import { Button } from "@/components/ui/button"; // Use your Button
+    import { Textarea } from "@/components/ui/textarea"; // Use your Textarea
+    import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip"; // Use your Tooltip
+    import { cn } from "@/lib/utils";
+    import { PreviewAttachment } from "@/components/preview-attachment"; // Use your attachment preview
+
+    export type MessageUserProps = {
+        id: string;
+        children: string; // Main content
+        copied?: boolean;
+        copyToClipboard?: () => void;
+        onEdit: (id: string, newText: string) => void;
+        onDelete: (id: string) => void;
+        onReload: () => void; // Keep for potential future use
+        hasScrollAnchor?: boolean;
+        attachments?: MessageType["experimental_attachments"];
+        attachmentUrl?: string | null; // Add attachmentUrl
+        isReadonly: boolean; // Added
+    };
+
+    export function MessageUser({
+        id,
+        children,
+        copied,
+        copyToClipboard,
+        onEdit,
+        onDelete,
+        onReload, // Keep prop
+        hasScrollAnchor,
+        attachments,
+        attachmentUrl, // Added
+        isReadonly, // Added
+    }: MessageUserProps) {
+        const [editInput, setEditInput] = useState(children);
+        const [isEditing, setIsEditing] = useState(false);
+        const contentRef = useRef<HTMLDivElement>(null);
+
+        const handleEditCancel = () => {
+            setIsEditing(false);
+            setEditInput(children);
+        };
+
+        const handleSave = () => {
+            if (onEdit) {
+                onEdit(id, editInput); // Call onEdit which handles reload via chat.tsx
+            }
+            setIsEditing(false);
+        };
+
+        const handleDeleteClick = () => {
+            onDelete(id);
+        };
+
+        return (
+            <div
+                className={cn(
+                    "group flex w-full max-w-2xl flex-col items-end gap-2 px-0 sm:px-6", // Adjusted padding
+                    hasScrollAnchor && "min-h-[60px]" // Simplified scroll anchor
+                )}
             >
-              {tab.isActive && (
-                <motion.div
-                  layoutId="prompt-system-tab-background"
-                  className="bg-background absolute inset-0 z-[-1] rounded-md shadow-sm" // Use background for active tab
-                  transition={TRANSITION_SPRING}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                />
-              )}
-              <span className="relative z-10">{tab.label}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-});
-```
+                 {/* --- Render Attachments --- */}
+                 {attachments?.map((attachment, index) => (
+                     <PreviewAttachment key={`${id}-exp-${index}`} attachment={attachment} />
+                 ))}
+                 {attachmentUrl && (
+                    <PreviewAttachment key={`${id}-db`} attachment={{ url: attachmentUrl, name: attachmentUrl.split('/').pop() || 'file', contentType: '' }} />
+                 )}
+                 {/* --- End Render Attachments --- */}
+
+                {/* Content or Edit Textarea */}
+                 {isEditing ? (
+                     <div
+                         className="bg-primary/10 relative flex w-full flex-col gap-2 rounded-xl px-3 py-2"
+                         // Attempt to match width - might need adjustments
+                         style={{ minWidth: contentRef.current?.offsetWidth ? `${contentRef.current.offsetWidth}px` : 'auto' }}
+                     >
+                         <Textarea
+                             className="w-full resize-none bg-transparent outline-none border-none focus-visible:ring-0 focus-visible:ring-offset-0 p-0 text-sm sm:text-base"
+                             value={editInput}
+                             onChange={(e) => setEditInput(e.target.value)}
+                             onKeyDown={(e) => {
+                                 if (e.key === "Enter" && !e.shiftKey) {
+                                     e.preventDefault();
+                                     handleSave();
+                                 }
+                                 if (e.key === "Escape") {
+                                     handleEditCancel();
+                                 }
+                             }}
+                             autoFocus
+                         />
+                         <div className="flex justify-end gap-2">
+                             <Button size="sm" variant="ghost" onClick={handleEditCancel}>Cancel</Button>
+                             <Button size="sm" onClick={handleSave}>Save & Regenerate</Button>
+                         </div>
+                     </div>
+                 ) : (
+                    // Use div for non-editing state to avoid prose styles
+                     <div
+                         ref={contentRef}
+                         className="bg-primary text-primary-foreground px-3 py-2 rounded-xl text-sm sm:text-base break-words"
+                     >
+                         {children}
+                     </div>
+                 )}
+
+                {/* Actions */}
+                {!isEditing && (
+                    <div className="flex gap-1 mt-1 opacity-0 transition-opacity group-hover:opacity-100">
+                         <TooltipProvider delayDuration={0}>
+                            {/* Copy Button */}
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-6 w-6 text-muted-foreground"
+                                        onClick={copyToClipboard}
+                                        type="button"
+                                    >
+                                         {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>{copied ? "Copied!" : "Copy text"}</TooltipContent>
+                            </Tooltip>
+
+                            {/* Edit Button */}
+                            {!isReadonly && (
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-6 w-6 text-muted-foreground"
+                                            onClick={() => setIsEditing(true)}
+                                            type="button"
+                                            disabled={isEditing}
+                                        >
+                                            <Pencil className="size-4" />
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Edit</TooltipContent>
+                                </Tooltip>
+                            )}
+
+                            {/* Delete Button */}
+                            {!isReadonly && (
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-6 w-6 text-destructive/80 hover:text-destructive"
+                                            onClick={handleDeleteClick}
+                                            type="button"
+                                        >
+                                            <Trash className="size-4" />
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Delete</TooltipContent>
+                                </Tooltip>
+                             )}
+                        </TooltipProvider>
+                    </div>
+                )}
+            </div>
+        );
+    }
+    ```
+
+4.  **Update Imports in Copied Files:**
+    *   Go through `conversation.tsx`, `message.tsx`, `message-assistant.tsx`, `message-user.tsx`, `chat-container.tsx`, `scroll-button.tsx`, `loader.tsx`.
+    *   Change imports like `import { Button } from "@/components/ui/button"` to use your actual path (`@/components/ui/button`).
+    *   Update paths for other components (`Markdown`, `Loader`, etc.) based on where you placed them.
+    *   Replace Phosphor icons with `lucide-react` or your `components/icons`.
+
+5.  **Review Dependencies:**
+    *   Ensure you have `framer-motion` installed (`pnpm add framer-motion`).
+    *   The Zola `ChatContainer` uses a custom scroll hook (`useAutoScroll`). You might need to adapt this or replace it with your existing `use-scroll-to-bottom` logic if preferred. The copied `conversation.tsx` already uses `ChatContainer`, so ensure `ChatContainer` itself works or adapt `conversation.tsx` to use your scroll container/hook. The provided `conversation.tsx` uses refs (`containerRef`, `scrollRef`) which should integrate with the Zola `ChatContainer`.
 
 ---
 
-**Step 5: Integrate UI into Input Area**
+**Explanation of Key Changes:**
 
-1.  **Modify `components/chat.tsx`:** (Changes shown in Step 3 already include this)
-    *   Import `PromptSystem`.
-    *   Add the conditional rendering logic for `PromptSystem` above the `MultimodalInput` when `messages.length === 0`.
-    *   Pass the required props (`onSelectSystemPrompt`, `onSuggestion`, `value`, `systemPrompt`).
+*   **`chat.tsx`:** Now imports and renders `<Conversation />` instead of `<Messages />`. It defines `handleDelete` and `handleEdit` functions using `setMessages` and passes them along with `reload` and the derived `conversationStatus` to `<Conversation />`.
+*   **`conversation.tsx`:** Remains largely the same as Zola's, orchestrating the mapping of messages to the `<Message />` component and handling the scroll container and scroll button.
+*   **`message.tsx`:** Acts as a simple router based on `message.role` (now called `variant` to match Zola's prop name) to render either `MessageUser` or `MessageAssistant`. It receives and passes down necessary props like `vote`, `isReadonly`, `chatId`, `reasoning`, `toolInvocations`, `attachmentUrl`.
+*   **`message-assistant.tsx`:** Now combines Zola's structure with your logic. It renders reasoning, search results, tool calls, and the main markdown content. It also includes the Copy, Reload, and Voting buttons.
+*   **`message-user.tsx`:** Integrates your attachment rendering (`PreviewAttachment`) and Zola's edit functionality. The Edit button triggers an inline textarea. Saving triggers the `onEdit` prop passed from `chat.tsx`.
 
----
-
-**Step 6: Styling and Refinement**
-
-*   The adapted components in Step 4 use `cn`, `Button`, and Tailwind classes from your existing setup, aiming for better theme integration.
-*   You might need further minor adjustments to perfectly match borders, paddings, or font sizes in `personas.tsx`, `suggestions.tsx`, and `prompt-system.tsx`.
-*   Pay attention to the `no-scrollbar` class added to hide horizontal scrollbars on the suggestion/persona rows if they overflow.
-*   Added `h-[70px]` to the container in `PromptSystem` to prevent layout shifts when toggling.
-
----
-
-**Step 7: Testing**
-
-*   **Clear Chat:** Start a new chat session or clear existing messages.
-*   **Verify UI:** Ensure the "Suggestions" / "Personas" toggle and the default view (Suggestions) appear above the input.
-*   **Test Suggestions:**
-    *   Click a suggestion category (e.g., "Code").
-    *   Verify the view changes to show specific prompts for that category.
-    *   Click a specific suggestion prompt (e.g., "Help me write a function...").
-    *   Verify the chat starts with that prompt as the user message.
-*   **Test Personas:**
-    *   Click the "Personas" tab.
-    *   Verify the persona buttons appear.
-    *   Click a persona button (e.g., "Software Engineer").
-    *   Verify the button appears selected.
-    *   Send a message (e.g., "Explain closures").
-    *   Verify the AI's response reflects the selected persona's style/prompt.
-    *   Click the same persona button again to deselect it. Send another message and verify the AI uses the default persona/prompt.
-*   **Test Disappearance:** Send any message. Verify the Suggestions/Personas UI disappears. Start a new chat and verify it reappears.
-
----
-
-This plan ports the core logic and UI structure from Zola for Personas and Suggestions, adapting it to your existing components and styling conventions. Remember to install `framer-motion` if you haven't already (`pnpm add framer-motion`).
+After these changes, test thoroughly to ensure messages render correctly, actions work, attachments display, and scrolling behaves as expected. Adjust styling (`cn` classes) as needed to match your theme.
