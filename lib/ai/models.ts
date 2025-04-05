@@ -14,14 +14,14 @@ export const DEFAULT_CHAT_MODEL: string = 'chat-model-small';
 export const myProvider = customProvider({
   languageModels: {
     'chat-model-small': google('gemini-2.0-flash'),
-    'chat-model-large': google('gemini-2.0-pro-exp-02-05'),
+    'chat-model-large': google('gemini-2.5-pro-exp-03-25'),
     'chat-model-image-gen': google('gemini-2.0-flash'), // Added model for inline image generation
     'chat-model-reasoning': wrapLanguageModel({
       model: groq('deepseek-r1-distill-llama-70b'),
       middleware: extractReasoningMiddleware({ tagName: 'think' }),
     }),
-    'title-model': google('gemini-2.0-pro-exp-02-05'),
-    'artifact-model': google('gemini-2.0-pro-exp-02-05'),
+    'title-model': google('gemini-2.5-pro-exp-03-25'),
+    'artifact-model': google('gemini-2.5-pro-exp-03-25'),
   },
   imageModels: {
     'small-model': fal.image('fal-ai/flux/schnell'),
