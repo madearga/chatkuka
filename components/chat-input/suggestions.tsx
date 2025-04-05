@@ -59,7 +59,7 @@ export const Suggestions = memo(function Suggestions({
         <Button
           variant="outline"
           size="sm"
-          className={cn("rounded-full h-auto py-1.5 px-3 flex items-center gap-1.5", props.className)}
+          className={cn("rounded-full h-auto py-1.5 px-3 flex items-center gap-1.5 text-xs sm:text-sm", props.className)}
           {...props}
         >
           {children}
@@ -77,7 +77,7 @@ export const Suggestions = memo(function Suggestions({
         variant="ghost"
         size="sm"
         className={cn(
-          "w-full justify-start rounded-xl py-2 h-auto text-left",
+          "w-full justify-start rounded-xl py-2 h-auto text-left text-sm",
           "hover:bg-accent",
           props.className
         )}
@@ -109,7 +109,7 @@ export const Suggestions = memo(function Suggestions({
     () => (
       <motion.div
         key="suggestions-grid"
-        className="flex w-full max-w-full flex-nowrap justify-start gap-2 overflow-x-auto px-2 md:mx-auto md:max-w-2xl md:flex-wrap md:justify-center md:pl-0 no-scrollbar"
+        className="flex w-full max-w-full flex-wrap justify-center gap-2 px-2 mx-auto md:max-w-2xl no-scrollbar"
         initial="initial"
         animate="animate"
         exit="exit"
@@ -143,7 +143,7 @@ export const Suggestions = memo(function Suggestions({
   const suggestionsList = useMemo(
     () => (
       <motion.div
-        className="flex w-full flex-col space-y-1 px-2 md:mx-auto md:max-w-2xl md:pl-0"
+        className="flex w-full flex-col space-y-1.5 px-2 mx-auto md:max-w-2xl"
         key={activeCategoryData?.label}
         initial="initial"
         animate="animate"
@@ -154,21 +154,21 @@ export const Suggestions = memo(function Suggestions({
         {activeCategoryData?.items.map((suggestion: string, index: number) => (
           <motion.div
             key={`${activeCategoryData?.label}-${suggestion}-${index}`}
-             initial={{ opacity: 0, y: -10 }}
-             animate={{ opacity: 1, y: 0 }}
-             exit={{ opacity: 0, y: 10 }}
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 10 }}
             transition={{
               ...TRANSITION_SPRING,
               delay: index * 0.05,
             }}
           >
-             <SuggestionButton
-                highlight={activeCategoryData.highlight}
-                type="button"
-                onClick={() => handleSuggestionClick(suggestion)}
-             >
+            <SuggestionButton
+              highlight={activeCategoryData.highlight}
+              type="button"
+              onClick={() => handleSuggestionClick(suggestion)}
+            >
               {suggestion}
-             </SuggestionButton>
+            </SuggestionButton>
           </motion.div>
         ))}
       </motion.div>

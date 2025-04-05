@@ -33,7 +33,7 @@ const ButtonPersona = memo(function ButtonPersona({
         isActive ? onSelectSystemPrompt("") : onSelectSystemPrompt(prompt)
       }
       className={cn(
-        "rounded-full h-auto py-1.5 px-3 flex items-center gap-1.5",
+        "rounded-full h-auto py-1.5 px-3 flex items-center gap-1.5 text-xs sm:text-sm",
         isActive &&
           "bg-primary text-primary-foreground hover:bg-primary/90"
       )}
@@ -56,7 +56,7 @@ export const Personas = memo(function Personas({
 }: PersonasProps) {
   return (
     <motion.div
-      className="flex w-full max-w-full flex-nowrap justify-start gap-2 overflow-x-auto px-2 md:mx-auto md:max-w-2xl md:flex-wrap md:justify-center md:pl-0 no-scrollbar"
+      className="flex w-full max-w-full flex-wrap justify-center gap-2 px-2 mx-auto md:max-w-2xl no-scrollbar"
       initial="initial"
       animate="animate"
       exit="exit"

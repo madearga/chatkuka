@@ -1,12 +1,14 @@
 // @/components/chat-input/prompt-system.tsx
 "use client";
 
-import React, { memo, useMemo, useState } from "react";
+import React, { memo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Personas } from "./personas";
 import { Suggestions } from "./suggestions";
 import { TRANSITION_SPRING } from "@/lib/ai/config";
+import { Button } from "@/components/ui/button"; // Import Button
+import { ArrowLeftRight } from "lucide-react"; // Correct icon import
 
 type PromptSystemProps = {
   onSuggestion: (suggestion: string) => void;
@@ -23,31 +25,14 @@ export const PromptSystem = memo(function PromptSystem({
 }: PromptSystemProps) {
   const [isPersonaMode, setIsPersonaMode] = useState(false);
 
-  const tabs = useMemo(
-    () => [
-      {
-        id: "suggestions",
-        label: "Suggestions",
-        isActive: !isPersonaMode,
-        onClick: () => {
-          setIsPersonaMode(false);
-        },
-      },
-      {
-        id: "personas",
-        label: "Personas",
-        isActive: isPersonaMode,
-        onClick: () => {
-          setIsPersonaMode(true);
-        },
-      },
-    ],
-    [isPersonaMode, onSelectSystemPrompt]
-  );
+  const handleToggleMode = () => {
+    setIsPersonaMode(!isPersonaMode);
+  };
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="relative w-full h-[70px]">
+    <div className="flex flex-col items-center w-full gap-4">
+      {/* Content area - Renders Suggestions or Personas */}
+      <div className="relative w-full min-h-[70px]">
         <AnimatePresence mode="popLayout">
           {isPersonaMode ? (
             <Personas
@@ -63,32 +48,17 @@ export const PromptSystem = memo(function PromptSystem({
         </AnimatePresence>
       </div>
 
-      <div className="relative flex items-center justify-center mb-2">
-        <div className="relative flex h-8 flex-row gap-3 rounded-lg bg-muted p-1">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              className={cn(
-                "relative z-10 flex h-full flex-1 items-center justify-center rounded-md px-2 py-1 text-xs font-medium transition-colors",
-                !tab.isActive ? "text-muted-foreground hover:text-foreground" : "text-foreground"
-              )}
-              onClick={tab.onClick}
-              type="button"
-            >
-              {tab.isActive && (
-                <motion.div
-                  layoutId="prompt-system-tab-background"
-                  className="bg-background absolute inset-0 z-[-1] rounded-md shadow-sm"
-                  transition={TRANSITION_SPRING}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                />
-              )}
-              <span className="relative z-10">{tab.label}</span>
-            </button>
-          ))}
-        </div>
+      {/* Toggle Button */}  
+      <div className="flex items-center justify-center w-full mt-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleToggleMode}
+          className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1.5"
+        >
+          <ArrowLeftRight className="size-3.5" /> {/* Correct icon */}
+          {isPersonaMode ? "Switch to Suggestions" : "Switch to Personas"}
+        </Button>
       </div>
     </div>
   );

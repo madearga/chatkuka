@@ -99,29 +99,37 @@ export function Chat({
           isReadonly={isReadonly}
         />
 
-        {showPromptSystem && (
-          <div className="px-2 sm:px-4 pb-2 sm:pb-4 md:pb-6">
-            <PromptSystem
-              onSelectSystemPrompt={handleSystemPromptSelect}
-              onSuggestion={handleSuggestion}
-              value={input}
-              systemPrompt={selectedSystemPrompt}
+        {/* Main content area: Messages or Initial Prompt System */}
+        <div className="flex-1 overflow-y-auto">
+          {showPromptSystem ? (
+            // Centered container for PromptSystem when no messages
+            <div className="flex flex-col items-center justify-center h-full p-4">
+              <div className="w-full max-w-2xl mx-auto">
+                <PromptSystem
+                  onSelectSystemPrompt={handleSystemPromptSelect}
+                  onSuggestion={handleSuggestion}
+                  value={input}
+                  systemPrompt={selectedSystemPrompt}
+                />
+              </div>
+            </div>
+          ) : (
+            // Messages list
+            <Messages
+              chatId={id}
+              isLoading={isLoading}
+              votes={votes}
+              messages={messages}
+              setMessages={setMessages}
+              reload={reload}
+              isReadonly={isReadonly}
+              isArtifactVisible={isArtifactVisible}
             />
-          </div>
-        )}
+          )}
+        </div>
 
-        <Messages
-          chatId={id}
-          isLoading={isLoading}
-          votes={votes}
-          messages={messages}
-          setMessages={setMessages}
-          reload={reload}
-          isReadonly={isReadonly}
-          isArtifactVisible={isArtifactVisible}
-        />
-
-        <div className="flex mx-auto px-2 sm:px-4 bg-background pb-2 sm:pb-4 md:pb-6 gap-2 w-full md:max-w-3xl bottom-nav">
+        {/* Bottom Input Area - Always centered */}
+        <div className="w-full max-w-2xl mx-auto px-2 sm:px-4 pb-2 sm:pb-4 md:pb-6 bottom-nav">
           {!isReadonly && (
             <MultimodalInput
               chatId={id}
