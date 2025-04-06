@@ -25,6 +25,7 @@ import { createDocument } from '@/lib/ai/tools/create-document';
 import { updateDocument } from '@/lib/ai/tools/update-document';
 import { requestSuggestions } from '@/lib/ai/tools/request-suggestions';
 import { getWeather } from '@/lib/ai/tools/get-weather';
+import { searchTavily } from '@/lib/clients/tavily';
 
 export const maxDuration = 60;
 
@@ -201,46 +202,19 @@ export async function POST(request: Request) {
               query: searchQuery,
             });
             
-            // Perform the search
-            const response = await fetch('https://api.tavily.com/search', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${tavilyApiKey}`,
-              },
-              body: JSON.stringify({
-                query: searchQuery,
-                search_depth: searchOptions?.searchDepth || 'basic',
-                include_answer: searchOptions?.includeAnswer !== false,
-                max_results: searchOptions?.maxResults || 10,
-                include_raw_content: false,
-                include_images: searchOptions?.includeImages || false,
-                include_image_descriptions: searchOptions?.includeImageDescriptions || false,
-                topic: searchOptions?.topic || 'general',
-                time_range: searchOptions?.timeRange || null,
-                days: searchOptions?.days || 3,
-                include_domains: searchOptions?.includeDomains || [],
-                exclude_domains: searchOptions?.excludeDomains || [],
-              }),
-            });
-            
-            if (!response.ok) {
-              throw new Error(`Search failed with status: ${response.status}`);
-            }
-            
-            searchResults = await response.json();
+            searchResults = await searchTavily(searchQuery, searchOptions);
             console.log('Search results from Tavily:', searchResults);
-            
+
             // Send search results to client
             dataStream.writeData({
               type: 'search-results',
               status: 'complete',
               query: searchQuery,
-              results: searchResults.results || [],
+              results: searchResults.results ? JSON.parse(JSON.stringify(searchResults.results)) : [],
               answer: searchResults.answer,
-              images: searchResults.images,
+              images: searchResults.images ? JSON.parse(JSON.stringify(searchResults.images)) : [],
               responseTime: searchResults.responseTime,
-            });
+            } as any);
             
             // Add search results to system message
             systemMessage += `\n\nSearch results for "${searchQuery}":\n\n`;
