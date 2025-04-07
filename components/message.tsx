@@ -22,7 +22,13 @@ import { Weather } from './weather';
 import equal from 'fast-deep-equal';
 import { cn, getFileTypeFromUrl } from '@/lib/utils';
 import { Button } from './ui/button';
-import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
+import { formatDistanceToNow } from 'date-fns';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from './ui/tooltip';
 import { MessageEditor } from './message-editor';
 import { DocumentPreview } from './document-preview';
 import { MessageReasoning } from './message-reasoning';
@@ -62,9 +68,10 @@ function getFileIcon(fileType: string): React.ReactNode {
   }
 }
 
-// Extended message type with attachmentUrl
+ // Extended message type with attachmentUrl
 interface ExtendedMessage extends Message {
   attachmentUrl?: string | null;
+  createdAt?: Date;
 }
 
 const PurePreviewMessage = ({
@@ -149,21 +156,24 @@ const PurePreviewMessage = ({
 
   return (
     <AnimatePresence>
-      <motion.div
-        className="w-full mx-auto max-w-3xl px-2 sm:px-4 group/message"
-        initial={{ y: 5, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        data-role={message.role}
-      >
-        <div
-          className={cn(
-            'flex gap-3 sm:gap-4 w-full group-data-[role=user]/message:ml-auto group-data-[role=user]/message:max-w-2xl',
-            {
-              'w-full': mode === 'edit',
-              'group-data-[role=user]/message:w-fit': mode !== 'edit',
-            },
-          )}
-        >
+      <TooltipProvider delayDuration={300}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <motion.div
+              className="w-full mx-auto max-w-3xl px-2 sm:px-4 group/message"
+              initial={{ y: 5, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              data-role={message.role}
+            >
+              <div
+                className={cn(
+                  'flex gap-3 sm:gap-4 w-full group-data-[role=user]/message:ml-auto group-data-[role=user]/message:max-w-2xl',
+                  {
+                    'w-full': mode === 'edit',
+                    'group-data-[role=user]/message:w-fit': mode !== 'edit',
+                  },
+                )}
+              >
           {message.role === 'assistant' && (
             <div className="size-8 flex items-center rounded-full justify-center ring-1 shrink-0 ring-border bg-background">
               <div className="translate-y-px">
@@ -395,7 +405,15 @@ const PurePreviewMessage = ({
             )}
           </div>
         </div>
-      </motion.div>
+            </motion.div>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">
+            {message.createdAt
+              ? formatDistanceToNow(new Date(message.createdAt), { addSuffix: true })
+              : 'Timestamp unavailable'}
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
     </AnimatePresence>
   );
 };

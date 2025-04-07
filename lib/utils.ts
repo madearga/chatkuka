@@ -128,6 +128,9 @@ export function convertToUIMessages(
       toolInvocations,
     };
 
+    // Map createdAt timestamp
+    (newMessage as any).createdAt = message.createdAt ? new Date(message.createdAt) : undefined;
+
     // Add attachment if exists in the database message
     if ('attachmentUrl' in message && message.attachmentUrl) {
       // Get filename from URL
