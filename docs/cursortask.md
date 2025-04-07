@@ -56,37 +56,37 @@ Okay, here is the extremely detailed, step-by-step Markdown checklist for implem
 *   **File Target:** `components/message-actions.tsx` (Modifying `PureMessageActions`)
 
     *   **Task 2.1: Import Regeneration Icon**
-        *   [ ] At the top of `components/message-actions.tsx`, import an appropriate icon, for example, `RotateCw` from `lucide-react`:
+        *   [x] At the top of `components/message-actions.tsx`, import an appropriate icon, for example, `RotateCw` from `lucide-react`:
             ```typescript
             import { CopyIcon, ThumbDownIcon, ThumbUpIcon, RotateCw } from './icons'; // Or from 'lucide-react'
             ```
 
     *   **Task 2.2: Add "Regenerate" Button within `PureMessageActions`**
-        *   [ ] Locate the main `div` element with `className="flex flex-row gap-2"` inside the `PureMessageActions` component.
-        *   [ ] Add a new `<Tooltip>` component block within this `div`, similar to the existing Copy/Vote buttons.
-        *   [ ] Inside the new `<Tooltip>`, add a `<TooltipTrigger asChild>`.
-        *   [ ] Inside the `<TooltipTrigger>`, add a `<Button>` component.
+        *   [x] Locate the main `div` element with `className="flex flex-row gap-2"` inside the `PureMessageActions` component.
+        *   [x] Add a new `<Tooltip>` component block within this `div`, similar to the existing Copy/Vote buttons.
+        *   [x] Inside the new `<Tooltip>`, add a `<TooltipTrigger asChild>`.
+        *   [x] Inside the `<TooltipTrigger>`, add a `<Button>` component.
             *   Set `variant="outline"`.
             *   Set `className="py-1 px-2 h-fit text-muted-foreground"`.
             *   Set the `onClick` handler to call the `reload` function (passed as a prop).
             *   Include the `<RotateCw />` icon as the button's child.
-        *   [ ] After the `<TooltipTrigger>`, add `<TooltipContent>Regenerate Response</TooltipContent>`.
+        *   [x] After the `<TooltipTrigger>`, add `<TooltipContent>Regenerate Response</TooltipContent>`.
 
     *   **Task 2.3: Add Conditional Rendering Logic**
-        *   [ ] Modify the component's early return logic. Instead of returning `null` immediately if `isLoading`, keep the component rendering but disable buttons.
-        *   [ ] Wrap the *entire content* of the `PureMessageActions` return statement (the `<TooltipProvider>`) in a conditional check: `if (message.role !== 'assistant') return null;`. This ensures actions only show for assistant messages.
-        *   [ ] Add a `disabled={isLoading}` prop to the newly added "Regenerate" button.
-        *   [ ] Add `disabled={isLoading}` prop to the existing "Copy", "Upvote", and "Downvote" buttons as well for consistency during loading. (Note: Upvote/Downvote already had some disabled logic, integrate `isLoading` with it: `disabled={isLoading || vote?.isUpvoted}` etc.).
+        *   [x] Modify the component's early return logic. Instead of returning `null` immediately if `isLoading`, keep the component rendering but disable buttons.
+        *   [x] Wrap the *entire content* of the `PureMessageActions` return statement (the `<TooltipProvider>`) in a conditional check: `if (message.role !== 'assistant') return null;`. This ensures actions only show for assistant messages.
+        *   [x] Add a `disabled={isLoading}` prop to the newly added "Regenerate" button.
+        *   [x] Add `disabled={isLoading}` prop to the existing "Copy", "Upvote", and "Downvote" buttons as well for consistency during loading. (Note: Upvote/Downvote already had some disabled logic, integrate `isLoading` with it: `disabled={isLoading || vote?.isUpvoted}` etc.).
 
     *   **Task 2.4: Pass `reload` Prop Down**
-        *   [ ] Go to `components/message.tsx` (`PurePreviewMessage`).
-        *   [ ] Verify that the `reload` prop is already being received.
-        *   [ ] Ensure the `reload` prop is passed correctly to the `<MessageActions />` component invocation.
-        *   [ ] Go to `components/messages.tsx` (`PureMessages`).
-        *   [ ] Verify that the `reload` prop is already being received.
-        *   [ ] Ensure the `reload` prop is passed correctly to the `<PreviewMessage />` component invocation.
-        *   [ ] Go to `components/chat.tsx`.
-        *   [ ] Verify that the `reload` function from `useChat` is passed down to the `<Messages />` component.
+        *   [x] Go to `components/message.tsx` (`PurePreviewMessage`).
+        *   [x] Verify that the `reload` prop is already being received.
+        *   [x] Ensure the `reload` prop is passed correctly to the `<MessageActions />` component invocation.
+        *   [x] Go to `components/messages.tsx` (`PureMessages`).
+        *   [x] Verify that the `reload` prop is already being received.
+        *   [x] Ensure the `reload` prop is passed correctly to the `<PreviewMessage />` component invocation.
+        *   [x] Go to `components/chat.tsx`.
+        *   [x] Verify that the `reload` function from `useChat` is passed down to the `<Messages />` component.
 
 **Story 3: Implement "Copy User Prompt" Button**
 
@@ -94,25 +94,25 @@ Okay, here is the extremely detailed, step-by-step Markdown checklist for implem
 *   **File Target:** `components/message-actions.tsx` (`PureMessageActions`)
 
     *   **Task 3.1: Modify Conditional Rendering for User Role**
-        *   [ ] Locate the conditional check added in Task 2.3: `if (message.role !== 'assistant') return null;`.
-        *   [ ] *Remove* this specific check, as we now want actions for *both* user and assistant roles (but different actions).
+        *   [x] Locate the conditional check added in Task 2.3: `if (message.role !== 'assistant') return null;`.
+        *   [x] *Remove* this specific check, as we now want actions for *both* user and assistant roles (but different actions).
 
     *   **Task 3.2: Add Conditional "Copy" Button for User Messages**
-        *   [ ] Inside the main `div` (with `className="flex flex-row gap-2"`) where other action buttons reside:
-        *   [ ] Add a conditional rendering block: `{message.role === 'user' && ( ... )}`.
-        *   [ ] Inside this block, add a `<Tooltip>` component.
-        *   [ ] Inside the `<Tooltip>`, add `<TooltipTrigger asChild>`.
-        *   [ ] Inside the `<TooltipTrigger>`, add a `<Button>`.
+        *   [x] Inside the main `div` (with `className="flex flex-row gap-2"`) where other action buttons reside:
+        *   [x] Add a conditional rendering block: `{message.role === 'user' && ( ... )}`.
+        *   [x] Inside this block, add a `<Tooltip>` component.
+        *   [x] Inside the `<Tooltip>`, add `<TooltipTrigger asChild>`.
+        *   [x] Inside the `<TooltipTrigger>`, add a `<Button>`.
             *   Set `variant="outline"`.
             *   Set `className="py-1 px-2 h-fit text-muted-foreground"`.
             *   Set the `onClick` handler to call `handleCopy` (this function already exists and copies `message.content`).
             *   Set `disabled={isLoading}`.
             *   Include the `<CopyIcon />` (already imported).
-        *   [ ] After the `<TooltipTrigger>`, add `<TooltipContent>Copy Prompt</TooltipContent>`.
+        *   [x] After the `<TooltipTrigger>`, add `<TooltipContent>Copy Prompt</TooltipContent>`.
 
     *   **Task 3.3: Adjust Existing Actions for Assistant Role**
-        *   [ ] Wrap the existing "Copy", "Upvote", and "Downvote" `<Tooltip>` blocks (excluding the user-specific copy button added above) in a conditional block: `{message.role === 'assistant' && ( ... )}`.
-        *   [ ] Ensure the early returns for `isLoading` or non-string content *within* the assistant-specific block remain, or that the buttons themselves are appropriately disabled.
+        *   [x] Wrap the existing "Copy", "Upvote", and "Downvote" `<Tooltip>` blocks (excluding the user-specific copy button added above) in a conditional block: `{message.role === 'assistant' && ( ... )}`.
+        *   [x] Ensure the early returns for `isLoading` or non-string content *within* the assistant-specific block remain, or that the buttons themselves are appropriately disabled.
 
 **Story 4: Add Subtle Distinction for User/AI Bubbles**
 

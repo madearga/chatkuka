@@ -3,6 +3,7 @@
 import type { Attachment, Message } from 'ai';
 import { useChat } from 'ai/react';
 import { useState, useCallback, useMemo } from 'react';
+import { useLocalStorage } from 'usehooks-ts';
 import useSWR, { useSWRConfig } from 'swr';
 
 import { ChatHeader } from '@/components/chat-header';
@@ -33,7 +34,10 @@ export function Chat({
 }) {
   const { mutate } = useSWRConfig();
 
-  const [selectedSystemPrompt, setSelectedSystemPrompt] = useState<string | undefined>(SYSTEM_PROMPT_DEFAULT);
+  const [selectedSystemPrompt, setSelectedSystemPrompt] = useLocalStorage<string>(
+    'selectedSystemPrompt',
+    SYSTEM_PROMPT_DEFAULT
+  );
 
   const {
     messages,

@@ -271,10 +271,12 @@ const PurePreviewMessage = ({
                   </Tooltip>
                 )}
 
-                <div className={cn('flex flex-col gap-4 break-words max-w-full overflow-hidden', {
-                  'bg-primary text-primary-foreground px-3 py-2 rounded-xl':
-                    message.role === 'user',
-                })}>
+                      <div className={cn(
+                        'flex flex-col gap-4 break-words max-w-full overflow-hidden',
+                        message.role === 'user'
+                          ? 'bg-primary text-primary-foreground px-3 py-2 rounded-xl'
+                          : 'bg-muted/50 border border-border/50 px-3 py-2 rounded-xl'
+                      )}>
                   {message.reasoning && Array.isArray(message.reasoning) && message.reasoning.length > 0 && (
                     <div className="text-muted-foreground w-full overflow-hidden text-ellipsis">
                       <div className="flex">
@@ -401,6 +403,7 @@ const PurePreviewMessage = ({
                 message={message}
                 vote={vote}
                 isLoading={isLoading}
+                reload={reload}
               />
             )}
           </div>
