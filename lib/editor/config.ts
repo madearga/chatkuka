@@ -8,10 +8,25 @@ import type { MutableRefObject } from 'react';
 
 import { buildContentFromDocument } from './functions';
 
+const extendedMarks = schema.spec.marks.update('strikethrough', {
+  parseDOM: [
+    { tag: 's' },
+    { tag: 'del' },
+    { tag: 'strike' },
+    { style: 'text-decoration=line-through' },
+  ],
+  toDOM: () => ['s', 0],
+});
+
 export const documentSchema = new Schema({
   nodes: addListNodes(schema.spec.nodes, 'paragraph block*', 'block'),
-  marks: schema.spec.marks,
+  marks: extendedMarks,
 });
+
+export const orderedListNode = documentSchema.nodes.ordered_list;
+export const bulletListNode = documentSchema.nodes.bullet_list;
+export const blockquoteNode = documentSchema.nodes.blockquote;
+export const paragraphNode = documentSchema.nodes.paragraph;
 
 export function headingRule(level: number) {
   return textblockTypeInputRule(

@@ -32,11 +32,14 @@ type EditorProps = {
   suggestions: Array<Suggestion>;
 };
 
+import { TextEditorToolbar } from '@/components/TextEditorToolbar';
+
 function PureEditor({
   content,
   onSaveContent,
   suggestions,
   status,
+  isCurrentVersion,
 }: EditorProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<EditorView | null>(null);
@@ -146,7 +149,13 @@ function PureEditor({
   }, [suggestions, content]);
 
   return (
-    <div className="relative prose dark:prose-invert" ref={containerRef} />
+    <>
+      <TextEditorToolbar
+        editorView={editorRef.current}
+        isDisabled={status === 'streaming' || !isCurrentVersion}
+      />
+      <div className="relative prose dark:prose-invert" ref={containerRef} />
+    </>
   );
 }
 

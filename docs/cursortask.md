@@ -1,115 +1,321 @@
-Okay, here is a highly detailed, step-by-step checklist designed for an AI Coding Agent to implement the centralization of the Tavily API client logic. Each task aims to be a distinct, actionable "one-point" story.
+Okay, here is a highly detailed, step-by-step checklist for implementing the Basic Formatting Toolbar for the Text Artifact's ProseMirror editor. This is designed for an AI Coding Agent to follow.
 
-**Project Goal:** Refactor the Tavily search API interaction from `app/(chat)/api/chat/route.ts` into a dedicated, reusable client module at `lib/clients/tavily.ts`.
+**Project Goal:** Add a formatting toolbar (Bold, Italic, Strikethrough, Code, Lists, Blockquote, Link) to the Text Artifact editor (`components/text-editor.tsx`) using ProseMirror commands and reflecting the current selection state.
 
-**File Target:** `lib/clients/tavily.ts` (New File)
-**File Target:** `app/(chat)/api/chat/route.ts` (Refactor)
-
----
-
-### **Story 1: Create Tavily Client Module Structure**
-
-*   [x] Create a new directory `lib/clients`.
-*   [x] Create a new file named `tavily.ts` inside the `lib/clients` directory.
-*   [x] Add the `'use server';` directive at the top of `lib/clients/tavily.ts` if server-only logic is intended, or omit if it might be used in shared contexts (prefer server-only for API keys). *Decision: Use 'server-only' for now.*
-*   [x] Import necessary types/modules (e.g., `zod` if planning to use it for validation later).
-*   [x] Define the basic structure for the primary search function, e.g., `export async function searchTavily(query: string, options?: TavilySearchOptions): Promise<TavilySearchResponse | { error: string }>`. (Types will be defined next).
-*   [x] Add a basic `try...catch` block inside the `searchTavily` function.
+**Primary Files:**
+*   `components/TextEditorToolbar.tsx` (New File)
+*   `components/text-editor.tsx` (Modification)
+*   `lib/editor/config.ts` (Potential Modification for Strikethrough)
+*   `components/ui/button.tsx` (Usage)
+*   `lucide-react` / `components/icons.tsx` (Usage for Icons)
+*   `components/ui/tooltip.tsx` (Usage)
+*   `components/ui/dialog.tsx` or `components/ui/popover.tsx` (Usage for Link Modal)
+*   `components/ui/input.tsx` (Usage for Link Modal)
+*   `components/ui/label.tsx` (Usage for Link Modal)
 
 ---
 
-### **Story 2: Define Input/Output Types for Tavily Client**
+### **Story 1: Create Toolbar UI Component Structure**
 
-*   [x] In `lib/clients/tavily.ts`, define the `TavilySearchOptions` interface/type based on the parameters used in the current `fetch` call in `chat/route.ts` and the Tavily API documentation. Include fields like `searchDepth`, `includeAnswer`, `maxResults`, `includeDomains`, `excludeDomains`, `includeImages`, `includeRawContent`, `topic`, `timeRange`, `days`, `includeImageDescriptions`. Ensure all fields are optional where applicable.
-    ```typescript
-    // Example Structure:
-    interface TavilySearchOptions {
-      searchDepth?: 'basic' | 'advanced';
-      includeAnswer?: boolean;
-      maxResults?: number;
-      includeDomains?: string[];
-      excludeDomains?: string[];
-      includeImages?: boolean;
-      includeRawContent?: boolean;
-      includeImageDescriptions?: boolean;
-      topic?: string;
-      timeRange?: string; // Note: This might overlap with 'days'. Clarify API usage if necessary.
-      days?: number;
-    }
-    ```
-*   [x] In `lib/clients/tavily.ts`, define the `TavilySearchResult` interface/type based on the expected fields in the `results` array from the Tavily API (e.g., `title`, `url`, `content`, `score`, `rawContent`, `publishedDate`).
-*   [x] In `lib/clients/tavily.ts`, define the `TavilyImage` interface/type if `includeImages` is used (e.g., `url`, `description`).
-*   [x] In `lib/clients/tavily.ts`, define the `TavilySearchResponse` interface/type for a successful search, including fields like `query`, `answer`, `results` (as an array of `TavilySearchResult`), `images` (as an array of `TavilyImage`), `responseTime`.
-*   [x] Refine the return type of the `searchTavily` function signature to use `TavilySearchResponse` for success. Keep the possibility of returning an error object or throwing a custom error. *Decision: Throw specific errors for failures.* Update function signature: `export async function searchTavily(query: string, options?: TavilySearchOptions): Promise<TavilySearchResponse>`.
+*   **Goal:** Set up the basic visual structure and props for the toolbar component.
+*   **Tasks:**
+    *   [x] Create new file: `components/TextEditorToolbar.tsx`.
+    *   [x] Add `'use client';` directive at the top of `TextEditorToolbar.tsx`.
+    *   [x] Import React and necessary types (`FC`, `useState`, etc.).
+    *   [x] Import `EditorView` type from `prosemirror-view`.
+    *   [x] Import the `Button` component from `@/components/ui/button`.
+    *   [x] Import necessary icons from `lucide-react`: `Bold`, `Italic`, `Strikethrough`, `Code`, `ListOrdered`, `List`, `Quote`, `Link2`, `Unlink`.
+    *   [x] Import `Tooltip`, `TooltipContent`, `TooltipProvider`, `TooltipTrigger` from `@/components/ui/tooltip`.
+    *   [x] Define the `TextEditorToolbarProps` interface:
+        ```typescript
+        import { EditorView } from 'prosemirror-view';
 
----
-
-### **Story 3: Implement Secure API Key Handling**
-
-*   [x] Inside `lib/clients/tavily.ts`, access the Tavily API key using `process.env.TAVILY_API_KEY`.
-*   [x] At the beginning of the `searchTavily` function, add a check to ensure the `TAVILY_API_KEY` environment variable is present and not empty.
-*   [x] If the API key is missing or empty, throw a specific `Error('Tavily API key is not configured.')`.
+        interface TextEditorToolbarProps {
+          editorView: EditorView | null;
+          isDisabled: boolean;
+        }
+        ```
+    *   [x] Define the `TextEditorToolbar: FC<TextEditorToolbarProps>` component.
+    *   [x] Inside the component, render a `TooltipProvider`.
+    *   [x] Inside the `TooltipProvider`, render a container `div` for the toolbar (e.g., `flex items-center gap-1 border-b border-border px-2 py-1 bg-muted rounded-t-md`).
+    *   [x] Add placeholder `Button` components wrapped in `Tooltip` and `TooltipTrigger` for each action: Bold, Italic, Strikethrough, Code, Ordered List, Bullet List, Blockquote, Link.
+    *   [x] Use `variant="ghost"` and a small size (e.g., `size="sm"` or custom `h-7 w-7 p-1`) for the buttons.
+    *   [x] Add `aria-label` and `TooltipContent` to each button describing its action (e.g., "Bold", "Insert Ordered List").
+    *   [x] Pass the `isDisabled` prop to each `Button`'s `disabled` attribute.
+    *   [x] Add temporary `onClick` handlers to each button (e.g., `onClick={() => console.log('Bold clicked')}`).
 
 ---
 
-### **Story 4: Implement Core Fetch Logic in Client**
+### **Story 2: Integrate Toolbar with Text Editor Component**
 
-*   [x] Inside the `try` block of `searchTavily`, construct the URL for the Tavily search endpoint (`https://api.tavily.com/search`).
-*   [x] Create the `headers` object for the `fetch` call, including `'Content-Type': 'application/json'` and `'Authorization': \`Bearer ${tavilyApiKey}\``.
-*   [x] Create the `requestBody` object. It must include the `query`.
-*   [x] Dynamically add properties to `requestBody` based on the provided `options` argument, mapping `TavilySearchOptions` fields to the actual Tavily API parameter names (e.g., `searchDepth` -> `search_depth`, `includeAnswer` -> `include_answer`). Only include options if they have a value.
-    *   [x] Map `searchDepth`.
-    *   [x] Map `includeAnswer`.
-    *   [x] Map `maxResults`.
-    *   [x] Map `includeDomains`.
-    *   [x] Map `excludeDomains`.
-    *   [x] Map `includeImages`.
-    *   [x] Map `includeRawContent`.
-    *   [x] Map `includeImageDescriptions`.
-    *   [x] Map `topic`.
-    *   [x] Map `timeRange` OR `days` (ensure only one is sent if both are provided, check Tavily docs for precedence).
-*   [x] Make the `fetch` call using `POST` method, passing the constructed `url`, `headers`, and `JSON.stringify(requestBody)`.
+*   **Goal:** Render the toolbar within the editor component and provide it with the necessary editor instance.
+*   **Tasks:**
+    *   [x] Open `components/text-editor.tsx`.
+    *   [x] Import the newly created `TextEditorToolbar` component.
+    *   [x] In the `PureEditor` component's return statement, render `<TextEditorToolbar editorView={editorRef.current} isDisabled={status === 'streaming' || !isCurrentVersion} />` *before* the `<div ref={containerRef} />`.
+    *   [x] Ensure the `editorRef` (which holds the `EditorView` instance) is correctly passed as the `editorView` prop.
 
 ---
 
-### **Story 5: Implement Response Handling in Client**
+### **Story 3: Implement Mark Toggling Logic (Bold, Italic, Strikethrough, Code)**
 
-*   [x] Await the `fetch` response.
-*   [x] Check if `response.ok` is false. If not ok, attempt to parse the error response body as JSON. Throw a specific error including the status code and the error message from the body (e.g., `Error(\`Tavily API error (${response.status}): ${errorData.message || 'Unknown error'}\`)`). If parsing the error body fails, throw a generic error with the status code (e.g., `Error(\`Tavily API request failed with status: ${response.status}\`)`).
-*   [x] If the response is ok, parse the response body using `response.json()`.
-*   [x] *Optional (Recommended):* Validate the parsed JSON data against a Zod schema derived from the `TavilySearchResponse` interface to ensure the API contract is met. If validation fails, throw a specific validation error.
-*   [x] If validation passes (or is skipped), cast the parsed data to `TavilySearchResponse` and return it.
-
----
-
-### **Story 6: Implement Error Handling in Client**
-
-*   [x] In the `catch` block surrounding the `fetch` call within `searchTavily`, catch any potential errors (network errors, JSON parsing errors, validation errors, specific errors thrown earlier).
-*   [x] Log the caught error server-side for debugging purposes (`console.error('Error in searchTavily:', error);`).
-*   [x] Re-throw the caught error or throw a new, more generic error (e.g., `Error('Failed to execute Tavily search.')`) to be handled by the calling function (the API route). *Decision: Re-throw the original or specific error for better context in the API route.*
-
----
-
-### **Story 7: Refactor API Route (`app/(chat)/api/chat/route.ts`) to Use Client**
-
-*   [x] Import the `searchTavily` function from `lib/clients/tavily.ts`.
-*   [x] Locate the section within the `POST` handler where the direct `fetch` call to Tavily is made (inside the `if (useSearch && searchToolAvailable && searchQuery && tavilyApiKey)` block).
-*   [x] Remove the code block that constructs the headers, body, and makes the `fetch` call to Tavily.
-*   [x] Keep the existing `try...catch` block around the Tavily logic.
-*   [x] Inside the `try` block, call the new `searchTavily` function: `const searchResults = await searchTavily(searchQuery, searchOptions);`.
-*   [x] Remove the redundant `tavilyApiKey` variable definition and the check `if (!response.ok)` within this specific block, as this handling is now inside the client.
-*   [x] Ensure the existing logic that uses `searchResults` (logging, updating `dataStream`, augmenting `systemMessage`) still works correctly with the structure returned by `searchTavily`.
-*   [x] Update the `catch` block associated with the search call. It should now catch errors thrown by `searchTavily`. Log the error and update the `dataStream` with the error status as before. Ensure the `error instanceof Error ? error.message : String(error)` pattern correctly captures the message from the potentially more specific errors thrown by the client.
-
----
-
-### **Story 8: Final Cleanup and Documentation**
-
-*   [x] In `app/(chat)/api/chat/route.ts`, remove any unused imports or variables related to the direct Tavily `fetch` call.
-*   [x] In `lib/clients/tavily.ts`, add JSDoc comments to the `searchTavily` function explaining its purpose, parameters (`query`, `options`), return type (`Promise<TavilySearchResponse>`), and potential errors it might throw.
-*   [x] Add inline comments within `lib/clients/tavily.ts` for any complex logic, especially around constructing the request body or handling specific API options.
-*   [x] Verify that no existing functionality related to chat generation, tool use (other than search), or database interaction in `app/(chat)/api/chat/route.ts` has been accidentally broken during the refactor.
+*   **Goal:** Make the Bold, Italic, Strikethrough, and Code buttons apply/remove the corresponding ProseMirror marks.
+*   **Tasks:**
+    *   [x] Open `lib/editor/config.ts`.
+    *   [x] Check if `strikethrough` mark exists in `documentSchema.spec.marks`. If not, add it:
+        ```typescript
+        // Inside marks: { ... }
+        strikethrough: {
+          parseDOM: [{ tag: "s" }, { tag: "del" }, { tag: "strike" }, { style: "text-decoration=line-through" }],
+          toDOM: () => ["s", 0]
+        }
+        ```
+    *   [x] Open `components/TextEditorToolbar.tsx`.
+    *   [x] Import `toggleMark` command from `prosemirror-commands`.
+    *   [x] Import `documentSchema` from `lib/editor/config.ts`.
+    *   [x] Create a helper function `runCommand` within `TextEditorToolbar`:
+        ```typescript
+        const runCommand = (command: (state: EditorState, dispatch?: (tr: Transaction) => void, view?: EditorView) => boolean) => {
+          if (!editorView) return;
+          command(editorView.state, editorView.dispatch, editorView);
+          editorView.focus(); // Keep focus in the editor
+        };
+        ```
+    *   [x] Replace the placeholder `onClick` for the Bold button with: `onClick={() => runCommand(toggleMark(documentSchema.marks.strong))}`.
+    *   [x] Replace the placeholder `onClick` for the Italic button with: `onClick={() => runCommand(toggleMark(documentSchema.marks.em))}`.
+    *   [x] Replace the placeholder `onClick` for the Strikethrough button with: `onClick={() => runCommand(toggleMark(documentSchema.marks.strikethrough))}`.
+    *   [x] Replace the placeholder `onClick` for the Code button with: `onClick={() => runCommand(toggleMark(documentSchema.marks.code))}`.
 
 ---
 
-This detailed checklist breaks down the refactoring process into small, manageable steps suitable for implementation, ensuring the Tavily client logic is properly centralized and the API route is updated correctly without impacting other features.
+### **Story 4: Implement Block Node Wrapping/Toggling Logic (Lists, Blockquote)**
+
+*   **Goal:** Make the List and Blockquote buttons wrap/unwrap selected text or change the current block type.
+*   **Tasks:**
+    *   [x] Open `components/TextEditorToolbar.tsx`.
+    *   [x] Import `wrapIn`, `setBlockType`, `lift` from `prosemirror-commands`.
+    *   [x] Import `wrapInList`, `liftListItem`, `sinkListItem` from `prosemirror-schema-list`.
+    *   [x] Import Node types (`ordered_list`, `bullet_list`, `blockquote`, `paragraph`) from `lib/editor/config.ts`.
+    *   [x] Define a command to toggle blockquotes (wrap in or lift out):
+        ```typescript
+        const toggleBlockquote = (state: EditorState, dispatch?: (tr: Transaction) => void, view?: EditorView) => {
+          // Check if selection is inside a blockquote
+          let { $from, $to } = state.selection;
+          let range = $from.blockRange($to);
+          if (!range) return false;
+          let parent = range.parent;
+          if (parent.type === documentSchema.nodes.blockquote) {
+            return lift(state, dispatch); // Lift out if already inside
+          } else {
+            return wrapIn(documentSchema.nodes.blockquote)(state, dispatch); // Wrap if not
+          }
+        };
+        ```
+    *   [x] Define a command to toggle ordered lists:
+        ```typescript
+        const toggleOrderedList = (state: EditorState, dispatch?: (tr: Transaction) => void, view?: EditorView) => {
+          // Check if selection is inside an ordered list
+          let { $from, $to } = state.selection;
+          let range = $from.blockRange($to);
+          if (!range) return false;
+          let parent = range.parent;
+          // Check if parent or grandparent is an ordered list
+          if ((parent.type === documentSchema.nodes.ordered_list) || (range.depth >= 2 && range.$from.node(range.depth - 1).type === documentSchema.nodes.ordered_list)) {
+            // Try to lift item first, if fails, set back to paragraph
+            return liftListItem(documentSchema.nodes.list_item)(state, dispatch) || setBlockType(documentSchema.nodes.paragraph)(state, dispatch);
+          } else {
+            return wrapInList(documentSchema.nodes.ordered_list)(state, dispatch);
+          }
+        };
+        ```
+    *   [x] Define a command to toggle bullet lists (similar logic to ordered list):
+        ```typescript
+        const toggleBulletList = (state: EditorState, dispatch?: (tr: Transaction) => void, view?: EditorView) => {
+          let { $from, $to } = state.selection;
+          let range = $from.blockRange($to);
+          if (!range) return false;
+          let parent = range.parent;
+          if ((parent.type === documentSchema.nodes.bullet_list) || (range.depth >= 2 && range.$from.node(range.depth - 1).type === documentSchema.nodes.bullet_list)) {
+             return liftListItem(documentSchema.nodes.list_item)(state, dispatch) || setBlockType(documentSchema.nodes.paragraph)(state, dispatch);
+          } else {
+            return wrapInList(documentSchema.nodes.bullet_list)(state, dispatch);
+          }
+        };
+        ```
+    *   [x] Replace the placeholder `onClick` for the Ordered List button with: `onClick={() => runCommand(toggleOrderedList)}`.
+    *   [x] Replace the placeholder `onClick` for the Bullet List button with: `onClick={() => runCommand(toggleBulletList)}`.
+    *   [x] Replace the placeholder `onClick` for the Blockquote button with: `onClick={() => runCommand(toggleBlockquote)}`.
+
+---
+
+### **Story 5: Implement Toolbar State Synchronization (Active Buttons)**
+
+*   **Goal:** Visually indicate which formatting options are active based on the cursor position or selection.
+*   **Tasks:**
+    *   [ ] Open `components/TextEditorToolbar.tsx`.
+    *   [ ] Import `useEffect`, `useState` from `react`.
+    *   [ ] Import `MarkType`, `NodeType` from `prosemirror-model`.
+    *   [ ] Define state variables for each button's active status:
+        ```typescript
+        const [isBoldActive, setIsBoldActive] = useState(false);
+        const [isItalicActive, setIsItalicActive] = useState(false);
+        const [isStrikeActive, setIsStrikeActive] = useState(false);
+        const [isCodeActive, setIsCodeActive] = useState(false);
+        const [isOlActive, setIsOlActive] = useState(false);
+        const [isUlActive, setIsUlActive] = useState(false);
+        const [isQuoteActive, setIsQuoteActive] = useState(false);
+        const [isLinkActive, setIsLinkActive] = useState(false);
+        // ... add more as needed
+        ```
+    *   [ ] Create a helper function `isMarkActiveCheck` (takes `state: EditorState`, `markType: MarkType`):
+        ```typescript
+        const isMarkActiveCheck = (state: EditorState, markType: MarkType): boolean => {
+          const { from, $from, to, empty } = state.selection;
+          if (empty) {
+            return !!markType.isInSet(state.storedMarks || $from.marks());
+          } else {
+            return state.doc.rangeHasMark(from, to, markType);
+          }
+        };
+        ```
+    *   [ ] Create a helper function `isBlockActiveCheck` (takes `state: EditorState`, `nodeType: NodeType`, `attrs = {}`):
+        ```typescript
+         const isBlockActiveCheck = (state: EditorState, nodeType: NodeType, attrs = {}): boolean => {
+          const { $from, to, node } = state.selection;
+          if (node) {
+            return node.hasMarkup(nodeType, attrs);
+          }
+          // Check if selection spans multiple blocks or is within the target block type
+          return to <= $from.end() && $from.parent.hasMarkup(nodeType, attrs);
+          // More robust check might be needed for list items specifically
+         };
+        ```
+    *   [ ] Add a `useEffect` hook that runs when `editorView?.state` changes (this requires the state to be passed down or polled). *Alternative:* Use ProseMirror's `updateState` prop modification. Let's modify `text-editor.tsx` first.
+    *   [ ] *Modify `components/text-editor.tsx`:*
+        *   [ ] Add state for the toolbar's active status: `const [toolbarState, setToolbarState] = useState({...});` (object with boolean for each format).
+        *   [ ] Update the `handleTransaction` function (or add an `updateState` prop to the `EditorView` constructor/`setProps`). In the part where `newState` is calculated:
+            ```typescript
+            // Inside handleTransaction or updateState
+            const newState = editorRef.current.state.apply(transaction);
+            editorRef.current.updateState(newState);
+
+            // --> Add state update logic here <--
+            const currentToolbarState = {
+                isBoldActive: isMarkActiveCheck(newState, documentSchema.marks.strong),
+                isItalicActive: isMarkActiveCheck(newState, documentSchema.marks.em),
+                isStrikeActive: isMarkActiveCheck(newState, documentSchema.marks.strikethrough),
+                isCodeActive: isMarkActiveCheck(newState, documentSchema.marks.code),
+                isOlActive: isBlockActiveCheck(newState, documentSchema.nodes.ordered_list) || /* check for list_item parent */ false, // More robust check needed
+                isUlActive: isBlockActiveCheck(newState, documentSchema.nodes.bullet_list) || /* check for list_item parent */ false, // More robust check needed
+                isQuoteActive: isBlockActiveCheck(newState, documentSchema.nodes.blockquote),
+                isLinkActive: isMarkActiveCheck(newState, documentSchema.marks.link),
+            };
+            setToolbarState(currentToolbarState);
+            // ... rest of the function (saving content etc.)
+            ```
+        *   [ ] Pass `toolbarState` down to the `TextEditorToolbar` component.
+    *   [ ] *Modify `components/TextEditorToolbar.tsx`:*
+        *   [ ] Add `toolbarState` to `TextEditorToolbarProps`.
+        *   [ ] Remove the local `useState` hooks for active statuses created earlier.
+        *   [ ] Use the `toolbarState` prop to conditionally set the `variant` or `className` of each `Button`. Example for Bold:
+            ```typescript
+            <Button
+              variant={toolbarState.isBoldActive ? "secondary" : "ghost"}
+              // ... other props
+            >
+              <Bold />
+            </Button>
+            ```
+        *   [ ] Ensure the active style provides clear visual feedback (e.g., `bg-accent`).
+
+---
+
+### **Story 6: Implement Link Functionality**
+
+*   **Goal:** Allow users to add, edit, and remove hyperlinks on selected text.
+*   **Tasks:**
+    *   [ ] Open `components/TextEditorToolbar.tsx`.
+    *   [ ] Import UI components for a modal/popover: `Dialog`, `DialogContent`, `DialogHeader`, `DialogTitle`, `DialogFooter` (or `Popover`, `PopoverContent`, etc.). Import `Input`, `Label`.
+    *   [ ] Import `link` mark type from `lib/editor/config.ts`.
+    *   [ ] Add state variables for the link modal:
+        ```typescript
+        const [showLinkDialog, setShowLinkDialog] = useState(false);
+        const [linkUrl, setLinkUrl] = useState('');
+        const [linkInitialText, setLinkInitialText] = useState(''); // Store selected text
+        const [linkIsEditing, setLinkIsEditing] = useState(false); // Track if editing existing link
+        ```
+    *   [ ] Create the Link Dialog component structure within `TextEditorToolbar` using `<Dialog>` and related components. Include `Label` and `Input` for the URL.
+    *   [ ] Implement the `onClick` handler for the Link button:
+        ```typescript
+        const handleLinkButtonClick = () => {
+          if (!editorView) return;
+          const { state } = editorView;
+          const { from, to, empty, $from } = state.selection;
+          const linkMark = documentSchema.marks.link;
+
+          let existingMark = null;
+          if (!empty) {
+            existingMark = state.doc.rangeHasMark(from, to, linkMark) ? linkMark.isInSet($from.marksSet($from.parent.childAfter($from.parentOffset).offset))?.[0] : null;
+             // Check if mark exists exactly at start or across range
+             existingMark = existingMark || linkMark.isInSet(state.doc.resolve(from).marks())?.[0];
+          } else {
+             existingMark = linkMark.isInSet(state.storedMarks || $from.marks())?.[0];
+          }
+
+
+          if (existingMark) { // Editing existing link
+            setLinkUrl(existingMark.attrs.href || '');
+            setLinkInitialText(state.doc.textBetween(from, to)); // Use selection if exists
+            setLinkIsEditing(true);
+          } else { // Adding new link
+            setLinkUrl('https://');
+            setLinkInitialText(state.doc.textBetween(from, to));
+            setLinkIsEditing(false);
+          }
+          setShowLinkDialog(true);
+        };
+        ```
+        *   Assign this handler to the Link button's `onClick`.
+    *   [ ] Implement the "Save" button logic within the Link Dialog:
+        ```typescript
+        const handleSaveLink = () => {
+          if (!editorView) return;
+          const { state, dispatch } = editorView;
+          const { from, to, empty } = state.selection;
+          const linkMark = documentSchema.marks.link;
+
+          let tr = state.tr;
+          // Remove existing link mark first if editing or just applying
+          tr = tr.removeMark(from, to, linkMark);
+
+          if (linkUrl.trim()) { // Only add if URL is not empty
+             const mark = linkMark.create({ href: linkUrl });
+             if (empty && linkInitialText && from === to) {
+               // If selection was empty, insert the initial text if available (though usually not needed for links)
+             }
+             tr = tr.addMark(from, to, mark);
+          }
+
+          dispatch(tr);
+          setShowLinkDialog(false);
+          editorView.focus();
+        };
+        ```
+    *   [ ] Add "Save" and "Cancel" buttons to the `DialogFooter`. Wire `handleSaveLink` to Save and `setShowLinkDialog(false)` to Cancel.
+    *   [ ] *Optional:* Add a "Remove Link" button inside the dialog, which would call `runCommand(toggleMark(documentSchema.marks.link))` and close the dialog.
+    *   [ ] Use the `toolbarState.isLinkActive` (from Story 5) to control the Link button's active appearance.
+
+---
+
+### **Story 7: Final Touches & Refinements**
+
+*   **Goal:** Ensure robustness and clean up the implementation.
+*   **Tasks:**
+    *   [ ] Review all `onClick` handlers in `TextEditorToolbar` to ensure they check `if (!editorView) return;` at the beginning.
+    *   [ ] Verify all imported icons are correctly displayed.
+    *   [ ] Test edge cases: empty selection, selection spanning multiple blocks, applying/removing marks repeatedly.
+    *   [ ] Ensure the editor remains focused after toolbar actions.
+    *   [ ] Check for any console errors during interaction.
+    *   [ ] Add keyboard accessibility to toolbar buttons (should work by default with Radix UI).
+    *   [ ] Ensure tooltips display correctly for all buttons.
+    *   [ ] Consider the visual styling of the active button state for clarity.
