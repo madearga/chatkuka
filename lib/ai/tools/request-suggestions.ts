@@ -22,6 +22,13 @@ export const requestSuggestions = ({
         .string()
         .describe('The ID of the document to request edits'),
     }),
+    /**
+     * Generates suggestions for a document by providing the AI model with enhanced context.
+     * The prompt now includes the document's title, kind, and full content, instead of just the content,
+     * to improve relevance and quality of suggestions.
+     *
+     * The AI is instructed to provide up to 5 suggestions, each with a full sentence edit and description.
+     */
     execute: async ({ documentId }) => {
       const document = await getDocumentById({ id: documentId });
 
@@ -31,15 +38,29 @@ export const requestSuggestions = ({
         };
       }
 
+      // Construct a detailed context prompt including title, kind, and content
+      const contextPrompt = `Document Title:
+${document.title}
+
+Document Kind:
+${document.kind}
+
+Full Document Content:
+---
+${document.content}
+---
+Based on the full document content above, please provide suggestions to improve the piece of writing and describe the change. It is very important for the edits to contain full sentences instead of just words. Max 5 suggestions.`;
+
       const suggestions: Array<
         Omit<Suggestion, 'userId' | 'createdAt' | 'documentCreatedAt'>
       > = [];
 
+      // Note: Using contextPrompt increases input tokens. Monitor for context window limits with large documents.
       const { elementStream } = streamObject({
         model: myProvider.languageModel('artifact-model'),
         system:
           'You are a help writing assistant. Given a piece of writing, please offer suggestions to improve the piece of writing and describe the change. It is very important for the edits to contain full sentences instead of just words. Max 5 suggestions.',
-        prompt: document.content,
+        prompt: contextPrompt,
         output: 'array',
         schema: z.object({
           originalSentence: z.string().describe('The original sentence'),
