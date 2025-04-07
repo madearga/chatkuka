@@ -394,7 +394,7 @@ export function PureMultimodalInput({
   };
 
   return (
-    <div className={`flex gap-2 flex-col w-full max-h-[400px] overflow-y-auto ${className || ''}`}>
+    <div className={`flex gap-2 flex-col w-full overflow-y-auto ${className || ''}`}>
       <div className="flex flex-col w-full gap-2 relative">
         <div
           className={cn(
@@ -411,7 +411,7 @@ export function PureMultimodalInput({
             name="message"
             value={input}
             className={cn(
-              'min-h-[24px] w-full resize-none border-0 bg-transparent py-4 pr-20 focus-visible:ring-0 focus-visible:ring-transparent', 
+              'min-h-[24px] w-full resize-none border-0 bg-transparent py-4 pr-20 max-h-[300px] overflow-y-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-ring', 
               'text-sm sm:text-base placeholder:text-muted-foreground',
               input.length === 0 && 'min-h-[48px]'
             )}
@@ -429,6 +429,24 @@ export function PureMultimodalInput({
             onKeyDown={handleKeyDown}
             suppressHydrationWarning
           />
+          
+          {input.trim().length > 0 && !isLoading && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="absolute right-[50px] sm:right-[60px] bottom-[10px] h-6 w-6 p-1 text-muted-foreground hover:text-foreground z-10"
+              onClick={(e) => {
+                e.preventDefault();
+                setInput('');
+                adjustHeight();
+                textareaRef.current?.focus();
+              }}
+              aria-label="Clear input"
+            >
+              <X size={16} />
+            </Button>
+          )}
           
           {/* Always show button container with DeepSeek-inspired styling */}
           <div className="absolute right-1 bottom-1 flex items-center chat-input-buttons">

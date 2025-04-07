@@ -5,6 +5,7 @@ import { Overview } from './overview';
 import { memo } from 'react';
 import { Vote } from '@/lib/db/schema';
 import equal from 'fast-deep-equal';
+import { AnimatePresence, motion } from 'framer-motion';
 
 interface MessagesProps {
   chatId: string;
@@ -31,7 +32,7 @@ function PureMessages({
   isReadonly,
 }: MessagesProps) {
   const [messagesContainerRef, messagesEndRef] =
-    useScrollToBottom<HTMLDivElement>();
+    useScrollToBottom<HTMLDivElement>(false);
 
   return (
     <div
@@ -41,22 +42,24 @@ function PureMessages({
     >
       {messages.length === 0 && <Overview />}
 
-      {messages.map((message, index) => (
-        <PreviewMessage
-          key={message.id}
-          chatId={chatId}
-          message={message}
-          isLoading={isLoading && messages.length - 1 === index}
-          vote={
-            votes
-              ? votes.find((vote) => vote.messageId === message.id)
-              : undefined
-          }
-          setMessages={setMessages}
-          reload={reload}
-          isReadonly={isReadonly}
-        />
-      ))}
+      <AnimatePresence>
+        {messages.map((message, index) => (
+          <PreviewMessage
+            key={message.id}
+            chatId={chatId}
+            message={message}
+            isLoading={isLoading && messages.length - 1 === index}
+            vote={
+              votes
+                ? votes.find((vote) => vote.messageId === message.id)
+                : undefined
+            }
+            setMessages={setMessages}
+            reload={reload}
+            isReadonly={isReadonly}
+          />
+        ))}
+      </AnimatePresence>
 
       {isLoading &&
         messages.length > 0 &&

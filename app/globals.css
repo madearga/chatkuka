@@ -158,7 +158,7 @@
     
     /* Gold highlight for active elements */
     .active-gold {
-        @apply bg-amber-50 dark:bg-amber-900/20 border-l-2 border-amber-400 dark:border-amber-600;
+        @apply bg-amber-100 dark:bg-amber-800/30 border-l-4 border-amber-500 dark:border-amber-500 font-semibold;
     }
     
     /* Gold text accent for important text */
@@ -651,5 +651,14 @@ button[type="button"]:hover {
     [data-role="user"] > div {
         max-width: calc(100vw - 2rem) !important;
         width: 100% !important;
+    }
+    
+    /* Monochrome user messages for consistency */
+    [data-role="user"] .bg-zinc-800 {
+        background-color: rgb(39 39 42) !important; /* zinc-800 */
+    }
+    
+    .dark [data-role="user"] .bg-zinc-700 {
+        background-color: rgb(63 63 70) !important; /* zinc-700 */
     }
 }

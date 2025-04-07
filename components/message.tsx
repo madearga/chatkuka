@@ -34,7 +34,9 @@ import { DocumentPreview } from './document-preview';
 import { MessageReasoning } from './message-reasoning';
 import { SearchResults } from './search-results';
 import { SearchProgress, type SearchStatus } from './search-progress';
+
 import { File, FileText, FileSpreadsheet, FileCode } from 'lucide-react';
+import { ResponseStream } from './ui/response-stream';
 
 // Tambahkan interface untuk data pencarian
 interface SearchData {
@@ -163,6 +165,9 @@ const PurePreviewMessage = ({
               className="w-full mx-auto max-w-3xl px-2 sm:px-4 group/message"
               initial={{ y: 5, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
+              exit={{ opacity: 0, y: -5, transition: { duration: 0.1 } }}
+              transition={{ duration: 0.2, ease: 'easeOut' }}
+              layout
               data-role={message.role}
             >
               <div
@@ -199,10 +204,10 @@ const PurePreviewMessage = ({
             {message.attachmentUrl && (
               <div className={cn(
                 "flex items-start gap-3 p-3 rounded-lg shadow-sm",
-                message.role === 'user' ? "bg-primary/5 ml-auto" : "bg-muted/80"
+                message.role === 'user' ? "bg-zinc-800/20 ml-auto dark:bg-zinc-700/20" : "bg-muted/80"
               )}>
                 <div className="flex items-center gap-3">
-                  <div className="flex items-center justify-center w-10 h-10 rounded-md bg-primary/10 shrink-0">
+                  <div className="flex items-center justify-center w-10 h-10 rounded-md bg-zinc-800/20 dark:bg-zinc-700/20 shrink-0">
                     {getFileIcon(fileType)}
                   </div>
                   <div className="flex flex-col overflow-hidden">
@@ -218,7 +223,7 @@ const PurePreviewMessage = ({
                   href={message.attachmentUrl} 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  className="mt-2 sm:mt-0 sm:ml-auto py-1.5 px-3 text-sm bg-primary/10 hover:bg-primary/20 text-primary rounded-md transition-colors"
+                  className="mt-2 sm:mt-0 sm:ml-auto py-1.5 px-3 text-sm bg-zinc-800/20 hover:bg-zinc-800/30 text-zinc-800 dark:text-zinc-300 rounded-md transition-colors"
                 >
                   Open
                 </a>
@@ -274,7 +279,7 @@ const PurePreviewMessage = ({
                       <div className={cn(
                         'flex flex-col gap-4 break-words max-w-full overflow-hidden',
                         message.role === 'user'
-                          ? 'bg-primary text-primary-foreground px-3 py-2 rounded-xl'
+                          ? 'bg-zinc-200 text-zinc-900 px-3 py-2 rounded-xl dark:bg-zinc-700 dark:text-zinc-100'
                           : 'bg-muted/50 border border-border/50 px-3 py-2 rounded-xl'
                       )}>
                   {message.reasoning && Array.isArray(message.reasoning) && message.reasoning.length > 0 && (
@@ -293,13 +298,16 @@ const PurePreviewMessage = ({
                     </div>
                   )}
 
-                  {typeof message.content === 'string' && message.content.trim() !== '' && (
-                    <div className="w-full overflow-hidden break-words">
-                      <Markdown>
-                        {message.content}
-                      </Markdown>
-                    </div>
-                  )}
+{typeof message.content === 'string' && message.content.trim() !== '' && (
+  <div className="w-full overflow-hidden break-words">
+    <ResponseStream
+      textStream={message.content}
+      mode="fade"
+      speed={20}
+      className="prose max-w-full text-foreground"
+    />
+  </div>
+)}
                 </div>
               </div>
             )}

@@ -1,186 +1,270 @@
-Okay, here is the extremely detailed, step-by-step Markdown checklist for implementing the UI/UX Polish & Convenience enhancements, designed for execution by an AI Coding Agent.
+Okay, here is the highly detailed, step-by-step Markdown checklist for implementing the requested minimal-change enhancements, designed for a competent AI Coding Agent.
 
 ---
 
-### **Project Checklist: UI/UX Polish & Convenience Enhancements**
+### **Project Checklist: UI/UX Polish Enhancements**
 
-**Story 1: Display Message Timestamps on Hover**
-
-*   **Goal:** Show the creation time of each message when the user hovers over it.
-*   **File Target:** `components/message.tsx`
-
-    *   **Task 1.1: Verify `createdAt` Prop in `PurePreviewMessage`**
-        *   [x] Locate the `PurePreviewMessage` component definition in `components/message.tsx`.
-        *   [x] Examine the props interface (or TypeScript definition) for `PurePreviewMessage`.
-        *   [x] Confirm that the `message` prop object includes a `createdAt` field (likely of type `Date` or string).
-        *   [x] *If `createdAt` is missing:*
-            *   [x] Navigate to `lib/utils.ts`.
-            *   [x] Locate the `convertToUIMessages` function.
-            *   [x] Ensure the `createdAt` field from the `DBMessage` is being mapped to the `Message` object being returned (e.g., `createdAt: message.createdAt`).
-            *   [x] Update the `ExtendedMessage` type definition in `components/message.tsx` if necessary to include `createdAt?: Date | string;`.
-            *   [x] Go back to `components/message.tsx` and update the props definition for `PurePreviewMessage` to expect `createdAt` within the `message` object.
-
-    *   **Task 1.2: Import Necessary Components and Functions**
-        *   [x] At the top of `components/message.tsx`, add the following imports:
-            ```typescript
-            import { formatDistanceToNow } from 'date-fns';
-            import {
-              Tooltip,
-              TooltipContent,
-              TooltipProvider,
-              TooltipTrigger,
-            } from '@/components/ui/tooltip';
-            ```
-
-    *   **Task 1.3: Wrap Message Content in Tooltip**
-        *   [x] Locate the `motion.div` element that wraps the entire message bubble (it has `data-role={message.role}`).
-        *   [x] Wrap this entire `motion.div` with the `<TooltipProvider delayDuration={300}>` component.
-        *   [x] Inside `<TooltipProvider>`, wrap the `motion.div` with the `<Tooltip>` component.
-        *   [x] Inside `<Tooltip>`, wrap the `motion.div` with the `<TooltipTrigger asChild>` component. Ensure the `motion.div` is the direct child.
-
-    *   **Task 1.4: Add Tooltip Content with Formatted Timestamp**
-        *   [x] Immediately after the closing `</TooltipTrigger>` tag (but still inside the `<Tooltip>`), add the `<TooltipContent>` component.
-        *   [x] Inside `<TooltipContent>`, call the `formatDistanceToNow` function with the `message.createdAt` property, adding the option `{ addSuffix: true }`. Ensure proper handling if `message.createdAt` might be undefined or needs parsing (e.g., `message.createdAt ? formatDistanceToNow(new Date(message.createdAt), { addSuffix: true }) : ''`).
-            ```typescript
-            <TooltipContent side="bottom">
-              {message.createdAt ? formatDistanceToNow(new Date(message.createdAt), { addSuffix: true }) : 'Timestamp unavailable'}
-            </TooltipContent>
-            ```
-
-    *   **Task 1.5: Verify Styling and Positioning**
-        *   [x] *Manual Check/AI Review:* Ensure the tooltip appears correctly on hover without disrupting the layout. The default `side="bottom"` should be reasonable.
-
-**Story 2: Implement "Regenerate Response" Button**
-
-*   **Goal:** Add a button to allow regeneration of the last AI assistant response.
-*   **File Target:** `components/message-actions.tsx` (Modifying `PureMessageActions`)
-
-    *   **Task 2.1: Import Regeneration Icon**
-        *   [x] At the top of `components/message-actions.tsx`, import an appropriate icon, for example, `RotateCw` from `lucide-react`:
-            ```typescript
-            import { CopyIcon, ThumbDownIcon, ThumbUpIcon, RotateCw } from './icons'; // Or from 'lucide-react'
-            ```
-
-    *   **Task 2.2: Add "Regenerate" Button within `PureMessageActions`**
-        *   [x] Locate the main `div` element with `className="flex flex-row gap-2"` inside the `PureMessageActions` component.
-        *   [x] Add a new `<Tooltip>` component block within this `div`, similar to the existing Copy/Vote buttons.
-        *   [x] Inside the new `<Tooltip>`, add a `<TooltipTrigger asChild>`.
-        *   [x] Inside the `<TooltipTrigger>`, add a `<Button>` component.
-            *   Set `variant="outline"`.
-            *   Set `className="py-1 px-2 h-fit text-muted-foreground"`.
-            *   Set the `onClick` handler to call the `reload` function (passed as a prop).
-            *   Include the `<RotateCw />` icon as the button's child.
-        *   [x] After the `<TooltipTrigger>`, add `<TooltipContent>Regenerate Response</TooltipContent>`.
-
-    *   **Task 2.3: Add Conditional Rendering Logic**
-        *   [x] Modify the component's early return logic. Instead of returning `null` immediately if `isLoading`, keep the component rendering but disable buttons.
-        *   [x] Wrap the *entire content* of the `PureMessageActions` return statement (the `<TooltipProvider>`) in a conditional check: `if (message.role !== 'assistant') return null;`. This ensures actions only show for assistant messages.
-        *   [x] Add a `disabled={isLoading}` prop to the newly added "Regenerate" button.
-        *   [x] Add `disabled={isLoading}` prop to the existing "Copy", "Upvote", and "Downvote" buttons as well for consistency during loading. (Note: Upvote/Downvote already had some disabled logic, integrate `isLoading` with it: `disabled={isLoading || vote?.isUpvoted}` etc.).
-
-    *   **Task 2.4: Pass `reload` Prop Down**
-        *   [x] Go to `components/message.tsx` (`PurePreviewMessage`).
-        *   [x] Verify that the `reload` prop is already being received.
-        *   [x] Ensure the `reload` prop is passed correctly to the `<MessageActions />` component invocation.
-        *   [x] Go to `components/messages.tsx` (`PureMessages`).
-        *   [x] Verify that the `reload` prop is already being received.
-        *   [x] Ensure the `reload` prop is passed correctly to the `<PreviewMessage />` component invocation.
-        *   [x] Go to `components/chat.tsx`.
-        *   [x] Verify that the `reload` function from `useChat` is passed down to the `<Messages />` component.
-
-**Story 3: Implement "Copy User Prompt" Button**
-
-*   **Goal:** Allow users to easily copy their own message content.
-*   **File Target:** `components/message-actions.tsx` (`PureMessageActions`)
-
-    *   **Task 3.1: Modify Conditional Rendering for User Role**
-        *   [x] Locate the conditional check added in Task 2.3: `if (message.role !== 'assistant') return null;`.
-        *   [x] *Remove* this specific check, as we now want actions for *both* user and assistant roles (but different actions).
-
-    *   **Task 3.2: Add Conditional "Copy" Button for User Messages**
-        *   [x] Inside the main `div` (with `className="flex flex-row gap-2"`) where other action buttons reside:
-        *   [x] Add a conditional rendering block: `{message.role === 'user' && ( ... )}`.
-        *   [x] Inside this block, add a `<Tooltip>` component.
-        *   [x] Inside the `<Tooltip>`, add `<TooltipTrigger asChild>`.
-        *   [x] Inside the `<TooltipTrigger>`, add a `<Button>`.
-            *   Set `variant="outline"`.
-            *   Set `className="py-1 px-2 h-fit text-muted-foreground"`.
-            *   Set the `onClick` handler to call `handleCopy` (this function already exists and copies `message.content`).
-            *   Set `disabled={isLoading}`.
-            *   Include the `<CopyIcon />` (already imported).
-        *   [x] After the `<TooltipTrigger>`, add `<TooltipContent>Copy Prompt</TooltipContent>`.
-
-    *   **Task 3.3: Adjust Existing Actions for Assistant Role**
-        *   [x] Wrap the existing "Copy", "Upvote", and "Downvote" `<Tooltip>` blocks (excluding the user-specific copy button added above) in a conditional block: `{message.role === 'assistant' && ( ... )}`.
-        *   [x] Ensure the early returns for `isLoading` or non-string content *within* the assistant-specific block remain, or that the buttons themselves are appropriately disabled.
-
-**Story 4: Add Subtle Distinction for User/AI Bubbles**
-
-*   **Goal:** Improve visual separation between user and assistant messages.
-*   **File Target:** `components/message.tsx` (`PurePreviewMessage`)
-
-    *   **Task 4.1: Locate Message Content Container**
-        *   [ ] Inside `PurePreviewMessage`, find the `div` that directly wraps the `<Markdown>` component when `mode === 'view'`. It likely has conditional classes already like `bg-primary`, `text-primary-foreground`, `px-3`, `py-2`, `rounded-xl` for the `user` role.
-
-    *   **Task 4.2: Apply Styling for Assistant Messages**
-        *   [ ] Modify the `className` of this container `div`. Use `cn()` for clarity.
-        *   [ ] Ensure the existing user styles (`bg-primary`, `text-primary-foreground`) are applied *only* when `message.role === 'user'`.
-        *   [ ] Add styles to be applied *only* when `message.role === 'assistant'`:
-            *   `bg-muted/50` (or adjust existing default background if applicable)
-            *   `border`
-            *   `border-border/50` (for a subtle border)
-            *   `px-3 py-2` (to match user padding)
-            *   `rounded-xl` (to match user rounding)
-            *   Example using `cn`:
-                ```typescript
-                className={cn(
-                  'flex flex-col gap-4 break-words max-w-full overflow-hidden', // Base styles
-                  message.role === 'user'
-                    ? 'bg-primary text-primary-foreground px-3 py-2 rounded-xl'
-                    : 'bg-muted/50 border border-border/50 px-3 py-2 rounded-xl' // Styles for assistant
-                )}
-                ```
-        *   [ ] Remove any default padding/margin from the parent that might interfere if the background/border now handles spacing.
-
-    *   **Task 4.3: Verify Readability**
-        *   [ ] *Manual Check/AI Review:* Check both light and dark modes to ensure the distinction is clear but not visually jarring. Adjust `/50` opacity or background color (`bg-muted` vs `bg-background`) if needed for better contrast.
-
-**Story 5: Persist Selected Persona/System Prompt**
-
-*   **Goal:** Remember the user's last chosen system prompt across sessions.
-*   **File Target:** `components/chat.tsx`
-
-    *   **Task 5.1: Import `useLocalStorage` Hook**
-        *   [ ] At the top of `components/chat.tsx`, add the import for `useLocalStorage` from `usehooks-ts`:
-            ```typescript
-            import { useLocalStorage } from 'usehooks-ts';
-            ```
-
-    *   **Task 5.2: Import Default System Prompt Constant**
-        *   [ ] Ensure the default system prompt value is available. Import it if it's defined elsewhere (e.g., `lib/ai/config.ts`):
-            ```typescript
-            import { SYSTEM_PROMPT_DEFAULT } from '@/lib/ai/config'; // Adjust path if necessary
-            ```
-        *   [ ] *If `SYSTEM_PROMPT_DEFAULT` is not exported:* Go to `lib/ai/config.ts`, find the default prompt string, export it as a constant `SYSTEM_PROMPT_DEFAULT`, and then import it in `chat.tsx`.
-
-    *   **Task 5.3: Replace `useState` with `useLocalStorage`**
-        *   [ ] Find the state declaration for the system prompt:
-            ```typescript
-            const [selectedSystemPrompt, setSelectedSystemPrompt] = useState<string | undefined>(SYSTEM_PROMPT_DEFAULT);
-            ```
-        *   [ ] Replace it with the `useLocalStorage` hook, providing a key (e.g., `'selectedSystemPrompt'`) and the default value:
-            ```typescript
-            const [selectedSystemPrompt, setSelectedSystemPrompt] = useLocalStorage<string>(
-              'selectedSystemPrompt', // Key for localStorage
-              SYSTEM_PROMPT_DEFAULT   // Default value
-            );
-            ```
-        *   [ ] Note: The type might change slightly; `useLocalStorage` might not return `undefined` if a default is provided. Adjust type annotations if TypeScript complains, likely changing `string | undefined` to just `string`.
-
-    *   **Task 5.4: Verify Hook Usage**
-        *   [ ] Confirm that `setSelectedSystemPrompt` is still called correctly in the `handleSystemPromptSelect` function and anywhere else it might be used. The usage should be identical to `useState`'s setter.
-        *   [ ] Confirm that `selectedSystemPrompt` is still correctly passed in the `body` of the `useChat` hook options and any `append`/`handleSubmit` calls.
+**Goal:** Implement several small UI/UX improvements to enhance visual clarity, accessibility, and user convenience without altering core application logic.
 
 ---
 
-This checklist provides the necessary steps for the AI agent to implement each enhancement with minimal changes while ensuring functionality and addressing potential dependencies.
+**Enhancement 1: Visual Focus State for Textarea**
+
+*   **Goal:** Make the main chat input textarea visually distinct when it receives keyboard focus.
+*   **Target Files:**
+    *   `components/multimodal-input.tsx` (Primary, likely contains the `Textarea`)
+    *   *OR* `components/ui/ai-input-with-search.tsx` (If this is the primary input component used)
+    *   `lib/utils.ts` (To ensure `cn` utility is available)
+
+#### Story 1.1: Locate and Prepare the Textarea Component
+
+*   [x] Open the primary input component file (likely `components/multimodal-input.tsx` or `components/ui/ai-input-with-search.tsx`).
+*   [x] Identify the `<Textarea>` component instance used for the main chat input. It might have props like `ref={textareaRef}`, `placeholder="Send a message..."` or similar.
+*   [x] Verify the `cn` utility function is imported from `@/lib/utils`. If not, add the import: `import { cn } from '@/lib/utils';`.
+
+#### Task 1.2: Add Focus Visible Tailwind Classes
+
+*   [x] Locate the `className` prop passed to the identified `<Textarea>` component.
+*   [x] Ensure the `className` value is wrapped within the `cn()` utility function for robust class merging. If it's just a string, wrap it: `className={cn("existing classes...")}`.
+*   [x] Append the following Tailwind focus utility classes *inside* the `cn()` function call:
+    *   `focus-visible:ring-2`
+    *   `focus-visible:ring-offset-2`
+    *   `focus-visible:ring-ring` (This uses the `--ring` CSS variable defined in `globals.css`)
+    *   `focus-visible:outline-none` (To ensure the default browser outline doesn't clash)
+*   **Resulting Example `className`:** `className={cn("min-h-[24px] w-full resize-none border-0 bg-transparent py-4 pr-20 ... focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-ring", className)}` (Adjust existing classes as needed).
+
+#### Task 1.3: Verification
+
+*   [x] Run the application locally (`pnpm dev`).
+*   [x] Navigate to the chat interface.
+*   [x] Use the Tab key to navigate focus to the main chat input Textarea.
+*   [x] **Verify:** A visible ring (using the application's ring color) appears around the Textarea only when it receives keyboard focus (not just on click). Check both light and dark modes.
+
+---
+
+**Enhancement 2: Clearer Active Chat Item Highlight**
+
+*   **Goal:** Enhance the visual prominence of the currently selected chat item in the sidebar history.
+*   **Target Files:**
+    *   `components/sidebar-history.tsx`
+    *   *OR* `app/globals.css`
+
+#### Story 2.1: Locate Active Chat Item Styling
+
+*   [x] Open `components/sidebar-history.tsx`.
+*   [x] Find the `ChatItem` component rendering.
+*   [x] Locate the `SidebarMenuButton` component within `ChatItem`.
+*   [x] Observe the conditional class application: `className={\`flex-grow ${isActive ? 'active-gold' : ''}\`}`. This confirms the `active-gold` class is used.
+
+#### Task 2.2: Enhance `active-gold` CSS Class (Option A - Preferred)
+
+*   [x] Open `app/globals.css`.
+*   [x] Locate the `@layer components` section and the `.active-gold` class definition within it.
+    ```css
+    .active-gold {
+        @apply bg-amber-50 dark:bg-amber-900/20 border-l-2 border-amber-400 dark:border-amber-600;
+    }
+    ```
+*   [x] **Modify** the class definition to make it more prominent. Consider these options (apply one or a combination):
+    *   **Stronger Background:** Change `bg-amber-50 dark:bg-amber-900/20` to something slightly darker/more saturated, e.g., `bg-amber-100 dark:bg-amber-800/30`.
+    *   **Bolder Border:** Increase border thickness `border-l-2` to `border-l-4`.
+    *   **More Contrast Border:** Change border color `border-amber-400 dark:border-amber-600` to something with higher contrast if needed, e.g., `border-amber-500 dark:border-amber-500`.
+    *   **Font Weight:** Add `font-semibold`.
+*   **Example Enhanced Definition:**
+    ```css
+    .active-gold {
+        @apply bg-amber-100 dark:bg-amber-800/30 border-l-4 border-amber-500 dark:border-amber-500 font-semibold;
+    }
+    ```
+
+#### Task 2.3: Add Inline Conditional Class (Option B - Alternative)
+
+*   [x] *If modifying `globals.css` is not desired*, open `components/sidebar-history.tsx`.
+*   [x] Locate the `SidebarMenuButton` within `ChatItem`.
+*   [x] Modify the `className` prop to use `cn()` and add more distinct classes directly when `isActive` is true.
+*   **Example:**
+    ```typescript
+    import { cn } from '@/lib/utils'; // Ensure cn is imported
+
+    // Inside ChatItem component:
+    <SidebarMenuButton asChild isActive={isActive} className={cn(
+        'flex-grow',
+        isActive ? 'bg-amber-100 dark:bg-amber-800/30 border-l-4 border-amber-500 dark:border-amber-500 font-semibold' : ''
+    )}>
+        {/* ... Link component ... */}
+    </SidebarMenuButton>
+    ```
+
+#### Task 2.4: Verification
+
+*   [x] Run the application locally.
+*   [x] Ensure you have multiple chat history items in the sidebar.
+*   [x] Click on different chat items.
+*   [x] **Verify:** The currently selected chat item has a clearly more prominent visual highlight (background, border, and/or font weight) compared to inactive items and compared to the previous styling. Check both light and dark modes.
+
+---
+
+**Enhancement 3: Subtle Message Entry Animation**
+
+*   **Goal:** Add a subtle fade-in/slide-up animation to new messages appearing in the chat list.
+*   **Target Files:**
+    *   `components/messages.tsx`
+    *   `components/message.tsx` (Specifically the `PurePreviewMessage` component's wrapping `motion.div`)
+
+#### Story 3.1: Prepare the Messages Component
+
+*   [x] Open `components/messages.tsx`.
+*   [x] Ensure `AnimatePresence` and `motion` are imported from `framer-motion`. If not, add: `import { AnimatePresence, motion } from 'framer-motion';`.
+*   [x] Locate the `.map` function that iterates over the `messages` array to render `PreviewMessage` components.
+*   [x] Wrap this mapping loop with `<AnimatePresence>`.
+    ```typescript
+    <AnimatePresence>
+      {messages.map((message, index) => (
+        <PreviewMessage
+          key={message.id} // Key must be on the direct child of AnimatePresence if PreviewMessage itself isn't a motion component
+          // ... other props
+        />
+      ))}
+    </AnimatePresence>
+    ```
+
+#### Task 3.2: Apply Animation Props to Message Wrapper
+
+*   [x] Open `components/message.tsx`.
+*   [x] Locate the `PurePreviewMessage` component.
+*   [x] Find the outermost `motion.div` that wraps the entire message structure. It likely already has `initial`, `animate` props.
+    ```typescript
+     <motion.div
+        className="w-full mx-auto max-w-3xl px-2 sm:px-4 group/message"
+        initial={{ y: 5, opacity: 0 }} // Keep existing initial state
+        animate={{ y: 0, opacity: 1 }} // Keep existing animate state
+        // Add exit and transition props
+        exit={{ opacity: 0, y: -5, transition: { duration: 0.1 } }} // Add subtle exit
+        transition={{ duration: 0.2, ease: "easeOut" }} // Add/adjust transition
+        layout // Add layout prop for smoother list adjustments
+        data-role={message.role}
+      >
+        {/* ... rest of the message content ... */}
+      </motion.div>
+    ```
+*   [x] **Add** the `exit` prop for a subtle fade-out/slide-out when a message is removed (though less common in chat).
+*   [x] **Add/Adjust** the `transition` prop for finer control (e.g., `duration: 0.2`, `ease: "easeOut"`).
+*   [x] **Add** the `layout` prop to the `motion.div`. This helps Framer Motion smoothly animate layout changes when messages are added or removed.
+
+#### Task 3.3: Verification
+
+*   [x] Run the application locally.
+*   [x] Send several messages to the chatbot.
+*   [x] **Verify:** Each new message (both user and assistant) appears with a brief, smooth fade-in and potentially a slight upward slide animation, rather than instantly popping in. Ensure performance remains smooth.
+
+---
+
+**Enhancement 4: Consistent Tooltips**
+
+*   **Goal:** Ensure all icon-only buttons have descriptive tooltips for better usability.
+*   **Target Files:**
+    *   `components/sidebar-toggle.tsx`
+    *   `components/message-actions.tsx`
+    *   `components/artifact-actions.tsx`
+    *   `components/toolbar.tsx`
+    *   `components/ui/tooltip.tsx` (Ensure components are exported)
+
+#### Story 4.1: Verify Tooltip Component Availability
+
+*   [x] Open `components/ui/tooltip.tsx`.
+*   [x] **Verify:** `Tooltip`, `TooltipTrigger`, `TooltipContent`, and `TooltipProvider` are correctly defined and exported.
+
+#### Task 4.2: Add Tooltips to Sidebar Toggle
+
+*   [x] Open `components/sidebar-toggle.tsx`.
+*   [x] **Verify:** The `Button` is already wrapped in `Tooltip`, `TooltipTrigger`, and `TooltipContent`. (It appears to be already implemented based on the provided code). If not, wrap it like other examples.
+
+#### Task 4.3: Add/Verify Tooltips in Message Actions
+
+*   [x] Open `components/message-actions.tsx`.
+*   [x] **Verify:** The Copy, Thumbs Up, and Thumbs Down buttons are already wrapped in Tooltips. (It appears to be already implemented).
+*   [x] **Check:** Ensure the `TooltipProvider` wraps the entire action group for optimal behavior. If not, add it:
+    ```typescript
+    import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+    // ... inside PureMessageActions
+    return (
+      <TooltipProvider delayDuration={0}>
+        <div className="flex flex-row gap-2">
+          {/* Existing Tooltip-wrapped buttons */}
+        </div>
+      </TooltipProvider>
+    );
+    ```
+
+#### Task 4.4: Add/Verify Tooltips in Artifact Actions
+
+*   [x] Open `components/artifact-actions.tsx`.
+*   [x] **Verify:** The mapped `artifactDefinition.actions` are already wrapped in `Tooltip`, `TooltipTrigger`, and `TooltipContent`. (It appears to be already implemented).
+*   [x] **Check:** Ensure a `TooltipProvider` exists at a suitable parent level (likely in `components/artifact.tsx` or higher) or wrap the `div` containing the actions in `ArtifactActions` with one.
+
+#### Task 4.5: Add/Verify Tooltips in Toolbar
+
+*   [x] Open `components/toolbar.tsx`.
+*   [x] **Verify:** The mapped `Tools` and the `ReadingLevelSelector` (if it uses icon buttons) are wrapped in `Tooltip` components. (It appears to be already implemented for the mapped tools).
+*   [x] **Check:** Ensure the main `motion.div` in `PureToolbar` or a parent component is wrapped in `TooltipProvider`.
+
+#### Task 4.6: Verification
+
+*   [x] Run the application locally.
+*   [x] Hover over the Sidebar Toggle button. **Verify:** Tooltip appears.
+*   [x] Hover over Copy, Thumbs Up, Thumbs Down buttons on an assistant message. **Verify:** Tooltips appear.
+*   [x] Open an artifact (e.g., create one by asking the AI).
+*   [x] Hover over the icon buttons in the artifact's top action bar (Undo, Redo, Copy, etc.). **Verify:** Tooltips appear.
+*   [x] Hover over the icons in the floating toolbar at the bottom right of the artifact view. **Verify:** Tooltips appear.
+
+---
+
+**Enhancement 5: "Clear Input" Button**
+
+*   **Goal:** Add a small 'X' button inside the chat input to quickly clear its content.
+*   **Target Files:**
+    *   `components/multimodal-input.tsx` (Or `components/ui/ai-input-with-search.tsx`)
+    *   `components/icons.tsx` (To potentially use `CrossSmallIcon`) or `lucide-react` (for `X`)
+
+#### Story 5.1: Locate Input Container
+
+*   [x] Open the primary input component file (`components/multimodal-input.tsx` or `components/ui/ai-input-with-search.tsx`).
+*   [x] Identify the main `div` that wraps the `<Textarea>` and the action buttons (Send, Upload, etc.). It likely has `relative` positioning.
+
+#### Task 5.2: Add Conditional Clear Button
+
+*   [x] Import the necessary icon (e.g., `X` from `lucide-react` or `CrossSmallIcon` from `@/components/icons`).
+*   [x] Import `Button` from `@/components/ui/button`.
+*   [x] *Inside* the main wrapping `div` (but likely *before* the absolutely positioned right-side action buttons), add the following conditionally rendered button:
+    ```typescript
+    {input.trim().length > 0 && !isLoading && (
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        className="absolute right-[50px] sm:right-[60px] bottom-[10px] h-6 w-6 p-1 text-muted-foreground hover:text-foreground z-10" // Adjust positioning (right offset) as needed based on other buttons
+        onClick={(e) => {
+          e.preventDefault(); // Prevent form submission if inside a form
+          setInput(''); // Clear the input state
+          adjustHeight(true); // Reset textarea height (ensure adjustHeight is available/passed)
+          textareaRef.current?.focus(); // Optional: refocus the textarea
+        }}
+        aria-label="Clear input"
+      >
+        <X size={16} /> {/* Or CrossSmallIcon */}
+      </Button>
+    )}
+    ```
+*   [x] **Ensure** the `adjustHeight` function and `textareaRef` from `useAutoResizeTextarea` are available in the scope where this button is added. If necessary, pass them down or call the hook within this component.
+*   [x] **Adjust** the `right-[50px]` or `sm:right-[60px]` value carefully so the clear button sits just to the left of the Send/Upload buttons without overlapping, considering different screen sizes.
+
+#### Task 5.3: Verification
+
+*   [x] Run the application locally.
+*   [x] Navigate to the chat input.
+*   [x] **Verify:** The clear button ('X') is initially hidden.
+*   [x] Type text into the textarea. **Verify:** The 'X' button appears inside the input area, near the right edge but before the main action buttons.
+*   [x] Click the 'X' button. **Verify:** The textarea content is cleared, and the button disappears. The textarea height potentially resets.
+*   [x] **Verify:** The button is not clickable or visible when the input is loading (`isLoading` is true).
+
+---
