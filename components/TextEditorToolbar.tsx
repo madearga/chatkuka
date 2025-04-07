@@ -52,151 +52,95 @@ export const TextEditorToolbar: FC<TextEditorToolbarProps> = ({
   }
 
   return (
-    <TooltipProvider>
-      <div className="flex items-center gap-1 border-b border-border px-2 py-1 bg-muted rounded-t-md">
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              disabled={isDisabled}
-              aria-label="Bold"
-              onClick={() =>
-                runCommand(toggleMark(documentSchema.marks.strong))
-              }
-              className="h-7 w-7 p-1"
-            >
-              <Bold className="w-4 h-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Bold</TooltipContent>
-        </Tooltip>
+    <div className="sticky top-0 z-10 flex items-center gap-1 border-b border-border/50 bg-muted/80 backdrop-blur px-2 py-1 rounded-md shadow-md mb-2">
+      <Button
+        variant="ghost"
+        size="sm"
+        disabled={isDisabled}
+        aria-label="Bold"
+        onClick={() => runCommand(toggleMark(documentSchema.marks.strong))}
+        className="h-7 w-7 p-1"
+      >
+        <Bold className="w-4 h-4" />
+      </Button>
 
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              disabled={isDisabled}
-              aria-label="Italic"
-              onClick={() =>
-                runCommand(toggleMark(documentSchema.marks.em))
-              }
-              className="h-7 w-7 p-1"
-            >
-              <Italic className="w-4 h-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Italic</TooltipContent>
-        </Tooltip>
+      <Button
+        variant="ghost"
+        size="sm"
+        disabled={isDisabled}
+        aria-label="Italic"
+        onClick={() => runCommand(toggleMark(documentSchema.marks.em))}
+        className="h-7 w-7 p-1"
+      >
+        <Italic className="w-4 h-4" />
+      </Button>
 
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              disabled={isDisabled}
-              aria-label="Strikethrough"
-              onClick={() =>
-                runCommand(toggleMark(documentSchema.marks.strikethrough))
-              }
-              className="h-7 w-7 p-1"
-            >
-              <Strikethrough className="w-4 h-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Strikethrough</TooltipContent>
-        </Tooltip>
+      <Button
+        variant="ghost"
+        size="sm"
+        disabled={isDisabled}
+        aria-label="Strikethrough"
+        onClick={() => runCommand(toggleMark(documentSchema.marks.strikethrough))}
+        className="h-7 w-7 p-1"
+      >
+        <Strikethrough className="w-4 h-4" />
+      </Button>
 
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              disabled={isDisabled}
-              aria-label="Code"
-              onClick={() =>
-                runCommand(toggleMark(documentSchema.marks.code))
-              }
-              className="h-7 w-7 p-1"
-            >
-              <Code className="w-4 h-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Code</TooltipContent>
-        </Tooltip>
+      <Button
+        variant="ghost"
+        size="sm"
+        disabled={isDisabled}
+        aria-label="Code"
+        onClick={() => runCommand(toggleMark(documentSchema.marks.code))}
+        className="h-7 w-7 p-1"
+      >
+        <Code className="w-4 h-4" />
+      </Button>
 
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              disabled={isDisabled}
-              aria-label="Ordered List"
-              onClick={() =>
-                runCommand(toggleOrderedList)
-              }
-              className="h-7 w-7 p-1"
-            >
-              <ListOrdered className="w-4 h-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Ordered List</TooltipContent>
-        </Tooltip>
+      <Button
+        variant="ghost"
+        size="sm"
+        disabled={isDisabled}
+        aria-label="Ordered List"
+        onClick={() => runCommand(toggleOrderedList)}
+        className="h-7 w-7 p-1"
+      >
+        <ListOrdered className="w-4 h-4" />
+      </Button>
 
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              disabled={isDisabled}
-              aria-label="Bullet List"
-              onClick={() =>
-                runCommand(toggleBulletList)
-              }
-              className="h-7 w-7 p-1"
-            >
-              <List className="w-4 h-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Bullet List</TooltipContent>
-        </Tooltip>
+      <Button
+        variant="ghost"
+        size="sm"
+        disabled={isDisabled}
+        aria-label="Bullet List"
+        onClick={() => runCommand(toggleBulletList)}
+        className="h-7 w-7 p-1"
+      >
+        <List className="w-4 h-4" />
+      </Button>
 
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              disabled={isDisabled}
-              aria-label="Blockquote"
-              onClick={() =>
-                runCommand(toggleBlockquote)
-              }
-              className="h-7 w-7 p-1"
-            >
-              <Quote className="w-4 h-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Blockquote</TooltipContent>
-        </Tooltip>
+      <Button
+        variant="ghost"
+        size="sm"
+        disabled={isDisabled}
+        aria-label="Blockquote"
+        onClick={() => runCommand(toggleBlockquote)}
+        className="h-7 w-7 p-1"
+      >
+        <Quote className="w-4 h-4" />
+      </Button>
 
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              disabled={isDisabled}
-              aria-label="Link"
-              onClick={() => console.log('Link clicked')}
-              className="h-7 w-7 p-1"
-            >
-              <Link2 className="w-4 h-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Link</TooltipContent>
-        </Tooltip>
-      </div>
-    </TooltipProvider>
+      <Button
+        variant="ghost"
+        size="sm"
+        disabled={isDisabled}
+        aria-label="Link"
+        onClick={() => console.log('Link clicked')}
+        className="h-7 w-7 p-1"
+      >
+        <Link2 className="w-4 h-4" />
+      </Button>
+    </div>
   );
 };
 

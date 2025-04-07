@@ -149,13 +149,13 @@ function PureEditor({
   }, [suggestions, content]);
 
   return (
-    <>
+    <div className="relative flex flex-col">
       <TextEditorToolbar
         editorView={editorRef.current}
         isDisabled={status === 'streaming' || !isCurrentVersion}
       />
-      <div className="relative prose dark:prose-invert" ref={containerRef} />
-    </>
+      <div className="prose dark:prose-invert mt-2" ref={containerRef} />
+    </div>
   );
 }
 
