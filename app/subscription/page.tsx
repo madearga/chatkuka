@@ -48,7 +48,7 @@ export default async function SubscriptionPage() {
           <h2 className="text-xl font-semibold mb-4">Pro Plan</h2>
           <div className="p-6 border rounded-lg bg-card border-primary">
             <div className="mb-4">
-              <div className="text-3xl font-bold">Rp 99.000</div>
+              <div className="text-3xl font-bold">Rp 1.000</div>
               <div className="text-muted-foreground">per month</div>
             </div>
             <ul className="space-y-2 mb-6">

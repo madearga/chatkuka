@@ -9,7 +9,7 @@ import { and, eq, lte, isNotNull } from 'drizzle-orm';
 const SUBSCRIPTION_PLAN = {
   id: 'monthly_99k',
   name: 'Monthly Subscription',
-  price: 99000,
+  price: 1000, // Changed from 99000 to 1000 for testing
   currency: 'IDR',
 };
 
@@ -100,10 +100,10 @@ export async function GET(request: Request) {
           if (chargeResponse.transaction_id) {
              await updatePaymentStatus({
                orderId, // Use the same orderId
-               status: chargeResponse.transaction_status === 'capture' || chargeResponse.transaction_status === 'settlement' 
-                         ? 'success' 
-                         : chargeResponse.transaction_status === 'pending' 
-                           ? 'pending' 
+               status: chargeResponse.transaction_status === 'capture' || chargeResponse.transaction_status === 'settlement'
+                         ? 'success'
+                         : chargeResponse.transaction_status === 'pending'
+                           ? 'pending'
                            : 'failed', // Determine status based on charge response
                transactionId: chargeResponse.transaction_id,
                paymentType: 'credit_card', // Or chargeResponse.payment_type if available

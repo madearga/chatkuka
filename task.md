@@ -88,12 +88,12 @@ Here is a very detailed checklist designed for a competent AI coding agent to im
         *   [x] Implement a `POST` handler function.
         *   [x] **Authentication:** Use `await auth()` to get the session. Return 401 if no user or user ID.
         *   [x] **Check Existing Subscription:** Query the database (`User` table) for the user's current `subscriptionStatus`. If already 'active' or 'pending_activation', return an appropriate error/message (e.g., 409 Conflict).
-        *   [x] **Define Plan Details:** Hardcode or fetch plan details (ID: `'monthly_99k'`, amount: `99000`).
+        *   [x] **Define Plan Details:** Hardcode or fetch plan details (ID: `'monthly_99k'`, amount: `1000`). <!-- Changed from 99000 to 1000 for testing -->
         *   [x] **Generate Order ID:** Use `generateOrderId('SUB_INIT_')` from `lib/midtrans.ts`.
         *   [x] **Prepare Midtrans Snap Parameters:**
-            *   `transaction_details`: Use the generated `orderId` and `gross_amount: 99000`.
+            *   `transaction_details`: Use the generated `orderId` and `gross_amount: 1000`. <!-- Changed from 99000 to 1000 for testing -->
             *   `customer_details`: Populate with user's email and ID from session.
-            *   `item_details`: Define the subscription item (e.g., `{ id: 'monthly_99k', price: 99000, quantity: 1, name: 'Monthly Subscription' }`).
+            *   `item_details`: Define the subscription item (e.g., `{ id: 'monthly_99k', price: 1000, quantity: 1, name: 'Monthly Subscription' }`). <!-- Changed from 99000 to 1000 for testing -->
             *   **Tokenization:** Add `credit_card: { save_card: true }` to *request* Midtrans to attempt saving the card details securely if the user pays with a card. (Note: Actual token availability depends on Midtrans flow and webhook).
         *   [x] **Call Midtrans Snap:** Use `createSnapTransaction` (from `lib/midtrans.ts`) with the prepared parameters.
         *   [x] **Handle Midtrans Errors:** Add `try...catch` around the `createSnapTransaction` call. Log errors and return a 500 response if Midtrans fails.
@@ -137,7 +137,7 @@ Here is a very detailed checklist designed for a competent AI coding agent to im
                 *   **Generate Order ID:** Create a unique `orderId` for this renewal attempt (e.g., `generateOrderId('SUB_RENEW_')`).
                 *   **Prepare Core API Charge Payload:**
                     *   `payment_type`: `'credit_card'`
-                    *   `transaction_details`: `{ order_id: newOrderId, gross_amount: 99000 }`
+                    *   `transaction_details`: `{ order_id: newOrderId, gross_amount: 1000 }` <!-- Changed from 99000 to 1000 for testing -->
                     *   `credit_card`: `{ token_id: user.midtransPaymentTokenId, authentication: true }` (Use the stored token ID. `authentication: true` might be needed for subsequent charges).
                     *   `customer_details`: Include user email/ID if needed by Midtrans.
                 *   **Call Midtrans Core API:** Use the initialized `coreApi.charge(payload)` method. Wrap in `try...catch`.

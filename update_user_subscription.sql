@@ -2,7 +2,7 @@
 
 -- 1. Perbarui semua user yang ada menjadi user free
 UPDATE "User"
-SET 
+SET
   "subscriptionStatus" = 'inactive',
   "isPaid" = false,
   "planId" = NULL,
@@ -11,19 +11,19 @@ SET
 -- 2. Contoh SQL untuk memperbarui user tertentu menjadi user pro
 -- Ganti 'user-id-yang-sudah-membayar' dengan ID user yang ingin diubah menjadi pro
 UPDATE "User"
-SET 
+SET
   "subscriptionStatus" = 'active',
   "isPaid" = true,
-  "planId" = 'monthly_99k',
+  "planId" = 'monthly_99k', -- Plan ID tetap sama meskipun harga diubah menjadi 1000
   "currentPeriodEnd" = NOW() + INTERVAL '1 month'
 WHERE "id" = 'user-id-yang-sudah-membayar';
 
 -- 3. Contoh SQL untuk melihat status langganan semua user
-SELECT 
-  "id", 
-  "email", 
-  "subscriptionStatus", 
-  "isPaid", 
-  "planId", 
+SELECT
+  "id",
+  "email",
+  "subscriptionStatus",
+  "isPaid",
+  "planId",
   "currentPeriodEnd"
 FROM "User";
