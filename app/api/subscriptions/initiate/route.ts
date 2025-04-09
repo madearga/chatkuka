@@ -11,7 +11,7 @@ import { eq } from 'drizzle-orm';
 const SUBSCRIPTION_PLAN = {
   id: 'monthly_99k',
   name: 'Monthly Subscription',
-  price: 99000,
+  price: 1000,
   currency: 'IDR',
 };
 
