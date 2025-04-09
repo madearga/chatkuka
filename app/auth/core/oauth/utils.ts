@@ -10,7 +10,7 @@ export async function connectUserToAccount(
   provider: OAuthProvider
 ) {
   console.log(`Connecting OAuth account: ${provider} - ${id} - ${email}`);
-  
+
   return db.transaction(async (trx: any) => {
     // Find existing user by email
     let user = await trx.query.UserTable.findFirst({
@@ -28,6 +28,7 @@ export async function connectUserToAccount(
         .values({
           email: email,
           name: name,
+          subscriptionStatus: 'inactive',
         })
         .returning({ id: UserTable.id, role: UserTable.role, email: UserTable.email, name: UserTable.name });
       user = newUser;

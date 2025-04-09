@@ -3,7 +3,7 @@ import NextAuth, { type User, type Session, type Account, type Profile } from 'n
 import Credentials from 'next-auth/providers/credentials';
 import GoogleProvider from 'next-auth/providers/google';
 
-import { getUser, getUserByEmail } from '@/lib/db/queries';
+import { getUser, getUserByEmail, getUserById } from '@/lib/db/queries';
 import { DrizzleAdapter } from '@/lib/db/auth-adapter';
 
 import { authConfig } from './auth.config';
@@ -38,9 +38,9 @@ export const {
           // First, try to find the user by email
           const users = await getUser(email);
           if (users.length === 0) return null;
-          
+
           const user = users[0];
-          
+
           // For regular email/password login, verify the password
           if (password) {
             // biome-ignore lint: Forbidden non-null assertion.
@@ -48,7 +48,7 @@ export const {
             if (!passwordsMatch) return null;
             return user as any;
           }
-          
+
           return null;
         } catch (error) {
           console.error('Error in authorize callback:', error);
@@ -64,7 +64,7 @@ export const {
         console.log('JWT Callback - Token:', token);
         console.log('JWT Callback - User:', user);
         console.log('JWT Callback - Account:', account);
-        
+
         // Initial sign in
         if (account && user) {
           // Add user ID to token
@@ -75,6 +75,25 @@ export const {
           if (profile) {
             token.name = profile.name || user.name;
             token.email = profile.email || user.email;
+          }
+
+          // Add subscription status to token
+          if ((user as any).subscriptionStatus) {
+            token.subscriptionStatus = (user as any).subscriptionStatus;
+          } else {
+            // Default to inactive for new users
+            token.subscriptionStatus = 'inactive';
+          }
+        }
+
+        // If token already has an ID but we need to update subscription status
+        if (token.id && !token.subscriptionStatus) {
+          // Fetch the latest user data from the database
+          const users = await getUserById(token.id as string);
+          if (users) {
+            token.subscriptionStatus = users.subscriptionStatus || 'inactive';
+          } else {
+            token.subscriptionStatus = 'inactive';
           }
         }
 
@@ -92,13 +111,21 @@ export const {
         // Log the session and token for debugging
         console.log('Session Callback - Session:', session);
         console.log('Session Callback - Token:', token);
-        
+
         if (session.user) {
           // Copy information from the token to the session
           session.user.id = token.id as string;
           // Add any other token properties you want in the session
           if (token.name) session.user.name = token.name as string;
           if (token.email) session.user.email = token.email as string;
+
+          // Add subscription status to session
+          if (token.subscriptionStatus) {
+            (session.user as any).subscriptionStatus = token.subscriptionStatus as string;
+          } else {
+            // Default to inactive if not set
+            (session.user as any).subscriptionStatus = 'inactive';
+          }
         }
 
         return session;

@@ -83,7 +83,12 @@ export async function createUser(email: string, password: string) {
   const hash = hashSync(password, salt);
 
   try {
-    return await db.insert(user).values({ email, password: hash });
+    // Explicitly set subscriptionStatus to inactive for new users
+    return await db.insert(user).values({
+      email,
+      password: hash,
+      subscriptionStatus: 'inactive'
+    });
   } catch (error) {
     console.error('Failed to create user in database');
     throw error;

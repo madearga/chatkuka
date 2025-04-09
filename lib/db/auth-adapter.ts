@@ -6,7 +6,7 @@ import { user, UserOAuthAccountTable } from './schema';
 /**
  * Drizzle adapter for NextAuth
  * This adapter connects NextAuth directly to our database schema
- * 
+ *
  * Since we're using JWT sessions, we don't need to implement all session-related methods,
  * but we still need to provide them to satisfy the Adapter interface.
  */
@@ -21,10 +21,12 @@ export function DrizzleAdapter(): Adapter {
           .values({
             email: data.email,
             name: data.name || null,
+            // Set default subscription status to inactive for new users
+            subscriptionStatus: 'inactive',
             // Note: emailVerified is not in our schema, so we don't include it
           })
           .returning();
-        
+
         return {
           id: newUser.id,
           email: newUser.email,
@@ -45,9 +47,9 @@ export function DrizzleAdapter(): Adapter {
           .select()
           .from(user)
           .where(eq(user.id, id));
-        
+
         if (!foundUser) return null;
-        
+
         return {
           id: foundUser.id,
           email: foundUser.email,
@@ -68,9 +70,9 @@ export function DrizzleAdapter(): Adapter {
           .select()
           .from(user)
           .where(eq(user.email, email));
-        
+
         if (!foundUser) return null;
-        
+
         return {
           id: foundUser.id,
           email: foundUser.email,
@@ -99,9 +101,9 @@ export function DrizzleAdapter(): Adapter {
               eq(UserOAuthAccountTable.providerAccountId, providerAccountId)
             )
           );
-        
+
         if (!result) return null;
-        
+
         return {
           id: result.user.id,
           email: result.user.email,
@@ -127,7 +129,7 @@ export function DrizzleAdapter(): Adapter {
           })
           .where(eq(user.id, userData.id))
           .returning();
-        
+
         return {
           id: updatedUser.id,
           email: updatedUser.email,
@@ -154,18 +156,18 @@ export function DrizzleAdapter(): Adapter {
               eq(UserOAuthAccountTable.providerAccountId, account.providerAccountId)
             )
           );
-        
+
         if (existingAccount.length > 0) {
           console.log('Account already exists, returning existing account');
           return account;
         }
-        
+
         await db.insert(UserOAuthAccountTable).values({
           provider: account.provider as any,
           providerAccountId: account.providerAccountId,
           userId: account.userId,
         });
-        
+
         return account;
       } catch (error) {
         console.error('Error linking account:', error);
@@ -175,7 +177,7 @@ export function DrizzleAdapter(): Adapter {
 
     // The following methods are stubs since we're using JWT sessions
     // but they're required by the Adapter interface
-    
+
     async createSession({ sessionToken, userId, expires }) {
       console.log('DrizzleAdapter.createSession - Using JWT sessions instead');
       return {
@@ -239,4 +241,4 @@ export function DrizzleAdapter(): Adapter {
       }
     },
   };
-} 
+}

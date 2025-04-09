@@ -22,7 +22,7 @@ export const user = pgTable('User', {
   paidUntil: timestamp('paidUntil'),
   createdAt: timestamp('createdAt'),
   updatedAt: timestamp('updatedAt'),
-  subscriptionStatus: varchar('subscriptionStatus', { enum: ['inactive', 'active', 'pending_activation', 'past_due', 'cancelled'] }),
+  subscriptionStatus: varchar('subscriptionStatus', { enum: ['inactive', 'active', 'pending_activation', 'past_due', 'cancelled'] }).default('inactive'),
   subscriptionId: varchar('subscriptionId'),
   subscriptionProvider: varchar('subscriptionProvider'),
   subscriptionStartedAt: timestamp('subscriptionStartedAt'),
