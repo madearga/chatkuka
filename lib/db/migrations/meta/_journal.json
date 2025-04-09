@@ -57,6 +57,13 @@
       "when": 1743172102125,
       "tag": "0007_narrow_baron_strucker",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1744180898282,
+      "tag": "0008_certain_nighthawk",
+      "breakpoints": true
     }
   ]
 }
