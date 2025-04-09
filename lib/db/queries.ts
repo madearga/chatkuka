@@ -43,19 +43,30 @@ export async function getUser(email: string): Promise<Array<User>> {
   }
 }
 
+// Get user by ID
+export async function getUserById(userId: string): Promise<User | null> {
+  try {
+    const users = await db.select().from(user).where(eq(user.id, userId));
+    return users.length > 0 ? users[0] : null;
+  } catch (error) {
+    console.error('Failed to get user by ID from database');
+    throw error;
+  }
+}
+
 // Get user by email, including OAuth account information
 export async function getUserByEmail(email: string) {
   try {
     // Find user by email
     const users = await db.select().from(user).where(eq(user.email, email));
     if (users.length === 0) return null;
-    
+
     // Check if user has OAuth account
     const oauthAccounts = await db
       .select()
       .from(UserOAuthAccountTable)
       .where(eq(UserOAuthAccountTable.userId, users[0].id));
-    
+
     // Return user with OAuth account info
     return {
       ...users[0],
@@ -143,12 +154,12 @@ export async function saveMessages({ messages }: { messages: Array<ExtendedMessa
       console.warn('No messages to save, skipping database insert');
       return { success: false, reason: 'empty_messages' };
     }
-    
+
     // Process messages to handle attachmentUrl
     const processedMessages = messages.map(message => {
       // Create a new message object that includes all fields from the original message
       const processedMessage = { ...message };
-      
+
       // Ensure attachmentUrl is defined (either from message or from experimental_attachments)
       if (!('attachmentUrl' in processedMessage) || processedMessage.attachmentUrl === undefined) {
         // Extract attachmentUrl from experimental_attachments if present
@@ -158,10 +169,10 @@ export async function saveMessages({ messages }: { messages: Array<ExtendedMessa
           processedMessage.attachmentUrl = null;
         }
       }
-      
+
       return processedMessage;
     });
-    
+
     return await db.insert(message).values(processedMessages);
   } catch (error) {
     console.error('Failed to save messages in database', error);

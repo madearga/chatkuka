@@ -34,7 +34,7 @@ function PureChatHeader({
       {/* Left side - toggle and model selector */}
       <div className="flex items-center gap-1 sm:gap-2 min-w-0 flex-1">
         <SidebarToggle />
-        
+
         {!isReadonly && (
           <ModelSelector
             selectedModelId={selectedModelId}
@@ -42,7 +42,7 @@ function PureChatHeader({
           />
         )}
       </div>
-      
+
       {/* Right side - new chat button and visibility */}
       <div className="flex items-center gap-1 sm:gap-2 justify-end">
         {!isReadonly && (
@@ -52,7 +52,7 @@ function PureChatHeader({
             className="flex-shrink-0"
           />
         )}
-        
+
         <Tooltip>
           <TooltipTrigger asChild>
             <Button

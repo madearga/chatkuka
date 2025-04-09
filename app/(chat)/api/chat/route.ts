@@ -8,11 +8,13 @@ import {
 import { auth } from '@/app/(auth)/auth';
 import { myProvider } from '@/lib/ai/models';
 import { systemPrompt } from '@/lib/ai/prompts';
+import { hasModelAccess, getDefaultModelForUser } from '@/lib/ai/model-access';
 import {
   deleteChatById,
   getChatById,
   saveChat,
   saveMessages,
+  getUserById,
 } from '@/lib/db/queries';
 import {
   generateUUID,
@@ -31,7 +33,7 @@ export const maxDuration = 60;
 
 export async function POST(request: Request) {
   try {
-    const {
+    let {
       id,
       messages,
       selectedChatModel,
@@ -39,9 +41,9 @@ export async function POST(request: Request) {
       searchQuery,
       searchOptions,
       systemPrompt: requestSystemPrompt, // Add systemPrompt from request
-    }: { 
-      id: string; 
-      messages: Array<Message & { attachmentUrl?: string | null }>; 
+    }: {
+      id: string;
+      messages: Array<Message & { attachmentUrl?: string | null }>;
       selectedChatModel: string;
       useSearch?: boolean;
       searchQuery?: string;
@@ -67,12 +69,12 @@ export async function POST(request: Request) {
       console.error('No session found');
       return new Response('Unauthorized - No session', { status: 401 });
     }
-    
+
     if (!session.user) {
       console.error('No user in session');
       return new Response('Unauthorized - No user in session', { status: 401 });
     }
-    
+
     if (!session.user.id) {
       console.error('No user ID in session');
       return new Response('Unauthorized - No user ID in session', { status: 401 });
@@ -81,6 +83,29 @@ export async function POST(request: Request) {
     // Log session info for debugging
     console.log('Session user ID:', session.user.id);
     console.log('Session user email:', session.user.email);
+
+    // Get user data from database to check subscription status
+    const user = await getUserById(session.user.id);
+
+    // Validate model access based on subscription status
+    if (!hasModelAccess(user, selectedChatModel)) {
+      console.error(`User ${session.user.email} attempted to use model ${selectedChatModel} without proper subscription`);
+      const defaultModel = getDefaultModelForUser(user);
+      console.log(`Falling back to default model: ${defaultModel}`);
+
+      // Override selected model with the default model for the user's tier
+      selectedChatModel = defaultModel;
+
+      // Add a system message to inform the user about the model downgrade
+      if (messages.length > 0 && messages[messages.length - 1].role === 'user') {
+        // Add a system message before the AI response
+        messages.push({
+          id: generateUUID(),
+          role: 'system',
+          content: `This model requires a Pro subscription. Your message has been processed with the free tier model instead. [Upgrade to Pro](/subscription) to access advanced models.`,
+        });
+      }
+    }
 
     const userMessage = getMostRecentUserMessage(messages);
 
@@ -104,14 +129,14 @@ export async function POST(request: Request) {
         const title = await generateTitleFromUserMessage({ message: userMessage });
         console.log('Creating new chat with title:', title);
         console.log('User ID from session:', session.user.id);
-        
+
         await saveChat({ id, userId: session.user.id, title });
         console.log('Successfully created new chat with ID:', id);
       } catch (error) {
         console.error('Failed to save chat in database', error);
         // Return detailed error information
-        return new Response(`Failed to create chat - database error: ${error instanceof Error ? error.message : String(error)}`, { 
-          status: 500 
+        return new Response(`Failed to create chat - database error: ${error instanceof Error ? error.message : String(error)}`, {
+          status: 500
         });
       }
     }
@@ -120,13 +145,13 @@ export async function POST(request: Request) {
     try {
       // Get attachmentUrl from message if available
       const attachmentUrl = (userMessage as any).attachmentUrl || null;
-      
+
       await saveMessages({
-        messages: [{ 
-          ...userMessage, 
-          createdAt: new Date(), 
+        messages: [{
+          ...userMessage,
+          createdAt: new Date(),
           chatId: id,
-          attachmentUrl 
+          attachmentUrl
         }],
       });
       console.log('Successfully saved user message');
@@ -137,10 +162,10 @@ export async function POST(request: Request) {
 
     // Get Tavily API key from environment variables
     const tavilyApiKey = process.env.TAVILY_API_KEY;
-    
+
     // Check if search is available
     const searchToolAvailable = Boolean(tavilyApiKey);
-    
+
     if (!searchToolAvailable && useSearch) {
       console.warn('Tavily API key is missing but search was requested');
     }
@@ -154,7 +179,7 @@ export async function POST(request: Request) {
         createdAt: new Date(),
         chatId: id
       };
-      
+
       await saveMessages({
         messages: [errorMessage],
       });
@@ -192,7 +217,7 @@ export async function POST(request: Request) {
         // If search is enabled, perform search before starting the AI response
         let systemMessage = requestSystemPrompt || systemPrompt({ selectedChatModel });
         let searchResults = null;
-        
+
         if (useSearch && searchToolAvailable && searchQuery && tavilyApiKey) {
           try {
             // Update status to processing
@@ -201,7 +226,7 @@ export async function POST(request: Request) {
               status: 'processing',
               query: searchQuery,
             });
-            
+
             searchResults = await searchTavily(searchQuery, searchOptions);
             console.log('Search results from Tavily:', searchResults);
 
@@ -215,13 +240,13 @@ export async function POST(request: Request) {
               images: searchResults.images ? JSON.parse(JSON.stringify(searchResults.images)) : [],
               responseTime: searchResults.responseTime,
             } as any);
-            
+
             // Add search results to system message
             systemMessage += `\n\nSearch results for "${searchQuery}":\n\n`;
             if (searchResults.answer) {
               systemMessage += `Summary: ${searchResults.answer}\n\n`;
             }
-            
+
             if (Array.isArray(searchResults.results) && searchResults.results.length > 0) {
               systemMessage += `Sources:\n`;
               searchResults.results.forEach((result: any, index: number) => {
@@ -229,19 +254,19 @@ export async function POST(request: Request) {
                 systemMessage += `URL: ${result.url}\n`;
                 systemMessage += `Content: ${result.content}\n\n`;
               });
-              
+
               // Add citation instructions
               systemMessage += `\nWhen referencing the above search results in your response, please cite the sources using markdown links in this format: [Source Title](URL).\n`;
               systemMessage += `For example: "According to [${searchResults.results[0].title}](${searchResults.results[0].url}), ..."\n\n`;
             } else {
               systemMessage += `No search results found.\n\n`;
             }
-            
+
             systemMessage += `Please use these search results to provide a comprehensive response to the user's query.`;
-            
+
           } catch (error) {
             console.error('Search error:', error);
-            
+
             // Send error to client
             dataStream.writeData({
               type: 'search-status',
@@ -249,7 +274,7 @@ export async function POST(request: Request) {
               query: searchQuery,
               error: error instanceof Error ? error.message : String(error),
             });
-            
+
             systemMessage += `\n\nAttempted to search for "${searchQuery}" but encountered an error. Please inform the user that the search failed and answer based on your knowledge.`;
           }
         } else if (useSearch && !searchToolAvailable) {

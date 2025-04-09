@@ -8,6 +8,7 @@ import {
   extractReasoningMiddleware,
   wrapLanguageModel,
 } from 'ai';
+import { ModelTier } from './model-access';
 
 export const DEFAULT_CHAT_MODEL: string = 'chat-model-small';
 
@@ -29,31 +30,38 @@ export const myProvider = customProvider({
   },
 });
 
+
+
 interface ChatModel {
   id: string;
   name: string;
   description: string;
+  tier?: ModelTier; // Tier required to access this model
 }
 
 export const chatModels: Array<ChatModel> = [
   {
     id: 'chat-model-small',
-    name: 'Small model',
+    name: 'Small model (Free)',
     description: 'Small model for fast, lightweight tasks',
+    tier: ModelTier.FREE,
   },
   {
     id: 'chat-model-large',
-    name: 'Large model',
+    name: 'Large model (Pro)',
     description: 'Large model for complex, multi-step tasks',
+    tier: ModelTier.PAID,
   },
   {
     id: 'chat-model-reasoning',
-    name: 'Reasoning model',
+    name: 'Reasoning model (Pro)',
     description: 'Uses advanced reasoning',
+    tier: ModelTier.PAID,
   },
   {
     id: 'chat-model-image-gen',
-    name: 'Image generation model',
-    description: 'Specialized model for generating images inline'
+    name: 'Image generation (Free)',
+    description: 'Specialized model for generating images inline',
+    tier: ModelTier.FREE,
   },
 ];
