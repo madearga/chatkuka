@@ -1,86 +1,90 @@
 import { NextResponse } from 'next/server';
+
 import { auth } from '@/app/(auth)/auth';
-import { db } from '@/lib/db';
+import { db } from '@/lib/db/db';
 import { user } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 
-// GET handler to retrieve subscription status
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    // Authentication check
+    // Check authentication
     const session = await auth();
-    if (!session?.user?.id) {
+    if (!session?.user) {
+      console.log('Subscription Manage API: Unauthorized request');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const userId = session.user.id;
-
-    // Fetch user's subscription details
-    const [userRecord] = await db
+    // Get user's subscription details
+    const [userData] = await db
       .select({
+        id: user.id,
+        email: user.email,
         subscriptionStatus: user.subscriptionStatus,
         planId: user.planId,
         currentPeriodEnd: user.currentPeriodEnd,
       })
       .from(user)
-      .where(eq(user.id, userId));
+      .where(eq(user.id, session.user.id));
 
-    if (!userRecord) {
+    if (!userData) {
+      console.error('Subscription Manage API: User not found');
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // Format the date for display if it exists
-    const formattedPeriodEnd = userRecord.currentPeriodEnd
-      ? new Date(userRecord.currentPeriodEnd).toISOString()
-      : null;
-
     // Return subscription details
     return NextResponse.json({
-      status: userRecord.subscriptionStatus || 'inactive',
-      planId: userRecord.planId || null,
-      currentPeriodEnd: formattedPeriodEnd,
-      isActive: userRecord.subscriptionStatus === 'active',
+      status: userData.subscriptionStatus || 'inactive',
+      planId: userData.planId,
+      currentPeriodEnd: userData.currentPeriodEnd,
+      isActive: userData.subscriptionStatus === 'active',
     });
   } catch (error) {
-    console.error('Failed to fetch subscription status:', error);
+    console.error('Subscription Manage API: Unhandled error:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch subscription status' },
+      { error: 'Failed to fetch subscription details' },
       { status: 500 }
     );
   }
 }
 
-// POST handler to cancel subscription
-export async function POST() {
+export async function POST(request: Request) {
   try {
-    // Authentication check
+    // Check authentication
     const session = await auth();
-    if (!session?.user?.id) {
+    if (!session?.user) {
+      console.log('Subscription Manage API: Unauthorized request');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const userId = session.user.id;
+    // Get action from request body
+    const { action } = await request.json();
 
-    // Fetch user's current subscription status
-    const [userRecord] = await db
+    if (action !== 'cancel') {
+      return NextResponse.json(
+        { error: 'Invalid action. Supported actions: cancel' },
+        { status: 400 }
+      );
+    }
+
+    // Get user's current subscription status
+    const [userData] = await db
       .select({
+        id: user.id,
         subscriptionStatus: user.subscriptionStatus,
       })
       .from(user)
-      .where(eq(user.id, userId));
+      .where(eq(user.id, session.user.id));
 
-    if (!userRecord) {
+    if (!userData) {
+      console.error('Subscription Manage API: User not found');
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // Check if already cancelled or inactive
-    if (
-      userRecord.subscriptionStatus === 'cancelled' ||
-      userRecord.subscriptionStatus === 'inactive'
-    ) {
+    // Check if subscription is already cancelled or inactive
+    if (userData.subscriptionStatus === 'cancelled' || userData.subscriptionStatus === 'inactive') {
       return NextResponse.json({
         message: 'Subscription is already cancelled or inactive',
-        status: 'cancelled',
+        status: userData.subscriptionStatus,
       });
     }
 
@@ -90,20 +94,16 @@ export async function POST() {
       .set({
         subscriptionStatus: 'cancelled',
       })
-      .where(eq(user.id, userId));
+      .where(eq(user.id, userData.id));
 
-    // Log the cancellation
-    console.log(`User ${userId} cancelled their subscription`);
-
-    // Return success response
     return NextResponse.json({
       message: 'Subscription cancelled successfully',
       status: 'cancelled',
     });
   } catch (error) {
-    console.error('Failed to cancel subscription:', error);
+    console.error('Subscription Manage API: Unhandled error:', error);
     return NextResponse.json(
-      { error: 'Failed to cancel subscription' },
+      { error: 'Failed to manage subscription' },
       { status: 500 }
     );
   }

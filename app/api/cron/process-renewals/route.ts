@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { db } from '@/lib/db/db';
 import { user } from '@/lib/db/schema';
 import { createPayment } from '@/lib/db/queries';
 import { coreApi, generateOrderId } from '@/lib/midtrans';
@@ -49,7 +49,7 @@ export async function GET(request: Request) {
 
     // Process each user's renewal
     const results = await Promise.all(
-      usersToRenew.map(async (user) => {
+      usersToRenew.map(async (userData) => {
         try {
           // Generate a unique order ID for this renewal
           const orderId = generateOrderId('SUB_RENEW_');
@@ -62,13 +62,13 @@ export async function GET(request: Request) {
               gross_amount: SUBSCRIPTION_PLAN.price,
             },
             credit_card: {
-              token_id: user.midtransPaymentTokenId,
+              token_id: userData.midtransPaymentTokenId,
               authentication: true,
             },
             customer_details: {
-              email: user.email,
+              email: userData.email,
               first_name: 'Subscriber',
-              customer_id: user.id,
+              customer_id: userData.id,
             },
           };
 
@@ -85,37 +85,37 @@ export async function GET(request: Request) {
             .set({
               currentPeriodEnd: newPeriodEnd,
             })
-            .where(eq(user.id, user.id));
+            .where(eq(user.id, userData.id));
 
           // Record the payment
           await createPayment({
             orderId,
             amount: SUBSCRIPTION_PLAN.price.toString(),
-            userId: user.id,
+            userId: userData.id,
             status: chargeResponse.transaction_status || 'pending',
             transactionId: chargeResponse.transaction_id,
             paymentType: 'credit_card',
           });
 
           return {
-            userId: user.id,
+            userId: userData.id,
             orderId,
             status: 'success',
             transactionStatus: chargeResponse.transaction_status,
           };
         } catch (error) {
-          console.error(`Failed to renew subscription for user ${user.id}:`, error);
-          
+          console.error(`Failed to renew subscription for user ${userData.id}:`, error);
+
           // If renewal fails, mark the subscription as past_due
           await db
             .update(user)
             .set({
               subscriptionStatus: 'past_due',
             })
-            .where(eq(user.id, user.id));
-            
+            .where(eq(user.id, userData.id));
+
           return {
-            userId: user.id,
+            userId: userData.id,
             status: 'failed',
             error: error instanceof Error ? error.message : 'Unknown error',
           };

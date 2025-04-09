@@ -46,17 +46,32 @@ export function PaymentForm({
 
   useEffect(() => {
     const loadSnapScript = () => {
-      const script = document.createElement('script');
-      script.src = process.env.NEXT_PUBLIC_MIDTRANS_SNAP_URL ?? 'https://app.sandbox.midtrans.com/snap/snap.js';
-      script.setAttribute('data-client-key', process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY ?? '');
-      script.onload = () => setSnapScriptLoaded(true);
-      document.body.appendChild(script);
+      try {
+        const script = document.createElement('script');
+        script.src = process.env.NEXT_PUBLIC_MIDTRANS_SNAP_URL ?? 'https://app.sandbox.midtrans.com/snap/snap.js';
+        script.setAttribute('data-client-key', process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY ?? '');
+        script.onload = () => {
+          console.log('Midtrans script loaded successfully');
+          setSnapScriptLoaded(true);
+        };
+        script.onerror = (error) => {
+          console.error('Failed to load Midtrans script:', error);
+          toast.error('Failed to load payment gateway. Please try again later.');
+        };
+        document.body.appendChild(script);
+      } catch (error) {
+        console.error('Error in loadSnapScript:', error);
+        toast.error('Failed to initialize payment gateway');
+      }
     };
 
-    if (!window.snap) {
-      loadSnapScript();
-    } else {
-      setSnapScriptLoaded(true);
+    if (typeof window !== 'undefined') {
+      if (!window.snap) {
+        loadSnapScript();
+      } else {
+        console.log('Midtrans snap already loaded');
+        setSnapScriptLoaded(true);
+      }
     }
 
     return () => {
@@ -71,6 +86,14 @@ export function PaymentForm({
     try {
       setIsLoading(true);
 
+      // Check if Midtrans script is loaded
+      if (!window.snap) {
+        toast.error('Payment gateway is not ready. Please try again.');
+        setIsLoading(false);
+        return;
+      }
+
+      console.log('Initiating payment request...');
       const response = await fetch('/api/payment', {
         method: 'POST',
         headers: {
@@ -83,43 +106,50 @@ export function PaymentForm({
       });
 
       if (!response.ok) {
-        throw new Error('Payment request failed');
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Payment request failed:', errorData);
+        throw new Error(errorData.error || 'Payment request failed');
       }
 
-      const { token } = await response.json();
+      const data = await response.json();
+      console.log('Payment token received:', data.token ? 'Yes' : 'No');
+
+      if (!data.token) {
+        throw new Error('No payment token received from server');
+      }
 
       const container = document.getElementById('snap-container');
       if (container) {
         container.innerHTML = '';
       }
 
-      if (window.snap && token) {
-        window.snap.embed(token, {
-          embedId: 'snap-container',
-          onSuccess: (result) => {
-            console.log('Payment success:', result);
-            toast.success('Payment successful!');
-            onSuccess?.();
-            router.refresh();
-          },
-          onPending: (result) => {
-            console.log('Payment pending:', result);
-            toast.info('Payment is pending');
-            onPending?.();
-          },
-          onError: (error) => {
-            console.error('Payment error:', error);
-            toast.error('Payment failed');
-            onError?.(error);
-          },
-          onClose: () => {
-            setIsLoading(false);
-          },
-        });
-      }
+      console.log('Opening Midtrans payment popup...');
+      window.snap.embed(data.token, {
+        embedId: 'snap-container',
+        onSuccess: (result) => {
+          console.log('Payment success:', result);
+          toast.success('Payment successful!');
+          onSuccess?.();
+          router.refresh();
+        },
+        onPending: (result) => {
+          console.log('Payment pending:', result);
+          toast.info('Payment is pending');
+          onPending?.();
+        },
+        onError: (error) => {
+          console.error('Payment error:', error);
+          toast.error('Payment failed');
+          onError?.(error);
+        },
+        onClose: () => {
+          console.log('Payment popup closed');
+          setIsLoading(false);
+        },
+      });
     } catch (error) {
-      console.error('Error:', error);
-      toast.error('Failed to initiate payment');
+      console.error('Error in handlePayment:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to initiate payment');
       onError?.(error);
       setIsLoading(false);
     }
@@ -127,11 +157,13 @@ export function PaymentForm({
 
   return (
     <div className="w-full">
-      <div 
-        id="snap-container" 
-        className="w-full min-h-[400px] mb-4 rounded-lg border border-border"
-      ></div>
-      
+      {isLoading && (
+        <div
+          id="snap-container"
+          className="w-full min-h-[400px] mb-4 rounded-lg border border-border"
+        ></div>
+      )}
+
       <Button
         onClick={handlePayment}
         disabled={!snapScriptLoaded || isLoading}
@@ -139,6 +171,12 @@ export function PaymentForm({
       >
         {isLoading ? 'Processing...' : 'Pay Now'}
       </Button>
+
+      {!snapScriptLoaded && (
+        <p className="text-sm text-muted-foreground mt-2 text-center">
+          Loading payment gateway...
+        </p>
+      )}
     </div>
   );
-} 
+}

@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
+
 import { auth } from '@/app/(auth)/auth';
-import { db } from '@/lib/db';
-import { user } from '@/lib/db/schema';
 import { createPayment } from '@/lib/db/queries';
 import { createSnapTransaction, generateOrderId } from '@/lib/midtrans';
+import { db } from '@/lib/db/db';
+import { user } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 
 // Monthly subscription plan details
@@ -14,49 +15,51 @@ const SUBSCRIPTION_PLAN = {
   currency: 'IDR',
 };
 
-export async function POST() {
+export async function POST(request: Request) {
   try {
-    // Authentication check
+    // Check authentication
     const session = await auth();
-    if (!session?.user?.id) {
+    if (!session?.user) {
+      console.log('Subscription API: Unauthorized request');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const userId = session.user.id;
-
-    // Check existing subscription status
-    const [userRecord] = await db
+    // Get user's current subscription status
+    const [userData] = await db
       .select({
+        id: user.id,
+        email: user.email,
         subscriptionStatus: user.subscriptionStatus,
       })
       .from(user)
-      .where(eq(user.id, userId));
+      .where(eq(user.id, session.user.id));
 
-    if (!userRecord) {
+    if (!userData) {
+      console.error('Subscription API: User not found');
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
     // Check if user already has an active or pending subscription
-    if (
-      userRecord.subscriptionStatus === 'active' ||
-      userRecord.subscriptionStatus === 'pending_activation'
-    ) {
+    if (userData.subscriptionStatus === 'active' || userData.subscriptionStatus === 'pending_activation') {
+      console.log(`Subscription API: User ${userData.id} already has an active or pending subscription`);
       return NextResponse.json(
         { error: 'User already has an active or pending subscription' },
         { status: 409 }
       );
     }
 
-    // Generate a unique order ID for this subscription initiation
+    // Generate unique order ID with subscription prefix
     const orderId = generateOrderId('SUB_INIT_');
+    console.log(`Subscription API: Generated order ID: ${orderId}`);
 
-    // Prepare Midtrans transaction parameters
+    // Create Midtrans transaction
+    console.log('Subscription API: Creating Midtrans transaction...');
     const transaction = await createSnapTransaction({
       orderId,
       amount: SUBSCRIPTION_PLAN.price,
       customer: {
-        id: userId,
-        email: session.user.email ?? 'unknown@example.com',
+        id: userData.id,
+        email: userData.email,
       },
       items: [
         {
@@ -66,39 +69,53 @@ export async function POST() {
           quantity: 1,
         },
       ],
-      // Add credit card tokenization option
       creditCardOptions: {
-        saveCard: true,
+        saveCard: true, // Save card for future recurring payments
+        secure: true,
       },
     });
 
-    // Update user record to pending_activation status
+    if (!transaction.token) {
+      console.error('Subscription API: No token received from Midtrans');
+      return NextResponse.json(
+        { error: 'Failed to generate payment token' },
+        { status: 500 }
+      );
+    }
+
+    // Update user's subscription status to pending_activation
     await db
       .update(user)
       .set({
         subscriptionStatus: 'pending_activation',
         planId: SUBSCRIPTION_PLAN.id,
       })
-      .where(eq(user.id, userId));
+      .where(eq(user.id, userData.id));
 
-    // Create payment record
-    await createPayment({
-      orderId,
-      amount: SUBSCRIPTION_PLAN.price.toString(),
-      userId,
-      snapToken: transaction.token,
-    });
+    // Save payment record to database
+    console.log('Subscription API: Saving payment record to database...');
+    try {
+      await createPayment({
+        orderId,
+        amount: SUBSCRIPTION_PLAN.price.toString(),
+        userId: userData.id,
+        snapToken: transaction.token,
+      });
+    } catch (dbError) {
+      console.error('Subscription API: Failed to save payment record', dbError);
+      // Continue even if DB save fails - we have the token already
+    }
 
-    // Return the token and order ID to the frontend
+    console.log('Subscription API: Successfully created subscription payment');
     return NextResponse.json({
       token: transaction.token,
       orderId,
-      redirectUrl: transaction.redirectUrl,
+      plan: SUBSCRIPTION_PLAN,
     });
   } catch (error) {
-    console.error('Failed to initiate subscription:', error);
+    console.error('Subscription API: Unhandled error:', error);
     return NextResponse.json(
-      { error: 'Failed to initiate subscription' },
+      { error: 'Failed to process subscription request' },
       { status: 500 }
     );
   }

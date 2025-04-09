@@ -137,10 +137,10 @@ export function convertToUIMessages(
       const fullName = message.attachmentUrl.split('/').pop() || 'file';
       const parts = fullName.split('-');
       const fileName = parts.length > 1 ? parts.slice(1).join('-') : fullName;
-      
+
       // Get file type based on extension
       const fileType = getFileTypeFromUrl(message.attachmentUrl);
-      
+
       // Add experimental attachments
       newMessage.experimental_attachments = [
         {
@@ -149,7 +149,7 @@ export function convertToUIMessages(
           contentType: `application/${fileType}`, // Approximate content type
         },
       ];
-      
+
       // Also keep the original attachmentUrl for components that expect it
       (newMessage as any).attachmentUrl = message.attachmentUrl;
     }
@@ -266,29 +266,42 @@ export function getDocumentTimestampByIndex(
  */
 export function getFileTypeFromUrl(url: string): string {
   if (!url) return 'unknown';
-  
+
   const extension = url.split('.').pop()?.toLowerCase() || '';
-  
+
   // Document types
   if (extension === 'pdf') return 'pdf';
   if (['doc', 'docx', 'rtf', 'odt'].includes(extension)) return 'document';
-  
+
   // Spreadsheet types
   if (['csv', 'xls', 'xlsx', 'ods'].includes(extension)) return 'spreadsheet';
-  
+
   // Text types
   if (['txt', 'md', 'markdown'].includes(extension)) return 'text';
-  
+
   // Code types
   if (['js', 'ts', 'py', 'java', 'c', 'cpp', 'cs', 'php', 'rb', 'go', 'html', 'css', 'json', 'xml'].includes(extension)) {
     return 'code';
   }
-  
+
   // Image types
   if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp'].includes(extension)) {
     return 'image';
   }
-  
+
   // Default/unknown type
   return 'unknown';
+}
+
+/**
+ * Format a date to a readable string
+ * @param date The date to format
+ * @returns A formatted date string (e.g., "Jan 1, 2023")
+ */
+export function formatDate(date: Date): string {
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  }).format(date);
 }

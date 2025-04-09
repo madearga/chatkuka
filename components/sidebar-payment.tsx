@@ -4,6 +4,7 @@ import { CreditCard } from 'lucide-react';
 import { useState } from 'react';
 
 import { PaymentForm } from '@/components/payment-form';
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -19,9 +20,18 @@ import {
 
 export function SidebarPayment() {
   const [isOpen, setIsOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Reset error when dialog opens/closes
+  const handleOpenChange = (open: boolean) => {
+    setIsOpen(open);
+    if (open) {
+      setError(null);
+    }
+  };
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <SidebarMenu>
           <SidebarMenuItem>
@@ -37,22 +47,40 @@ export function SidebarPayment() {
           <DialogTitle>Test Payment with Midtrans</DialogTitle>
         </DialogHeader>
         <div className="py-4">
-          <PaymentForm
-            amount={10000}
-            items={[
-              {
-                id: 'test-item',
-                name: 'Test Item',
-                price: 10000,
-                quantity: 1,
-              },
-            ]}
-            onSuccess={() => {
-              setIsOpen(false);
-            }}
-          />
+          {error ? (
+            <div className="p-4 mb-4 border border-red-200 bg-red-50 rounded-md text-red-800">
+              <p className="font-medium">Error loading payment form</p>
+              <p className="text-sm">{error}</p>
+              <Button
+                variant="outline"
+                className="mt-2"
+                onClick={() => setError(null)}
+              >
+                Try Again
+              </Button>
+            </div>
+          ) : (
+            <PaymentForm
+              amount={10000}
+              items={[
+                {
+                  id: 'test-item',
+                  name: 'Test Item',
+                  price: 10000,
+                  quantity: 1,
+                },
+              ]}
+              onSuccess={() => {
+                setIsOpen(false);
+              }}
+              onError={(err) => {
+                console.error('Payment error in sidebar:', err);
+                setError(err instanceof Error ? err.message : 'Unknown payment error');
+              }}
+            />
+          )}
         </div>
       </DialogContent>
     </Dialog>
   );
-} 
+}

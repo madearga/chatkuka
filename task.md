@@ -153,105 +153,106 @@ Here is a very detailed checklist designed for a competent AI coding agent to im
 
 ---
 
-**Epic 3: Secure Webhook Handling**
+**Epic 3: Secure Webhook Handling** ✅
 
 *   **Goal:** Securely process incoming notifications from Midtrans for both initial and recurring payments.
 
     *   #### Story 3.1: Enhance Midtrans Webhook Handler
         *   **Goal:** Implement signature verification and handle various transaction statuses correctly for subscriptions.
         *   **Target File:** `app/api/payment/route.ts` (Enhance existing `PUT` handler)
-        *   [ ] **Implement Signature Verification:** Add the SHA-512 signature check using `MIDTRANS_SIGNATURE_KEY` as detailed in the previous response's "Midtrans Implementation Steps - Step 1". **This is mandatory.** Return 403 Forbidden if the signature is invalid.
-        *   [ ] **Parse Notification:** Safely parse the incoming JSON payload *after* signature verification (or use raw body for verification if needed). Extract `order_id`, `transaction_status`, `transaction_id`, `payment_type`, `gross_amount`, `masked_card`, `saved_token_id`, `token_id`, `fraud_status`, etc.
-        *   [ ] **Identify Payment Type (Initial vs. Renewal):** Determine if the `order_id` corresponds to an initial subscription payment (e.g., starts with `SUB_INIT_`) or a renewal (e.g., starts with `SUB_RENEW_`).
-        *   [ ] **Handle Successful Initial Payment (`settlement` or `capture` for `SUB_INIT_` order):**
-            *   Find the user associated with the `order_id` (query `payment` table, then `user` table, or infer from webhook if possible).
-            *   Verify `gross_amount` matches 99000.
-            *   **Capture Payment Token:** Extract the relevant token ID (`saved_token_id` or `token_id` - check Midtrans webhook docs for the exact field for saved cards/tokens) from the payload.
-            *   **Update User:** Update the user's record in the DB:
+        *   [x] **Implement Signature Verification:** Add the SHA-512 signature check using `MIDTRANS_SIGNATURE_KEY` as detailed in the previous response's "Midtrans Implementation Steps - Step 1". **This is mandatory.** Return 403 Forbidden if the signature is invalid.
+        *   [x] **Parse Notification:** Safely parse the incoming JSON payload *after* signature verification (or use raw body for verification if needed). Extract `order_id`, `transaction_status`, `transaction_id`, `payment_type`, `gross_amount`, `masked_card`, `saved_token_id`, `token_id`, `fraud_status`, etc.
+        *   [x] **Identify Payment Type (Initial vs. Renewal):** Determine if the `order_id` corresponds to an initial subscription payment (e.g., starts with `SUB_INIT_`) or a renewal (e.g., starts with `SUB_RENEW_`).
+        *   [x] **Handle Successful Initial Payment (`settlement` or `capture` for `SUB_INIT_` order):**
+            *   [x] Find the user associated with the `order_id` (query `payment` table, then `user` table, or infer from webhook if possible).
+            *   [x] Verify `gross_amount` matches 99000.
+            *   [x] **Capture Payment Token:** Extract the relevant token ID (`saved_token_id` or `token_id` - check Midtrans webhook docs for the exact field for saved cards/tokens) from the payload.
+            *   [x] **Update User:** Update the user's record in the DB:
                 *   Set `subscriptionStatus` to `'active'`.
                 *   Set `midtransPaymentTokenId` to the captured token ID.
                 *   Set `currentPeriodEnd` to 1 month from the current date.
-            *   **Record Payment:** Insert a record into the `payment` table for this successful transaction.
-            *   Log success.
-        *   [ ] **Handle Successful Renewal Payment (`settlement` or `capture` for `SUB_RENEW_` order):**
-            *   Find the user associated with the `order_id`.
-            *   Verify `gross_amount`.
-            *   **Update User:** Update `currentPeriodEnd` by adding 1 month to the *previous* `currentPeriodEnd` (or current date if renewal was late). Ensure `subscriptionStatus` is `'active'`.
-            *   **Record Payment:** Insert a record into the `payment` table.
-            *   Log success.
-        *   [ ] **Handle Failed/Denied/Expired Payments (for renewals):**
-            *   Find the user associated with the `order_id`.
-            *   **Update User:** Set `subscriptionStatus` to `'past_due'` or `'inactive'` based on your business rules/retry strategy.
-            *   **Record Payment Attempt (Optional):** Consider logging failed attempts in the `payment` table with status 'failed'.
-            *   Log failure.
-        *   [ ] **Handle Pending Payments:** Log the status. Usually no immediate DB action is needed; wait for a final status webhook.
-        *   [ ] **Handle Fraud Status:** Implement logic based on `fraud_status` if necessary (e.g., `challenge`, `accept`, `deny`).
-        *   [ ] **Return 200 OK:** Respond to Midtrans with a 200 status code quickly after processing (or after validation if processing is deferred).
+            *   [x] **Record Payment:** Insert a record into the `payment` table for this successful transaction.
+            *   [x] Log success.
+        *   [x] **Handle Successful Renewal Payment (`settlement` or `capture` for `SUB_RENEW_` order):**
+            *   [x] Find the user associated with the `order_id`.
+            *   [x] Verify `gross_amount`.
+            *   [x] **Update User:** Update `currentPeriodEnd` by adding 1 month to the *previous* `currentPeriodEnd` (or current date if renewal was late). Ensure `subscriptionStatus` is `'active'`.
+            *   [x] **Record Payment:** Insert a record into the `payment` table.
+            *   [x] Log success.
+        *   [x] **Handle Failed/Denied/Expired Payments (for renewals):**
+            *   [x] Find the user associated with the `order_id`.
+            *   [x] **Update User:** Set `subscriptionStatus` to `'past_due'` or `'inactive'` based on your business rules/retry strategy.
+            *   [x] **Record Payment Attempt (Optional):** Consider logging failed attempts in the `payment` table with status 'failed'.
+            *   [x] Log failure.
+        *   [x] **Handle Pending Payments:** Log the status. Usually no immediate DB action is needed; wait for a final status webhook.
+        *   [x] **Handle Fraud Status:** Implement logic based on `fraud_status` if necessary (e.g., `challenge`, `accept`, `deny`).
+        *   [x] **Return 200 OK:** Respond to Midtrans with a 200 status code quickly after processing (or after validation if processing is deferred).
 
 ---
 
-**Epic 4: Frontend User Interface**
+**Epic 4: Frontend User Interface** ✅
 
 *   **Goal:** Provide UI elements for users to subscribe, view status, and cancel.
 
     *   #### Story 4.1: Subscription Initiation UI
         *   **Goal:** Add a button or section for non-subscribed users to start the subscription process.
-        *   **Target File(s):** `components/sidebar-user-nav.tsx`, `components/sidebar-payment.tsx` (Rename/Refactor?), or a new dedicated settings/billing page component.
-        *   [ ] Add a "Subscribe Now" button or link, conditionally rendered based on user's subscription status (fetch status via `/api/subscriptions/manage` GET endpoint or include in session).
-        *   [ ] On click, trigger the process to call `/api/subscriptions/initiate`.
+        *   **Target File(s):** `components/sidebar-subscription.tsx`, `components/subscription-form.tsx`
+        *   [x] Add a "Subscribe Now" button or link, conditionally rendered based on user's subscription status (fetch status via `/api/subscriptions/manage` GET endpoint or include in session).
+        *   [x] On click, trigger the process to call `/api/subscriptions/initiate`.
 
     *   #### Story 4.2: Integrate Midtrans Snap for Initial Payment
         *   **Goal:** Use the Snap token returned by the initiation API to display the Midtrans payment popup.
-        *   **Target File:** Component handling the "Subscribe Now" click (e.g., refactored `PaymentForm` or a new component).
-        *   [ ] Modify the payment initiation function (triggered by the subscribe button).
-        *   [ ] Add `async` to the handler.
-        *   [ ] Add `setIsLoading(true)`.
-        *   [ ] Call `fetch('/api/subscriptions/initiate', { method: 'POST' })`.
-        *   [ ] Handle potential errors from the API call (show toast).
-        *   [ ] Parse the JSON response to get `{ token, orderId }`.
-        *   [ ] Check if `window.snap` is available (ensure script is loaded).
-        *   [ ] Call `window.snap.embed(token, { embedId: 'snap-container', onSuccess: ..., onPending: ..., onError: ..., onClose: ... })`.
-        *   [ ] Implement `onSuccess` callback: Show a temporary success message (e.g., "Payment successful, activating..."). *Do not assume activation is complete here.* Maybe trigger a refetch of subscription status after a short delay. `setIsLoading(false)`.
-        *   [ ] Implement `onPending`: Show pending message. `setIsLoading(false)`.
-        *   [ ] Implement `onError`: Show error toast. `setIsLoading(false)`.
-        *   [ ] Implement `onClose`: `setIsLoading(false)`.
-        *   [ ] Remove or adapt the static `amount` and `items` from `PaymentForm` if reusing it; data comes from the backend now.
+        *   **Target File:** `components/subscription-form.tsx`
+        *   [x] Modify the payment initiation function (triggered by the subscribe button).
+        *   [x] Add `async` to the handler.
+        *   [x] Add `setIsLoading(true)`.
+        *   [x] Call `fetch('/api/subscriptions/initiate', { method: 'POST' })`.
+        *   [x] Handle potential errors from the API call (show toast).
+        *   [x] Parse the JSON response to get `{ token, orderId }`.
+        *   [x] Check if `window.snap` is available (ensure script is loaded).
+        *   [x] Call `window.snap.embed(token, { embedId: 'snap-container', onSuccess: ..., onPending: ..., onError: ..., onClose: ... })`.
+        *   [x] Implement `onSuccess` callback: Show a temporary success message (e.g., "Payment successful, activating..."). *Do not assume activation is complete here.* Maybe trigger a refetch of subscription status after a short delay. `setIsLoading(false)`.
+        *   [x] Implement `onPending`: Show pending message. `setIsLoading(false)`.
+        *   [x] Implement `onError`: Show error toast. `setIsLoading(false)`.
+        *   [x] Implement `onClose`: `setIsLoading(false)`.
+        *   [x] Remove or adapt the static `amount` and `items` from `PaymentForm` if reusing it; data comes from the backend now.
 
     *   #### Story 4.3: Display Subscription Status UI
         *   **Goal:** Show the user their current plan, status, and next billing date.
-        *   **Target File(s):** `components/sidebar-user-nav.tsx` or a dedicated settings/billing page.
-        *   [ ] Fetch subscription status using SWR or similar (call `/api/subscriptions/manage` GET).
-        *   [ ] Conditionally render status information (e.g., "Plan: Monthly", "Status: Active", "Renews on: [formatted date]").
-        *   [ ] Format the `currentPeriodEnd` date for display.
+        *   **Target File(s):** `components/subscription-form.tsx`
+        *   [x] Fetch subscription status using SWR or similar (call `/api/subscriptions/manage` GET).
+        *   [x] Conditionally render status information (e.g., "Plan: Monthly", "Status: Active", "Renews on: [formatted date]").
+        *   [x] Format the `currentPeriodEnd` date for display.
 
     *   #### Story 4.4: Cancellation UI
         *   **Goal:** Allow users to cancel their subscription.
-        *   **Target File(s):** Same as Story 4.3.
-        *   [ ] Add a "Cancel Subscription" button, conditionally rendered only for `'active'` users.
-        *   [ ] Add a confirmation dialog (e.g., use `AlertDialog`) before proceeding.
-        *   [ ] On confirmation, call `fetch('/api/subscriptions/manage', { method: 'POST' })`.
-        *   [ ] Handle success: Show success toast, update local UI state/refetch status.
-        *   [ ] Handle error: Show error toast.
+        *   **Target File(s):** `components/subscription-form.tsx`
+        *   [x] Add a "Cancel Subscription" button, conditionally rendered only for `'active'` users.
+        *   [x] Add a confirmation dialog (e.g., use `AlertDialog`) before proceeding.
+        *   [x] On confirmation, call `fetch('/api/subscriptions/manage', { method: 'POST' })`.
+        *   [x] Handle success: Show success toast, update local UI state/refetch status.
+        *   [x] Handle error: Show error toast.
 
 ---
 
-**Epic 5: Access Control**
+**Epic 5: Access Control** ✅
 
 *   **Goal:** Restrict access to premium features based on subscription status.
 
     *   #### Story 5.1: Implement Access Checks
         *   **Goal:** Add logic to verify active subscription status before allowing access to protected resources.
         *   **Target File(s):** `middleware.ts` (for route protection), specific API routes, specific Page components, specific UI components.
-        *   [ ] **Identify Premium Features:** Determine which parts of the application are subscription-only.
-        *   [ ] **Backend Check:** In API routes handling premium actions, fetch the user's `subscriptionStatus`. If not `'active'`, return a 403 Forbidden error.
-        *   [ ] **Frontend Check (UI):** In components rendering premium features, check the user's status. Conditionally render the feature, show an upgrade prompt, or disable functionality if not active.
-        *   [ ] **Middleware (Optional):** If entire routes are premium, enhance `middleware.ts` to fetch user status (might require DB lookup if not in JWT session) and redirect non-active users away from protected paths. *Note: Adding DB lookups to middleware can impact performance.*
+        *   [x] **Identify Premium Features:** Determine which parts of the application are subscription-only.
+        *   [x] **Backend Check:** In API routes handling premium actions, fetch the user's `subscriptionStatus`. If not `'active'`, return a 403 Forbidden error.
+        *   [x] **Frontend Check (UI):** In components rendering premium features, check the user's status. Conditionally render the feature, show an upgrade prompt, or disable functionality if not active.
+        *   [x] **Middleware (Optional):** If entire routes are premium, enhance `middleware.ts` to fetch user status (might require DB lookup if not in JWT session) and redirect non-active users away from protected paths. *Note: Adding DB lookups to middleware can impact performance.*
 
 ---
 
-**Epic 6: Testing and Deployment**
+**Epic 6: Testing and Deployment** ⚠️
 
 *   **Goal:** Ensure the subscription flow works correctly in sandbox and production.
+*   **Note:** This epic requires actual testing with Midtrans sandbox/production environments and cannot be fully completed in this environment.
 
     *   #### Story 6.1: Sandbox Environment Testing
         *   **Goal:** Thoroughly test the entire subscription lifecycle using Midtrans Sandbox credentials.
