@@ -1,4 +1,4 @@
-import midtransClient from 'midtrans-client';
+import midtransClient, { Snap } from 'midtrans-client';
 import crypto from 'crypto';
 
 // Check for environment variables
@@ -20,8 +20,8 @@ if (!process.env.MIDTRANS_SIGNATURE_KEY) {
   console.warn('Warning: MIDTRANS_SIGNATURE_KEY is not configured in environment variables. Using dummy value.');
 }
 
-// Initialize Midtrans Snap client
-let snap;
+// Initialize Midtrans Snap client with explicit type
+let snap: Snap;
 try {
   snap = new midtransClient.Snap({
     isProduction: IS_PRODUCTION,
@@ -32,12 +32,14 @@ try {
 } catch (error) {
   console.error('Failed to initialize Midtrans Snap client:', error);
   // Create a dummy snap client that returns mock responses
+  // Cast the dummy object to Snap type (assuming createTransaction matches)
   snap = {
-    createTransaction: async () => ({
+    createTransaction: async (params: any) => ({
       token: 'mock-token-' + Date.now(),
       redirect_url: 'https://example.com/payment/mock',
     }),
-  };
+    // Add other methods used by Snap if necessary, or use a more complex type/casting
+  } as Snap; // Cast to Snap
   console.warn('Using mock Midtrans Snap client');
 }
 

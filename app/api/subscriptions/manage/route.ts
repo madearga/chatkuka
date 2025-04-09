@@ -10,8 +10,14 @@ export async function GET(request: Request) {
     // Check authentication
     const session = await auth();
     if (!session?.user) {
-      console.log('Subscription Manage API: Unauthorized request');
+      console.log('Subscription Manage API: Unauthorized GET request');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Explicitly check if user ID exists in the session
+    if (!session.user.id) {
+      console.error('Subscription Manage API: User ID missing in session for GET');
+      return NextResponse.json({ error: 'User ID missing in session' }, { status: 400 });
     }
 
     // Get user's subscription details
@@ -52,8 +58,14 @@ export async function POST(request: Request) {
     // Check authentication
     const session = await auth();
     if (!session?.user) {
-      console.log('Subscription Manage API: Unauthorized request');
+      console.log('Subscription Manage API: Unauthorized POST request');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Explicitly check if user ID exists in the session
+    if (!session.user.id) {
+      console.error('Subscription Manage API: User ID missing in session for POST');
+      return NextResponse.json({ error: 'User ID missing in session' }, { status: 400 });
     }
 
     // Get action from request body

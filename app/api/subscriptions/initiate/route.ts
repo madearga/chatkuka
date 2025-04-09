@@ -24,6 +24,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Explicitly check if user ID exists in the session
+    if (!session.user.id) {
+      console.error('Subscription API: User ID missing in session');
+      return NextResponse.json({ error: 'User ID missing in session' }, { status: 400 });
+    }
+
     // Get user's current subscription status
     const [userData] = await db
       .select({

@@ -411,14 +411,14 @@ export async function createPayment({
   orderId: string;
   amount: string;
   userId: string;
-  snapToken: string;
+  snapToken?: string;
 }): Promise<Payment> {
   try {
     const [newPayment] = await db.insert(payment).values({
       orderId,
       amount,
       userId,
-      snapToken,
+      snapToken: snapToken ?? null,
       createdAt: new Date(),
       updatedAt: new Date(),
     }).returning();

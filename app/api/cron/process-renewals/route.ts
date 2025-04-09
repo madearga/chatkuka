@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db/db';
 import { user } from '@/lib/db/schema';
-import { createPayment } from '@/lib/db/queries';
+import { createPayment, updatePaymentStatus } from '@/lib/db/queries';
 import { coreApi, generateOrderId } from '@/lib/midtrans';
 import { and, eq, lte, isNotNull } from 'drizzle-orm';
 
@@ -87,15 +87,31 @@ export async function GET(request: Request) {
             })
             .where(eq(user.id, userData.id));
 
-          // Record the payment
-          await createPayment({
+          // Record the initial payment attempt
+          const newPayment = await createPayment({
             orderId,
             amount: SUBSCRIPTION_PLAN.price.toString(),
             userId: userData.id,
-            status: chargeResponse.transaction_status || 'pending',
-            transactionId: chargeResponse.transaction_id,
-            paymentType: 'credit_card',
+            // snapToken is not relevant here
+            // status defaults to pending
           });
+
+          // Update the payment record with transaction details from the charge
+          if (chargeResponse.transaction_id) {
+             await updatePaymentStatus({
+               orderId, // Use the same orderId
+               status: chargeResponse.transaction_status === 'capture' || chargeResponse.transaction_status === 'settlement' 
+                         ? 'success' 
+                         : chargeResponse.transaction_status === 'pending' 
+                           ? 'pending' 
+                           : 'failed', // Determine status based on charge response
+               transactionId: chargeResponse.transaction_id,
+               paymentType: 'credit_card', // Or chargeResponse.payment_type if available
+             });
+          } else {
+             // Handle cases where charge might succeed but transaction_id is missing (unlikely)
+             await updatePaymentStatus({ orderId, status: 'failed' });
+          }
 
           return {
             userId: userData.id,
