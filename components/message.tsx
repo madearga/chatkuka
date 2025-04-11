@@ -179,8 +179,9 @@ const PurePreviewMessage = ({
                             >
                               <ResponseStream
                                 textStream={part.text}
-                                mode="fade"
-                                speed={20}
+                                mode="typewriter"
+                                speed={100}
+                                characterChunkSize={2}
                                 className="prose max-w-full text-foreground"
                               />
                             </div>
