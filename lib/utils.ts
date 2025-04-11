@@ -10,6 +10,7 @@ import { type ClassValue, clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
 import type { Message as DBMessage, Document } from '@/lib/db/schema';
+import { type DBSchemaMessage } from '@/lib/db/queries';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -52,112 +53,31 @@ export function generateUUID(): string {
   });
 }
 
-function addToolMessageToChat({
-  toolMessage,
-  messages,
-}: {
-  toolMessage: CoreToolMessage;
-  messages: Array<Message>;
-}): Array<Message> {
-  return messages.map((message) => {
-    if (message.toolInvocations) {
-      return {
-        ...message,
-        toolInvocations: message.toolInvocations.map((toolInvocation) => {
-          const toolResult = toolMessage.content.find(
-            (tool) => tool.toolCallId === toolInvocation.toolCallId,
-          );
-
-          if (toolResult) {
-            return {
-              ...toolInvocation,
-              state: 'result',
-              result: toolResult.result,
-            };
-          }
-
-          return toolInvocation;
-        }),
-      };
-    }
-
-    return message;
-  });
-}
-
 export function convertToUIMessages(
-  messages: Array<DBMessage>,
+  messages: Array<DBSchemaMessage>,
 ): Array<Message> {
-  return messages.reduce((chatMessages: Array<Message>, message) => {
-    if (message.role === 'tool') {
-      return addToolMessageToChat({
-        toolMessage: message as CoreToolMessage,
-        messages: chatMessages,
-      });
-    }
+  return messages.map((dbMessage) => {
+    // Define expected part structure for type safety
+    type ExpectedPart = { type: string; text?: string };
 
-    let textContent = '';
-    let reasoning: string | undefined = undefined;
-    const toolInvocations: Array<ToolInvocation> = [];
-
-    if (typeof message.content === 'string') {
-      textContent = message.content;
-    } else if (Array.isArray(message.content)) {
-      for (const content of message.content) {
-        if (content.type === 'text') {
-          textContent += content.text;
-        } else if (content.type === 'tool-call') {
-          toolInvocations.push({
-            state: 'call',
-            toolCallId: content.toolCallId,
-            toolName: content.toolName,
-            args: content.args,
-          });
-        } else if (content.type === 'reasoning') {
-          reasoning = content.reasoning;
-        }
-      }
-    }
-
-    // Create a base message
-    const newMessage: Message = {
-      id: message.id,
-      role: message.role as Message['role'],
-      content: textContent,
-      reasoning,
-      toolInvocations,
+    const uiMessage: Message = {
+      id: dbMessage.id,
+      role: dbMessage.role as Message['role'],
+      parts: dbMessage.parts as any, // Map parts, cast needed if types differ
+      // Add deprecated content field, asserting parts type
+      content: ((dbMessage.parts as ExpectedPart[] | undefined)
+        ?.find((p: ExpectedPart) => p.type === 'text')
+        ?.text
+      ) ?? '',
+      experimental_attachments: dbMessage.attachments as any, // Map attachments
     };
 
-    // Map createdAt timestamp
-    (newMessage as any).createdAt = message.createdAt ? new Date(message.createdAt) : undefined;
-
-    // Add attachment if exists in the database message
-    if ('attachmentUrl' in message && message.attachmentUrl) {
-      // Get filename from URL
-      const fullName = message.attachmentUrl.split('/').pop() || 'file';
-      const parts = fullName.split('-');
-      const fileName = parts.length > 1 ? parts.slice(1).join('-') : fullName;
-
-      // Get file type based on extension
-      const fileType = getFileTypeFromUrl(message.attachmentUrl);
-
-      // Add experimental attachments
-      newMessage.experimental_attachments = [
-        {
-          url: message.attachmentUrl,
-          name: fileName,
-          contentType: `application/${fileType}`, // Approximate content type
-        },
-      ];
-
-      // Also keep the original attachmentUrl for components that expect it
-      (newMessage as any).attachmentUrl = message.attachmentUrl;
+    if (dbMessage.createdAt) {
+      (uiMessage as any).createdAt = new Date(dbMessage.createdAt);
     }
 
-    chatMessages.push(newMessage);
-
-    return chatMessages;
-  }, []);
+    return uiMessage;
+  });
 }
 
 type ResponseMessageWithoutId = CoreToolMessage | CoreAssistantMessage;

@@ -39,10 +39,27 @@ export function PureMessageActions({
   if (typeof message.content !== 'string') return null;
 
   const handleCopy = async () => {
-    if (typeof message.content !== 'string') return;
-    
-    await copyToClipboard(message.content);
-    toast.success('Copied to clipboard!');
+    // Prefer copying all text parts from message.parts if available
+    const textToCopy = (message as any).parts
+      ?.filter((part: any): part is { type: 'text'; text: string } => part.type === 'text')
+      .map((part: any) => part.text)
+      .join('\n\n')
+      .trim();
+
+    if (textToCopy && textToCopy.length > 0) {
+      await copyToClipboard(textToCopy);
+      toast.success('Copied to clipboard!');
+      return;
+    }
+
+    // Fallback: copy message.content if it's a string
+    if (typeof message.content === 'string' && message.content.trim() !== '') {
+      await copyToClipboard(message.content);
+      toast.success('Copied to clipboard!');
+      return;
+    }
+
+    toast.error("There's no text content to copy!");
   };
 
   return (

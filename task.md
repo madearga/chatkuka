@@ -1,277 +1,271 @@
-Okay, this is a significant feature enhancement involving recurring payments. Implementing subscriptions requires careful handling of state, secure payment method storage (via tokenization), webhook verification, and potentially scheduled tasks.
+Okay, here is the extremely detailed Markdown checklist for migrating your `madearga-chatkuka.git` codebase to AI SDK v4.2+, focusing on the `message.parts` structure and stable APIs, designed for an AI Coding Agent using `bun`.
 
-Here is a very detailed checklist designed for a competent AI coding agent to implement a Rp 99,000 monthly subscription using Midtrans, building upon the existing codebase.
-
----
-
-### **Project Checklist: Midtrans Monthly Subscription (Rp 99,000)**
-
-**Goal:** Implement a feature allowing users to subscribe to a monthly plan costing Rp 99,000 using Midtrans. This includes initiating the subscription, handling the first payment, securely storing payment method details (via Midtrans tokenization), processing recurring payments (likely via backend logic triggering Midtrans Core API), managing subscription status, handling webhooks securely, and controlling access based on subscription status.
-
-**Assumptions:**
-*   The subscription grants access to specific premium features or removes limitations (to be defined in Access Control).
-*   We will use Midtrans Snap for the *initial* payment and user experience, aiming to tokenize the card during this process.
-*   Subsequent *recurring* payments will be initiated by our backend (using a scheduler/cron job) via the Midtrans Core API using the stored token.
-*   Midtrans's native subscription features might not be used directly; our application manages the subscription lifecycle and triggers renewals.
+**CRITICAL PRE-REQUISITE:** Before starting *any* steps, ensure you have:
+1.  **Created a full backup** of your current codebase.
+2.  **Created a full backup** of your PostgreSQL database.
+3.  **Created and checked out a new Git branch** specifically for this migration (e.g., `feat/ai-sdk-v4.2-migration`).
 
 ---
 
-**Epic 1: Database Schema & Migrations**
+### **Project Checklist: AI SDK v4.2+ Migration (Message Parts & Stable APIs)**
 
-*   **Goal:** Update the database schema to support subscription information and track payment history related to subscriptions.
-
-    *   #### Story 1.1: Enhance `User` Table Schema
-        *   **Goal:** Add fields to the `User` table to track subscription status and details.
-        *   **Target File:** `lib/db/schema.ts`
-        *   [x] Locate the `user` table definition.
-        *   [x] Add a new `subscriptionStatus` column:
-            *   Type: `varchar` with an enum constraint.
-            *   Enum values: `'inactive'`, `'active'`, `'pending_activation'`, `'past_due'`, `'cancelled'`.
-            *   Default value: `'inactive'`.
-            *   `notNull()`.
-        *   [x] Add a new `planId` column (optional, but good practice):
-            *   Type: `varchar(50)`.
-            *   `notNull(false)` (allow null for non-subscribed users).
-            *   *Example value could be `'monthly_99k'`*.
-        *   [x] Add a new `currentPeriodEnd` column:
-            *   Type: `timestamp`.
-            *   `notNull(false)` (allow null for inactive subscriptions).
-            *   This will store the date/time when the current subscription period expires and the next charge is due.
-        *   [x] Add a new `midtransPaymentTokenId` column:
-            *   Type: `text`.
-            *   `notNull(false)`.
-            *   This will securely store the token identifier provided by Midtrans for the user's saved payment method (e.g., saved card token). **Do NOT store raw card details.**
-        *   [x] Add a new `midtransSubscriptionId` column (optional, if using Midtrans specific subscription feature - less likely needed for this plan):
-            *   Type: `varchar(100)`.
-            *   `notNull(false)`.
-
-    *   #### Story 1.2: Enhance `Payment` Table Schema
-        *   **Goal:** Potentially add a field to link payments to subscription cycles if detailed tracking is needed.
-        *   **Target File:** `lib/db/schema.ts`
-        *   [x] Locate the `payment` table definition.
-        *   [x] *Consider* adding a `subscriptionCycleStart` (timestamp, nullable) and `subscriptionCycleEnd` (timestamp, nullable) if tracking payment per cycle is required. *Decision: Skip for now to keep it simpler; rely on `createdAt` and `User.currentPeriodEnd`.*
-        *   [x] *Consider* adding a `paymentFor` column (e.g., enum: 'one-time', 'subscription_initial', 'subscription_renewal'). *Decision: Skip for now; infer from context.*
-        *   [x] Verify existing fields (`orderId`, `amount`, `status`, `userId`, `transactionId`, `paymentType`) are sufficient for tracking recurring payments.
-
-    *   #### Story 1.3: Generate and Apply Database Migration
-        *   **Goal:** Create and apply a Drizzle migration reflecting the schema changes.
-        *   **Tool:** Drizzle Kit CLI
-        *   [x] Run `pnpm run db:generate` (or equivalent Drizzle Kit command) to create a new migration file in `lib/db/migrations/`.
-        *   [x] Inspect the generated SQL migration file for correctness. Ensure it adds the new columns to the `User` table with correct types, defaults, and nullability.
-        *   [x] Run `pnpm run db:migrate` (or equivalent command) to apply the migration to the database. Verify successful application in the console output.
+**Goal:** Update the project to utilize the stable APIs and the `message.parts` data structure from AI SDK v4.2+, ensuring all existing chat, artifact, and related functionalities remain operational. Use `bun` for package management and script execution.
 
 ---
 
-**Epic 2: Backend API & Logic**
+**Epic 1: Environment Setup & Dependency Updates**
 
-*   **Goal:** Implement API endpoints and core logic for subscription initiation, management, and recurring billing.
+*   **Goal:** Prepare the development environment and update necessary packages to versions compatible with AI SDK v4.2+.
 
-    *   #### Story 2.1: Update Midtrans Configuration
-        *   **Goal:** Ensure all necessary Midtrans keys and settings are configured.
-        *   **Target Files:** `lib/midtrans.ts`, `.env.local` / Vercel Env Vars
-        *   [x] Verify `MIDTRANS_SERVER_KEY`, `MIDTRANS_CLIENT_KEY`, `MIDTRANS_ENV` are set.
-        *   [x] **CRITICAL:** Add `MIDTRANS_SIGNATURE_KEY` (obtained from Midtrans Dashboard MAP -> Settings -> Access Keys) to environment variables. This is **different** from the Server Key and vital for webhook security.
-        *   [x] In `lib/midtrans.ts`, consider initializing a `midtransClient.CoreApi` instance alongside the existing `Snap` instance if needed for direct charges using tokens (likely required for renewals). Ensure it uses the correct server key and production status.
+    *   #### Story 1.1: Verify Environment
+        *   [x] Confirm `bun` is installed and available in the command line environment (`bun --version`).
+        *   [x] Ensure Node.js version is compatible with the target AI SDK version (typically >= 18).
+
+    *   #### Story 1.2: Update Core AI SDK Dependencies
+        *   [x] Open the `package.json` file.
+        *   [x] Locate the `dependencies` section.
+        *   [x] Update the version for the `ai` package to the latest stable version (>= 4.2, check Vercel AI SDK documentation for the specific latest stable version, e.g., `^4.3.4` or higher).
+        *   [x] Update the version for `@ai-sdk/react` to the corresponding latest stable version (e.g., `^1.2.8` or higher).
+        *   [x] Update the versions for specific AI provider packages used in `lib/ai/providers.ts` (e.g., `@ai-sdk/google`, `@ai-sdk/groq`, `@ai-sdk/fal`) to their latest compatible stable versions.
+        *   [x] Verify the `zod` dependency version is `^3.23.8` or higher. Your current `^3.24.2` is sufficient.
+
+    *   #### Story 1.3: Install Updated Dependencies
+        *   [x] Open your terminal in the project root directory.
+        *   [x] Run the command: `bun install`.
+        *   [x] Observe the output for any installation errors or peer dependency warnings. Resolve critical errors if they occur.
+
+    *   #### Story 1.4: Initial Build Check
+        *   [x] Run the development server using the command specified in your `package.json` (likely `bun run dev`).
+        *   [x] Verify that the application builds and starts without immediate crashing errors related to the dependency updates. (Note: Runtime errors related to API changes are expected at this stage).
+
+---
+
+**Epic 2: Adopt Stable AI SDK APIs**
+
+*   **Goal:** Refactor the codebase to use the stable APIs by removing the `experimental_` prefix from relevant functions and options.
+
+    *   #### Story 2.1: Update `streamText` API Usage
+        *   [x] Open `app/(chat)/api/chat/route.ts`.
+        *   [x] Locate the `streamText` function call within the `POST` request handler.
+        *   [x] Find the `experimental_transform` option. Remove the `experimental_` prefix, leaving `transform: smoothStream(...)`.
+        *   [x] Find the `experimental_activeTools` option. Remove the `experimental_` prefix, leaving `activeTools: [...]`.
+        *   [x] Find the `experimental_generateMessageId` option. Remove the `experimental_` prefix, leaving `generateMessageId: generateUUID`.
+        *   [x] Find the `experimental_telemetry` option. Remove the `experimental_` prefix, leaving `telemetry: {...}`.
+        *   [x] Search for any potential use of `experimental_toolCallStreaming` and remove the prefix if found.
+
+    *   #### Story 2.2: Update Artifact Server API Usage
+        *   [x] Open `artifacts/text/server.ts`.
+        *   [x] Locate the `streamText` call within `onUpdateDocument`.
+        *   [x] Find the `experimental_transform` option. Remove the `experimental_` prefix.
+        *   [x] Find the `experimental_providerMetadata` option. Rename it to `providerOptions`.
+        *   [x] Open `artifacts/code/server.ts`.
+        *   [x] Locate the `streamObject` call within `onCreateDocument`. Check if any experimental options are used and update if necessary (unlikely for `streamObject` based on docs).
+        *   [x] Locate the `streamObject` call within `onUpdateDocument`. Check if any experimental options are used and update if necessary.
+        *   [x] Open `artifacts/sheet/server.ts`.
+        *   [x] Locate the `streamObject` call within `onCreateDocument`. Check if any experimental options are used and update if necessary.
+        *   [x] Locate the `streamObject` call within `onUpdateDocument`. Check if any experimental options are used and update if necessary.
+        *   [x] Open `artifacts/image/server.ts`.
+        *   [x] Locate the `experimental_generateImage` calls. *Keep* this prefix as `generateImage` is likely still experimental or has a different stable name if available (verify with latest SDK docs if needed, but assume `experimental_generateImage` remains for now unless docs state otherwise).
+
+    *   #### Story 2.3: Update Custom Provider Usage (Verification)
+        *   [x] Open `lib/ai/providers.ts`.
+        *   [x] Verify that `customProvider` is used *without* the `experimental_` prefix. (Your `madearga-chatkuka.git` code already does this).
+
+    *   #### Story 2.4: Build Check After API Updates
+        *   [x] Run `bun run dev`.
+        *   [x] Verify the application still builds and starts without errors related to these API name changes.
+
+---
+
+**Epic 3: Refactor UI Components for `message.parts`**
+
+*   **Goal:** Modify React components responsible for rendering chat messages to correctly display content based on the new `message.parts` array structure.
+
+    *   #### Story 3.1: Update `PreviewMessage` Component
+        *   [x] Open `components/message.tsx`.
+        *   [x] Import necessary types from `ai`: `import type { UIMessage, UIMessagePart } from 'ai';`.
+        *   [x] Locate the `PurePreviewMessage` component.
+        *   [x] Find the existing logic that renders content based on `message.content`, `message.toolInvocations`, `message.reasoning`, and potentially `message.experimental_attachments`.
+        *   [x] **Remove** or comment out the old rendering logic for these separate fields.
+        *   [x] Add a loop that iterates over `message.parts`: `message.parts?.map((part, index) => { ... })`. Use optional chaining (`?.`) in case `parts` is somehow undefined initially.
+        *   [x] Inside the loop, implement a `switch (part.type)` statement.
+        *   [x] **Case `'text'`:**
+            *   [x] Render the text content using `part.text`.
+            *   [x] Reuse the existing conditional rendering logic for the edit button (`message.role === 'user' && !isReadonly && mode === 'view'`).
+            *   [x] Render the `Markdown` or `ResponseStream` component with `part.text` as its child/prop.
+            *   [x] Ensure styling (e.g., background for user messages) is applied correctly around the text part.
+        *   [x] **Case `'tool-invocation'`:**
+            *   [x] Destructure `const { toolInvocation } = part;`.
+            *   [x] Further destructure `const { toolName, toolCallId, state, args, result } = toolInvocation;`.
+            *   [x] Adapt the *existing* conditional rendering logic based on `state`:
+                *   If `state === 'call'`, render the appropriate component (`Weather` skeleton, `DocumentPreview` with args, `DocumentToolCall`, `SearchProgress`). Pass `args` as needed.
+                *   If `state === 'result'`, render the appropriate component (`Weather` with data, `DocumentPreview` with result, `DocumentToolResult`, `SearchResults`). Pass `result` as needed. Make sure to handle the `search` tool result structure correctly for the `SearchResults` component.
+            *   [x] Use `toolCallId` as the `key` for the rendered tool component.
+        *   [x] **Case `'reasoning'`:**
+            *   [x] Render the `MessageReasoning` component, passing `part.reasoning` as the `reasoning` prop and `isLoading` prop as before.
+        *   [x] **Case `'file'` (If you plan to support inline file parts):**
+            *   [x] Render an appropriate component (e.g., `PreviewAttachment`) using `part.data`, `part.mimeType`, `part.name`.
+        *   [x] **Case `'source'` (If you plan to support source parts):**
+            *   [x] Render a source citation component using `part.source.url`, `part.source.title`, etc.
+        *   [x] **Default Case:** Add `console.warn(\`Unhandled message part type: \${(part as any).type}\`); return null;`.
+    *   #### Story 3.2: Update `MessageActions` Component
+        *   [x] Open `components/message-actions.tsx`.
+        *   [x] Locate the `handleCopy` function.
+        *   [x] Modify `handleCopy` to iterate through `message.parts`, filter for `part.type === 'text'`, extract the `part.text`, join them (e.g., with `\n\n`), and then copy the combined text.
             ```typescript
-            // In lib/midtrans.ts (add alongside snap)
-            export const coreApi = new midtransClient.CoreApi({
-              isProduction: IS_PRODUCTION,
-              serverKey: MIDTRANS_SERVER_KEY,
-              clientKey: MIDTRANS_CLIENT_KEY, // Client key might not be needed for Core API server-side calls
+            const handleCopy = async () => {
+              const textToCopy = message.parts
+                ?.filter((part): part is { type: 'text'; text: string } => part.type === 'text')
+                .map((part) => part.text)
+                .join('\n\n') // Join text parts with double newline
+                .trim();
+
+              if (!textToCopy) {
+                toast.error("There's no text content to copy!");
+                return;
+              }
+
+              await copyToClipboard(textToCopy);
+              toast.success('Copied to clipboard!');
+            };
+            ```
+    *   #### Story 3.3: Update `MessageEditor` Component
+        *   [x] Open `components/message-editor.tsx`.
+        *   [x] Locate the `onClick` handler for the "Send" button.
+        *   [x] Inside the `setMessages` call, modify how the `updatedMessage` is constructed:
+            *   Find the index of the message being edited.
+            *   Get the existing `parts` array from `messages[index]`.
+            *   Find the index of the *first* part with `type: 'text'`.
+            *   If found, update `parts[textPartIndex] = { type: 'text', text: draftContent }`.
+            *   If *not* found (edge case), create a new text part: `parts = [{ type: 'text', text: draftContent }]`.
+            *   Set the `parts` property of the `updatedMessage` to this modified array.
+            *   Keep the `content: draftContent` assignment for now for potential backward compatibility needs elsewhere, although it's deprecated in the UI message structure.
+            ```typescript
+            // Example snippet within the Send button's onClick handler
+            setMessages((messages) => {
+              const index = messages.findIndex((m) => m.id === message.id);
+              if (index !== -1) {
+                // Make a mutable copy of parts or default to empty array
+                const newParts = [...(messages[index].parts || [])];
+                const textPartIndex = newParts.findIndex(p => p.type === 'text');
+
+                if (textPartIndex !== -1) {
+                  // Update the existing text part
+                  newParts[textPartIndex] = { type: 'text', text: draftContent };
+                } else {
+                  // If no text part exists (unlikely for user messages), add one
+                  // You might want to decide if this should prepend or append
+                  newParts.unshift({ type: 'text', text: draftContent });
+                }
+
+                const updatedMessage = {
+                  ...messages[index],
+                  content: draftContent, // Keep for now if needed elsewhere
+                  parts: newParts, // Assign the updated parts array
+                };
+                // Return the updated messages array
+                return [...messages.slice(0, index), updatedMessage];
+              }
+              // If message not found, return original messages
+              return messages;
             });
             ```
 
-    *   #### Story 2.2: Create Subscription Initiation API Endpoint
-        *   **Goal:** An endpoint for the frontend to call when a user clicks "Subscribe". This endpoint will prepare the initial Midtrans payment.
-        *   **Target File:** `app/api/subscriptions/initiate/route.ts` (Create this file/route)
-        *   [x] Create the route handler file (`route.ts`).
-        *   [x] Implement a `POST` handler function.
-        *   [x] **Authentication:** Use `await auth()` to get the session. Return 401 if no user or user ID.
-        *   [x] **Check Existing Subscription:** Query the database (`User` table) for the user's current `subscriptionStatus`. If already 'active' or 'pending_activation', return an appropriate error/message (e.g., 409 Conflict).
-        *   [x] **Define Plan Details:** Hardcode or fetch plan details (ID: `'monthly_99k'`, amount: `1000`). <!-- Changed from 99000 to 1000 for testing -->
-        *   [x] **Generate Order ID:** Use `generateOrderId('SUB_INIT_')` from `lib/midtrans.ts`.
-        *   [x] **Prepare Midtrans Snap Parameters:**
-            *   `transaction_details`: Use the generated `orderId` and `gross_amount: 1000`. <!-- Changed from 99000 to 1000 for testing -->
-            *   `customer_details`: Populate with user's email and ID from session.
-            *   `item_details`: Define the subscription item (e.g., `{ id: 'monthly_99k', price: 1000, quantity: 1, name: 'Monthly Subscription' }`). <!-- Changed from 99000 to 1000 for testing -->
-            *   **Tokenization:** Add `credit_card: { save_card: true }` to *request* Midtrans to attempt saving the card details securely if the user pays with a card. (Note: Actual token availability depends on Midtrans flow and webhook).
-        *   [x] **Call Midtrans Snap:** Use `createSnapTransaction` (from `lib/midtrans.ts`) with the prepared parameters.
-        *   [x] **Handle Midtrans Errors:** Add `try...catch` around the `createSnapTransaction` call. Log errors and return a 500 response if Midtrans fails.
-        *   [x] **Update Database (Initial):** *Before* returning the token, update the user's record in the database:
-            *   Set `subscriptionStatus` to `'pending_activation'`.
-            *   Set `planId` to `'monthly_99k'`.
-            *   *Do not* set `currentPeriodEnd` or `midtransPaymentTokenId` yet (wait for successful payment webhook).
-        *   [x] **Return Response:** Return a JSON response containing the `snapToken` and `orderId` to the frontend. Example: `NextResponse.json({ token: transaction.token, orderId })`.
+---
 
-    *   #### Story 2.3: Create Subscription Management API Endpoint
-        *   **Goal:** Endpoints for users to view status and cancel their subscription.
-        *   **Target File:** `app/api/subscriptions/manage/route.ts` (Create this file/route)
-        *   [x] Create the route handler file.
-        *   [x] Implement a `GET` handler:
-            *   Auth check.
-            *   Fetch user's `subscriptionStatus`, `planId`, `currentPeriodEnd` from the DB.
-            *   Return this data as JSON.
-        *   [x] Implement a `POST` handler (for cancellation):
-            *   Auth check.
-            *   Get user's current subscription details from DB.
-            *   If status is already `'cancelled'` or `'inactive'`, return success/no-action needed.
-            *   Update user's `subscriptionStatus` in the DB to `'cancelled'`. *Consider if you want immediate cancellation or cancellation at period end. For simplicity, let's do immediate for now, but `cancel_at_period_end` is often better UX.*
-            *   *(Optional - If using Midtrans Subscription API):* Call the relevant Midtrans API to cancel the subscription there. If managing manually, this step isn't needed.
-            *   Log the cancellation action.
-            *   Return a success response.
+**Epic 4: Refactor Backend for `message.parts` & Database Interaction**
 
-    *   #### Story 2.4: Implement Recurring Billing Logic (Scheduler/Cron Job)
-        *   **Goal:** Define the logic that will run periodically to charge subscribed users.
-        *   **Target Platform:** Vercel Cron Jobs (or other scheduler). Configure to run daily (e.g., `0 0 * * *`).
-        *   **Target Logic Location:** Can be a Server Action (`lib/actions/billing.ts`) or a dedicated API route (`app/api/cron/process-renewals/route.ts`) called by the cron job. Let's plan for an API route secured by a secret.
-        *   [x] Create the API route file (e.g., `app/api/cron/process-renewals/route.ts`).
-        *   [x] **Security:** Add a check for a secret key passed in the request header or query parameter, comparing it against an environment variable (`CRON_SECRET`). Return 401/403 if invalid.
-        *   [x] **Query for Due Renewals:**
-            *   Get the current date/time.
-            *   Query the `User` table for users where:
-                *   `subscriptionStatus` is `'active'`.
-                *   `currentPeriodEnd` is not null AND `currentPeriodEnd` is less than or equal to the current date/time.
-                *   `midtransPaymentTokenId` is not null.
-        *   [x] **Process Each Due User:** Loop through the fetched users.
-            *   For each user:
-                *   **Generate Order ID:** Create a unique `orderId` for this renewal attempt (e.g., `generateOrderId('SUB_RENEW_')`).
-                *   **Prepare Core API Charge Payload:**
-                    *   `payment_type`: `'credit_card'`
-                    *   `transaction_details`: `{ order_id: newOrderId, gross_amount: 1000 }` <!-- Changed from 99000 to 1000 for testing -->
-                    *   `credit_card`: `{ token_id: user.midtransPaymentTokenId, authentication: true }` (Use the stored token ID. `authentication: true` might be needed for subsequent charges).
-                    *   `customer_details`: Include user email/ID if needed by Midtrans.
-                *   **Call Midtrans Core API:** Use the initialized `coreApi.charge(payload)` method. Wrap in `try...catch`.
-                *   **Handle Midtrans Response:**
-                    *   **Success (`transaction_status: 'capture'` or `'settlement'`):** Log success. The *actual* subscription update (`currentPeriodEnd`, `payment` record) should happen in the **webhook handler** upon receiving the success notification from Midtrans for this `transaction_id`.
-                    *   **Pending (`transaction_status: 'pending'`):** Log pending status. Wait for webhook.
-                    *   **Failure (`transaction_status: 'deny'`, `'cancel'`, `'expire'`, or error thrown):**
-                        *   [x] Log the failure details (transaction ID, status, message).
-                        *   [x] Update user's `subscriptionStatus` in DB to `'past_due'`.
-                        *   [x] *(Optional)* Implement retry logic (e.g., flag for retry next day, up to X times).
-                        *   [x] *(Optional)* Trigger a notification to the user.
-        *   [x] Return a success response from the cron API route (e.g., `NextResponse.json({ processed: users.length })`).
+*   **Goal:** Update the backend API endpoint and database queries to handle the new `message.parts` structure and interact with the `Message_v2` and `Vote_v2` tables.
+
+    *   #### Story 4.1: Update Chat API (`onFinish` Handler)
+        *   [x] Open `app/(chat)/api/chat/route.ts`.
+        *   [x] Locate the `onFinish` callback within the `streamText` call.
+        *   [x] Inside the `try` block, modify the logic to get the last assistant message(s) from `response.messages`.
+        *   [x] For each relevant assistant message to be saved:
+            *   [x] Construct the `messageToSave` object to match the `DBMessage` type from `lib/db/schema.ts`.
+            *   [x] Assign `lastAssistantMessage.parts` directly to the `parts` property.
+            *   [x] Assign `lastAssistantMessage.experimental_attachments ?? []` to the `attachments` property.
+            *   [x] Ensure `createdAt` is set (`new Date()`).
+        *   [x] Call `saveMessages` with the correctly formatted `messageToSave` object(s).
+        *   [x] **Remove** any calls to the old `sanitizeResponseMessages` function, as the order is now preserved by the `parts` array itself.
+
+    *   #### Story 4.2: Update Database Queries (`lib/db/queries.ts`)
+        *   [x] Open `lib/db/queries.ts`.
+        *   [x] **`saveMessages` function:**
+            *   [x] Change the target table from `messageDeprecated` to `message` (or `Message_v2` if you haven't renamed).
+            *   [x] Ensure the `values` passed include `parts` (as JSON) and `attachments` (as JSON, defaulting to `[]`). Adapt the input type if needed (`DBMessage[]`).
+        *   [x] **`getMessagesByChatId` function:**
+            *   [x] Change the target table from `messageDeprecated` to `message` (`Message_v2`).
+        *   [x] **`voteMessage` function:**
+            *   [x] Change target table from `voteDeprecated` to `vote` (`Vote_v2`).
+            *   [x] Ensure foreign key references point to the new `message` (`Message_v2`) table.
+        *   [x] **`getVotesByChatId` function:**
+            *   [x] Change target table from `voteDeprecated` to `vote` (`Vote_v2`).
+        *   [x] **`getMessageById` function:**
+            *   [x] Change target table from `messageDeprecated` to `message` (`Message_v2`).
+        *   [x] **`deleteMessagesByChatIdAfterTimestamp` function:**
+            *   [x] Change target tables for deletion from `voteDeprecated` and `messageDeprecated` to `vote` (`Vote_v2`) and `message` (`Message_v2`).
+
+    *   #### Story 4.3: Update Data Conversion Utility (`lib/utils.ts`)
+        *   [x] Open `lib/utils.ts`.
+        *   [x] Locate the `convertToUIMessages` function.
+        *   [x] Change the input type from `MessageDeprecated[]` (or `Message[]` if using old name) to `DBMessage[]` (referencing the new schema type).
+        *   [x] Modify the function body to directly map `dbMessage.parts` to `uiMessage.parts` and `dbMessage.attachments` to `uiMessage.experimental_attachments`.
+        *   [x] Add the deprecated `content` field by extracting text from the first text part, for temporary compatibility: `content: (dbMessage.parts.find(p => p.type === 'text') as { text: string } | undefined)?.text ?? ''`.
+        *   [x] Remove the old `addToolMessageToChat` function if it exists.
 
 ---
 
-**Epic 3: Secure Webhook Handling** ✅
+**Epic 5: Database Schema Migration & Data Transfer**
 
-*   **Goal:** Securely process incoming notifications from Midtrans for both initial and recurring payments.
+*   **Goal:** Apply the necessary database schema changes and migrate existing message/vote data to the new table structure.
 
-    *   #### Story 3.1: Enhance Midtrans Webhook Handler
-        *   **Goal:** Implement signature verification and handle various transaction statuses correctly for subscriptions.
-        *   **Target File:** `app/api/payment/route.ts` (Enhance existing `PUT` handler)
-        *   [x] **Implement Signature Verification:** Add the SHA-512 signature check using `MIDTRANS_SIGNATURE_KEY` as detailed in the previous response's "Midtrans Implementation Steps - Step 1". **This is mandatory.** Return 403 Forbidden if the signature is invalid.
-        *   [x] **Parse Notification:** Safely parse the incoming JSON payload *after* signature verification (or use raw body for verification if needed). Extract `order_id`, `transaction_status`, `transaction_id`, `payment_type`, `gross_amount`, `masked_card`, `saved_token_id`, `token_id`, `fraud_status`, etc.
-        *   [x] **Identify Payment Type (Initial vs. Renewal):** Determine if the `order_id` corresponds to an initial subscription payment (e.g., starts with `SUB_INIT_`) or a renewal (e.g., starts with `SUB_RENEW_`).
-        *   [x] **Handle Successful Initial Payment (`settlement` or `capture` for `SUB_INIT_` order):**
-            *   [x] Find the user associated with the `order_id` (query `payment` table, then `user` table, or infer from webhook if possible).
-            *   [x] Verify `gross_amount` matches 99000.
-            *   [x] **Capture Payment Token:** Extract the relevant token ID (`saved_token_id` or `token_id` - check Midtrans webhook docs for the exact field for saved cards/tokens) from the payload.
-            *   [x] **Update User:** Update the user's record in the DB:
-                *   Set `subscriptionStatus` to `'active'`.
-                *   Set `midtransPaymentTokenId` to the captured token ID.
-                *   Set `currentPeriodEnd` to 1 month from the current date.
-            *   [x] **Record Payment:** Insert a record into the `payment` table for this successful transaction.
-            *   [x] Log success.
-        *   [x] **Handle Successful Renewal Payment (`settlement` or `capture` for `SUB_RENEW_` order):**
-            *   [x] Find the user associated with the `order_id`.
-            *   [x] Verify `gross_amount`.
-            *   [x] **Update User:** Update `currentPeriodEnd` by adding 1 month to the *previous* `currentPeriodEnd` (or current date if renewal was late). Ensure `subscriptionStatus` is `'active'`.
-            *   [x] **Record Payment:** Insert a record into the `payment` table.
-            *   [x] Log success.
-        *   [x] **Handle Failed/Denied/Expired Payments (for renewals):**
-            *   [x] Find the user associated with the `order_id`.
-            *   [x] **Update User:** Set `subscriptionStatus` to `'past_due'` or `'inactive'` based on your business rules/retry strategy.
-            *   [x] **Record Payment Attempt (Optional):** Consider logging failed attempts in the `payment` table with status 'failed'.
-            *   [x] Log failure.
-        *   [x] **Handle Pending Payments:** Log the status. Usually no immediate DB action is needed; wait for a final status webhook.
-        *   [x] **Handle Fraud Status:** Implement logic based on `fraud_status` if necessary (e.g., `challenge`, `accept`, `deny`).
-        *   [x] **Return 200 OK:** Respond to Midtrans with a 200 status code quickly after processing (or after validation if processing is deferred).
+    *   #### Story 5.1: Apply Schema Migration (0005)
+        *   [x] **CRITICAL: Ensure Database Backup exists!**
+        *   [x] Verify that the migration file `lib/db/migrations/0005_wooden_whistler.sql` exists and contains the `CREATE TABLE "Message_v2"` and `CREATE TABLE "Vote_v2"` statements with the correct columns (`parts`, `attachments`). (Skipped: Schema already updated)
+        *   [x] Run the Drizzle migration command: `bun run db:migrate`. (Skipped: Schema already updated, migration script removed from build)
+        *   [x] Verify the new tables `Message_v2` and `Vote_v2` were created in your database. (Verified: Columns exist in `Message` table)
+
+    *   #### Story 5.2: Run Data Migration Script
+        *   [x] **CRITICAL: Ensure Database Backup exists!**
+        *   [x] Carefully review the script `lib/db/helpers/01-core-to-parts.ts`. (Skipped: User opted out)
+        *   [x] Execute the migration script: `bun run ./lib/db/helpers/01-core-to-parts.ts`. (Skipped: User opted out)
+        *   [x] After completion, query the `Message_v2` and `Vote_v2` tables to verify data integrity and correct transformation (check `parts` column content). (Skipped: User opted out)
+
+    *   #### Story 5.3: Update Schema File (`lib/db/schema.ts`)
+        *   [x] Open `lib/db/schema.ts`.
+        *   [x] **Remove** the definitions for the old `messageDeprecated` and `voteDeprecated` tables (or rename `Message_v2` to `message` and `Vote_v2` to `vote`, then remove the old ones). Ensure all foreign keys now point to the new tables. (Completed: Schema updated directly)
+        *   [x] Update any type exports (`DBMessage`, `Vote`) to refer to the new table schemas. (Completed: Renamed to `DBSchemaMessage`)
+
+    *   #### Story 5.4: Generate Cleanup Migration (Optional but Recommended)
+        *   [x] **CRITICAL: Ensure Database Backup exists and Data Migration was successful!**
+        *   [x] Generate a new Drizzle migration: `bun run db:generate`. (Skipped: No old tables to drop)
+        *   [x] Inspect the generated SQL file. It should contain `DROP TABLE "Message";` and `DROP TABLE "Vote";` (or the original names if you didn't rename the v2 tables). (Skipped: No old tables to drop)
+        *   [x] Apply the cleanup migration: `bun run db:migrate`. (Skipped: No old tables to drop)
 
 ---
 
-**Epic 4: Frontend User Interface** ✅
+**Epic 6: Final Testing and Verification**
 
-*   **Goal:** Provide UI elements for users to subscribe, view status, and cancel.
+*   **Goal:** Ensure the application functions correctly after all migration steps.
 
-    *   #### Story 4.1: Subscription Initiation UI
-        *   **Goal:** Add a button or section for non-subscribed users to start the subscription process.
-        *   **Target File(s):** `components/sidebar-subscription.tsx`, `components/subscription-form.tsx`
-        *   [x] Add a "Subscribe Now" button or link, conditionally rendered based on user's subscription status (fetch status via `/api/subscriptions/manage` GET endpoint or include in session).
-        *   [x] On click, trigger the process to call `/api/subscriptions/initiate`.
+    *   #### Story 6.1: Comprehensive Manual Testing
+        *   [ ] Start the development server: `bun run dev`.
+        *   [ ] **New Chat:** Start a new chat. Send simple messages. Verify rendering.
+        *   [ ] **Tool Calls:** Send messages that trigger tools (weather, document creation/update, suggestions). Verify tool calls and results render correctly within the message parts structure.
+        *   [ ] **Reasoning:** Use the reasoning model. Verify reasoning steps appear correctly. Toggle reasoning visibility.
+        *   [ ] **Attachments:** Upload files during input. Send the message. Verify the attachment is associated with the user message and displays correctly.
+        *   [ ] **Artifacts:** Create and interact with all artifact types (text, code, image, sheet). Ensure streaming updates and final content are handled correctly. Test toolbar actions.
+        *   [ ] **History:** Navigate to older chats (created *before* the migration). Verify messages load and display correctly in the new `parts` format.
+        *   [ ] **Voting:** Test upvoting and downvoting on *new* messages and *old* (migrated) messages.
+        *   [ ] **Editing:** Edit user messages (both new and old). Verify the correct text part is updated and the chat reloads correctly.
+        *   [ ] **Error Handling:** Test scenarios that might cause errors (e.g., failed tool call) and verify UI feedback.
+        *   [ ] **Responsiveness:** Check UI rendering and interactions on different screen sizes (desktop/mobile).
 
-    *   #### Story 4.2: Integrate Midtrans Snap for Initial Payment
-        *   **Goal:** Use the Snap token returned by the initiation API to display the Midtrans payment popup.
-        *   **Target File:** `components/subscription-form.tsx`
-        *   [x] Modify the payment initiation function (triggered by the subscribe button).
-        *   [x] Add `async` to the handler.
-        *   [x] Add `setIsLoading(true)`.
-        *   [x] Call `fetch('/api/subscriptions/initiate', { method: 'POST' })`.
-        *   [x] Handle potential errors from the API call (show toast).
-        *   [x] Parse the JSON response to get `{ token, orderId }`.
-        *   [x] Check if `window.snap` is available (ensure script is loaded).
-        *   [x] Call `window.snap.embed(token, { embedId: 'snap-container', onSuccess: ..., onPending: ..., onError: ..., onClose: ... })`.
-        *   [x] Implement `onSuccess` callback: Show a temporary success message (e.g., "Payment successful, activating..."). *Do not assume activation is complete here.* Maybe trigger a refetch of subscription status after a short delay. `setIsLoading(false)`.
-        *   [x] Implement `onPending`: Show pending message. `setIsLoading(false)`.
-        *   [x] Implement `onError`: Show error toast. `setIsLoading(false)`.
-        *   [x] Implement `onClose`: `setIsLoading(false)`.
-        *   [x] Remove or adapt the static `amount` and `items` from `PaymentForm` if reusing it; data comes from the backend now.
-
-    *   #### Story 4.3: Display Subscription Status UI
-        *   **Goal:** Show the user their current plan, status, and next billing date.
-        *   **Target File(s):** `components/subscription-form.tsx`
-        *   [x] Fetch subscription status using SWR or similar (call `/api/subscriptions/manage` GET).
-        *   [x] Conditionally render status information (e.g., "Plan: Monthly", "Status: Active", "Renews on: [formatted date]").
-        *   [x] Format the `currentPeriodEnd` date for display.
-
-    *   #### Story 4.4: Cancellation UI
-        *   **Goal:** Allow users to cancel their subscription.
-        *   **Target File(s):** `components/subscription-form.tsx`
-        *   [x] Add a "Cancel Subscription" button, conditionally rendered only for `'active'` users.
-        *   [x] Add a confirmation dialog (e.g., use `AlertDialog`) before proceeding.
-        *   [x] On confirmation, call `fetch('/api/subscriptions/manage', { method: 'POST' })`.
-        *   [x] Handle success: Show success toast, update local UI state/refetch status.
-        *   [x] Handle error: Show error toast.
+    *   #### Story 6.2: Automated Testing (If Applicable)
+        *   [ ] Run the Playwright test suite: `bun run test`.
+        *   [ ] Investigate and fix any failing tests. Failures are likely due to changes in the DOM structure (rendering `parts` instead of direct `content`/`toolInvocations`). Update selectors and assertions in `tests/pages/chat.ts` and `tests/pages/artifact.ts` as needed. Pay close attention to tests involving message content verification, tool results, and reasoning display.
 
 ---
 
-**Epic 5: Access Control** ✅
-
-*   **Goal:** Restrict access to premium features based on subscription status.
-
-    *   #### Story 5.1: Implement Access Checks
-        *   **Goal:** Add logic to verify active subscription status before allowing access to protected resources.
-        *   **Target File(s):** `middleware.ts` (for route protection), specific API routes, specific Page components, specific UI components.
-        *   [x] **Identify Premium Features:** Determine which parts of the application are subscription-only.
-        *   [x] **Backend Check:** In API routes handling premium actions, fetch the user's `subscriptionStatus`. If not `'active'`, return a 403 Forbidden error.
-        *   [x] **Frontend Check (UI):** In components rendering premium features, check the user's status. Conditionally render the feature, show an upgrade prompt, or disable functionality if not active.
-        *   [x] **Middleware (Optional):** If entire routes are premium, enhance `middleware.ts` to fetch user status (might require DB lookup if not in JWT session) and redirect non-active users away from protected paths. *Note: Adding DB lookups to middleware can impact performance.*
-
----
-
-**Epic 6: Testing and Deployment** ⚠️
-
-*   **Goal:** Ensure the subscription flow works correctly in sandbox and production.
-*   **Note:** This epic requires actual testing with Midtrans sandbox/production environments and cannot be fully completed in this environment.
-
-    *   #### Story 6.1: Sandbox Environment Testing
-        *   **Goal:** Thoroughly test the entire subscription lifecycle using Midtrans Sandbox credentials.
-        *   [ ] Configure `.env.local` with Sandbox keys (Server, Client, Signature). Set `MIDTRANS_ENV=sandbox`.
-        *   [ ] Test subscription initiation via UI.
-        *   [ ] Complete a payment using Midtrans Sandbox payment methods.
-        *   [ ] **Verify Webhook:** Use `ngrok` or similar to receive webhooks locally. Verify the signature check passes for valid notifications and fails for invalid ones. Verify the database is updated correctly on successful initial payment (status active, token stored, period end set).
-        *   [ ] **Test Renewal Trigger:** Manually trigger the cron job logic/API endpoint (`/api/cron/process-renewals`).
-        *   [ ] Simulate a successful renewal payment via Midtrans Sandbox (if possible, or mock the Core API call/webhook). Verify `currentPeriodEnd` is updated in DB and a payment record is created.
-        *   [ ] Simulate a failed renewal payment. Verify user status changes to `past_due` or `inactive`.
-        *   [ ] Test cancellation flow via UI. Verify status changes in DB. Verify renewals stop.
-        *   [ ] Test access control for premium features based on status changes.
-
-    *   #### Story 6.2: Production Deployment
-        *   **Goal:** Configure and deploy the feature to production.
-        *   [ ] Update Vercel environment variables with Production Midtrans keys (Server, Client, Signature). Set `MIDTRANS_ENV=production`.
-        *   [ ] Configure the production webhook URL in the Midtrans Dashboard (MAP).
-        *   [ ] Configure the Vercel Cron Job (or chosen scheduler) to call the renewal API route (`/api/cron/process-renewals`) with the `CRON_SECRET`.
-        *   [ ] Deploy the application.
-        *   [ ] Perform a final smoke test in production with a real payment method.
-
----
+**Migration Complete:** Once all tests pass and manual verification confirms expected behavior, merge the migration branch. Remember to apply the database migrations (including the cleanup migration if generated) to your staging and production environments during deployment.

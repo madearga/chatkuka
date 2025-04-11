@@ -15,11 +15,11 @@ import {
   saveChat,
   saveMessages,
   getUserById,
+  type DBSchemaMessage,
 } from '@/lib/db/queries';
 import {
   generateUUID,
   getMostRecentUserMessage,
-  sanitizeResponseMessages,
 } from '@/lib/utils';
 
 import { generateTitleFromUserMessage } from '../../actions';
@@ -126,6 +126,7 @@ export async function POST(request: Request) {
     // Create new chat if it doesn't exist
     if (!chat) {
       try {
+        // Generate title using the original user message (before transformation)
         const title = await generateTitleFromUserMessage({ message: userMessage });
         console.log('Creating new chat with title:', title);
         console.log('User ID from session:', session.user.id);
@@ -143,16 +144,24 @@ export async function POST(request: Request) {
 
     // Save user message to database
     try {
-      // Get attachmentUrl from message if available
-      const attachmentUrl = (userMessage as any).attachmentUrl || null;
+      // Get the attachments from the user message if available
+      const attachments = (userMessage as any).experimental_attachments ?? [];
+
+      // Construct the message to save using the DBSchemaMessage type
+      const userMessageToSave: DBSchemaMessage = {
+        id: userMessage.id,
+        role: userMessage.role,
+        // Create a text part from the user's content
+        parts: [{ type: 'text', text: userMessage.content ?? '' }],
+        createdAt: new Date(),
+        chatId: id,
+        // Assign the extracted attachments
+        attachments: attachments,
+      };
 
       await saveMessages({
-        messages: [{
-          ...userMessage,
-          createdAt: new Date(),
-          chatId: id,
-          attachmentUrl
-        }],
+        // Pass the correctly typed message in an array
+        messages: [userMessageToSave],
       });
       console.log('Successfully saved user message');
     } catch (error) {
@@ -172,12 +181,20 @@ export async function POST(request: Request) {
 
     // Jika search diminta tapi tidak tersedia, beri tahu pengguna
     if (useSearch && !searchToolAvailable) {
-      const errorMessage = {
+      // Create error message using the new DBSchemaMessage format
+      const errorMessage: DBSchemaMessage = {
         id: generateUUID(),
         role: 'assistant',
-        content: "I'm sorry, but the web search functionality is currently unavailable. Please check if the Tavily API key is configured correctly. I'll try to answer your question based on my existing knowledge.",
+        // Create a text part for the error content
+        parts: [
+          {
+            type: 'text',
+            text: "I'm sorry, but the web search functionality is currently unavailable. Please check if the Tavily API key is configured correctly. I'll try to answer your question based on my existing knowledge.",
+          },
+        ],
         createdAt: new Date(),
-        chatId: id
+        chatId: id,
+        attachments: [], // Default empty attachments
       };
 
       await saveMessages({
@@ -286,47 +303,45 @@ export async function POST(request: Request) {
           system: systemMessage,
           messages,
           maxSteps: 5,
-          experimental_activeTools: activeTools,
-          experimental_transform: smoothStream({ chunking: 'word' }),
-          experimental_generateMessageId: generateUUID,
           tools,
-          onFinish: async ({ response, reasoning }) => {
-            if (session.user?.id) {
-              try {
-                const sanitizedResponseMessages = sanitizeResponseMessages({
-                  messages: response.messages,
-                  reasoning,
-                });
+          onFinish: async (response) => {
+            console.log('Stream finished. Response:', response);
 
-                if (sanitizedResponseMessages && sanitizedResponseMessages.length > 0) {
-                  const messagesToSave = sanitizedResponseMessages.map((message) => {
-                    return {
-                      id: message.id,
-                      chatId: id,
-                      role: message.role,
-                      content: message.content,
-                      createdAt: new Date(),
-                    };
-                  }).filter(msg => msg.content !== undefined && msg.content !== null);
+            // Use intermediate 'unknown' cast as suggested by TS error
+            const finalAssistantMessage = (response as unknown as { message: Message })
+              .message;
 
-                  if (messagesToSave.length > 0) {
-                    await saveMessages({
-                      messages: messagesToSave,
-                    });
-                  } else {
-                    console.log('No messages to save after mapping and filtering');
-                  }
-                } else {
-                  console.log('No messages to save after sanitization');
-                }
-              } catch (error) {
-                console.error('Failed to save chat', error);
-              }
+            // Check if the final message exists and is from the assistant
+            if (!finalAssistantMessage || finalAssistantMessage.role !== 'assistant') {
+              console.error(
+                'onFinish: No final assistant message found or role is not assistant.',
+                finalAssistantMessage
+              );
+              return; // Exit if no valid message to save
+            }
+
+            try {
+              // Construct the message object to save to the database using DBSchemaMessage type
+              const messageToSave: DBSchemaMessage = {
+                id: finalAssistantMessage.id || generateUUID(),
+                role: finalAssistantMessage.role,
+                // content: '', // Deprecated, store main content in parts - Removed as not part of DBSchemaMessage
+                parts: finalAssistantMessage.parts, // Store the full parts array
+                // Access attachments safely after asserting the message type
+                attachments: (finalAssistantMessage as any).experimental_attachments ?? [],
+                createdAt: new Date(),
+                chatId: id, // Associate with the current chat
+              };
+
+              // Ensure the object conforms to what saveMessages expects (an array)
+              await saveMessages({ messages: [messageToSave] });
+              console.log('Successfully saved final assistant message');
+            } catch (error) {
+              console.error('Failed to save final assistant message', error);
             }
           },
-          experimental_telemetry: {
-            isEnabled: true,
-            functionId: 'stream-text',
+          onError: (error) => {
+            console.error('Error in chat API route:', error);
           },
         });
 

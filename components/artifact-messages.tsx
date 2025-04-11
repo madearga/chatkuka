@@ -42,7 +42,7 @@ function PureArtifactMessages({
         <PreviewMessage
           chatId={chatId}
           key={message.id}
-          message={message}
+          message={{ ...message, parts: message.parts ?? [] }}
           isLoading={isLoading && index === messages.length - 1}
           vote={
             votes

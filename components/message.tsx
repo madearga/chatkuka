@@ -1,6 +1,7 @@
 'use client';
 
 import type { ChatRequestOptions, Message } from 'ai';
+import type { UIMessage } from 'ai';
 import cx from 'classnames';
 import { AnimatePresence, motion } from 'framer-motion';
 import { memo, useMemo, useState } from 'react';
@@ -86,7 +87,7 @@ const PurePreviewMessage = ({
   isReadonly,
 }: {
   chatId: string;
-  message: ExtendedMessage;
+  message: UIMessage;
   vote: Vote | undefined;
   isLoading: boolean;
   setMessages: (
@@ -98,63 +99,24 @@ const PurePreviewMessage = ({
   isReadonly: boolean;
 }) => {
   const [mode, setMode] = useState<'view' | 'edit'>('view');
-  
-  // Parse search data if available - simplify to avoid hydration issues
-  const searchData = useMemo(() => {
-    try {
-      // Check for direct search data in message content
-      if (typeof message.content === 'object' && message.content !== null) {
-        const content = message.content as any;
-        if (content.type === 'search-status' || content.type === 'search-results') {
-          return content as SearchData;
-        }
-      }
-      
-      // Check for search data in tool invocations
-      if (message.toolInvocations && Array.isArray(message.toolInvocations) && message.toolInvocations.length > 0) {
-        for (const toolInvocation of message.toolInvocations) {
-          if (toolInvocation.toolName === 'search' && toolInvocation.state === 'result' && toolInvocation.result) {
-            const result = toolInvocation.result;
-            return {
-              type: 'search-results',
-              status: 'complete',
-              query: result.query || '',
-              results: result.results || [],
-              answer: result.answer || '',
-              images: result.images || [],
-              responseTime: result.responseTime || 0,
-              topic: result.topic || 'general',
-              timeRange: result.timeRange || ''
-            } as SearchData;
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Error parsing search data:', error);
-    }
-    
-    return null;
-  }, [message.content, message.toolInvocations]);
 
   // Get file information if attachment URL exists
   const fileType = useMemo(() => {
-    if (message.attachmentUrl) {
-      return getFileTypeFromUrl(message.attachmentUrl);
+    if ((message as any).attachmentUrl) {
+      return getFileTypeFromUrl((message as any).attachmentUrl);
     }
     return 'unknown';
-  }, [message.attachmentUrl]);
+  }, [(message as any).attachmentUrl]);
 
   // Get the file name from the URL
   const fileName = useMemo(() => {
-    if (message.attachmentUrl) {
-      // Extract filename from URL, removing the unique ID prefix
-      const fullName = message.attachmentUrl.split('/').pop() || 'file';
-      // Split by dash and remove the first part (usually a UUID)
+    if ((message as any).attachmentUrl) {
+      const fullName = (message as any).attachmentUrl.split('/').pop() || 'file';
       const parts = fullName.split('-');
       return parts.length > 1 ? parts.slice(1).join('-') : fullName;
     }
     return 'Attached file';
-  }, [message.attachmentUrl]);
+  }, [(message as any).attachmentUrl]);
 
   return (
     <AnimatePresence>
@@ -179,243 +141,197 @@ const PurePreviewMessage = ({
                   },
                 )}
               >
-          {message.role === 'assistant' && (
-            <div className="size-8 flex items-center rounded-full justify-center ring-1 shrink-0 ring-border bg-background">
-              <div className="translate-y-px">
-                <SparklesIcon size={14} />
-              </div>
-            </div>
-          )}
-
-          <div className="flex flex-col gap-4 w-full overflow-hidden max-w-full">
-            {/* Display experimental attachments */}
-            {message.experimental_attachments && (
-              <div className="flex flex-row flex-wrap justify-end gap-2 max-w-full">
-                {message.experimental_attachments.map((attachment) => (
-                  <PreviewAttachment
-                    key={attachment.url}
-                    attachment={attachment}
-                  />
-                ))}
-              </div>
-            )}
-
-            {/* Display attachment from database */}
-            {message.attachmentUrl && (
-              <div className={cn(
-                "flex items-start gap-3 p-3 rounded-lg shadow-sm",
-                message.role === 'user' ? "bg-zinc-800/20 ml-auto dark:bg-zinc-700/20" : "bg-muted/80"
-              )}>
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center justify-center w-10 h-10 rounded-md bg-zinc-800/20 dark:bg-zinc-700/20 shrink-0">
-                    {getFileIcon(fileType)}
+                {message.role === 'assistant' && (
+                  <div className="size-8 flex items-center rounded-full justify-center ring-1 shrink-0 ring-border bg-background">
+                    <div className="translate-y-px">
+                      <SparklesIcon size={14} />
+                    </div>
                   </div>
-                  <div className="flex flex-col overflow-hidden">
-                    <span className="text-sm font-medium truncate max-w-[150px] sm:max-w-[200px]">
-                      {fileName}
-                    </span>
-                    <span className="text-xs text-muted-foreground capitalize">
-                      {fileType} file
-                    </span>
-                  </div>
-                </div>
-                <a 
-                  href={message.attachmentUrl} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="mt-2 sm:mt-0 sm:ml-auto py-1.5 px-3 text-sm bg-zinc-800/20 hover:bg-zinc-800/30 text-zinc-800 dark:text-zinc-300 rounded-md transition-colors"
-                >
-                  Open
-                </a>
-              </div>
-            )}
-
-            {message.reasoning && (
-              <MessageReasoning
-                isLoading={isLoading}
-                reasoning={message.reasoning}
-              />
-            )}
-
-            {/* Render search status or results if available */}
-            {searchData && (
-              <div className="w-full">
-                {searchData.type === 'search-status' ? (
-                  <SearchProgress 
-                    status={searchData.status}
-                    query={searchData.query}
-                    error={searchData.error}
-                  />
-                ) : searchData.type === 'search-results' && Array.isArray(searchData.results) ? (
-                  <SearchResults 
-                    results={searchData.results}
-                    query={searchData.query}
-                    answer={searchData.answer}
-                    images={searchData.images}
-                    responseTime={searchData.responseTime}
-                  />
-                ) : null}
-              </div>
-            )}
-
-            {(message.content && typeof message.content === 'string' || (message.reasoning && Array.isArray(message.reasoning))) && mode === 'view' && (
-              <div className="flex flex-row gap-2 items-start w-full overflow-hidden">
-                {message.role === 'user' && !isReadonly && (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6"
-                        onClick={() => setMode('edit')}
-                      >
-                        <PencilEditIcon />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Edit</TooltipContent>
-                  </Tooltip>
                 )}
 
-                      <div className={cn(
-                        'flex flex-col gap-4 break-words max-w-full overflow-hidden',
-                        message.role === 'user'
-                          ? 'bg-zinc-200 text-zinc-900 px-3 py-2 rounded-xl dark:bg-zinc-700 dark:text-zinc-100'
-                          : 'bg-muted/50 border border-border/50 px-3 py-2 rounded-xl'
-                      )}>
-                  {message.reasoning && Array.isArray(message.reasoning) && message.reasoning.length > 0 && (
-                    <div className="text-muted-foreground w-full overflow-hidden text-ellipsis">
-                      <div className="flex">
-                        <div className="flex-1" />
-                        <span className="prose p-0.5 px-1 text-xs ">Reasoning</span>
-                      </div>
-                      <div className="text-sm italic mb-4">
-                        {message.reasoning.map((reason, index) => (
-                          <div key={index} className="my-2 max-w-full break-words">
-                            {reason}
+                <div className="flex flex-col gap-4 w-full overflow-hidden max-w-full">
+                  {/* Render message.parts */}
+                  {message.parts?.map((part, index) => {
+                    switch (part.type) {
+                      case 'text':
+                        return (
+                          <div key={index} className="flex flex-row items-start gap-2">
+                            {message.role === 'user' && !isReadonly && mode === 'view' && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-6 w-6 shrink-0 mt-1"
+                                    onClick={() => setMode('edit')}
+                                  >
+                                    <PencilEditIcon />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Edit</TooltipContent>
+                              </Tooltip>
+                            )}
+                            <div
+                              className={cn(
+                                'flex-grow break-words max-w-full overflow-hidden',
+                                message.role === 'user' ? 'bg-zinc-200 text-zinc-900 px-3 py-2 rounded-xl dark:bg-zinc-700 dark:text-zinc-100' : 'bg-muted/50 border border-border/50 px-3 py-2 rounded-xl'
+                              )}
+                            >
+                              <ResponseStream
+                                textStream={part.text}
+                                mode="fade"
+                                speed={20}
+                                className="prose max-w-full text-foreground"
+                              />
+                            </div>
                           </div>
-                        ))}
+                        );
+                      case 'tool-invocation': {
+                        const { toolInvocation } = part;
+                        const { toolName, toolCallId, state, args } = toolInvocation;
+                        // The result property is only present when state === 'result'
+                        const result = (toolInvocation as any).result;
+                        if (state === 'call') {
+                          return (
+                            <div key={toolCallId}>
+                              {toolName === 'getWeather' ? (
+                                <Weather />
+                              ) : toolName === 'createDocument' ? (
+                                <DocumentPreview isReadonly={isReadonly} args={args} />
+                              ) : toolName === 'updateDocument' ? (
+                                <DocumentToolCall
+                                  type="update"
+                                  args={args}
+                                  isReadonly={isReadonly}
+                                />
+                              ) : toolName === 'requestSuggestions' ? (
+                                <DocumentToolCall
+                                  type="request-suggestions"
+                                  args={args}
+                                  isReadonly={isReadonly}
+                                />
+                              ) : toolName === 'search' ? (
+                                <SearchProgress
+                                  status="searching"
+                                  query={args.query}
+                                />
+                              ) : null}
+                            </div>
+                          );
+                        }
+                        if (state === 'result' && result !== undefined) {
+                          return (
+                            <div key={toolCallId}>
+                              {toolName === 'getWeather' ? (
+                                <Weather weatherAtLocation={result} />
+                              ) : toolName === 'createDocument' ? (
+                                <DocumentPreview
+                                  isReadonly={isReadonly}
+                                  result={result}
+                                />
+                              ) : toolName === 'updateDocument' ? (
+                                <DocumentToolResult
+                                  type="update"
+                                  result={result}
+                                  isReadonly={isReadonly}
+                                />
+                              ) : toolName === 'requestSuggestions' ? (
+                                <DocumentToolResult
+                                  type="request-suggestions"
+                                  result={result}
+                                  isReadonly={isReadonly}
+                                />
+                              ) : toolName === 'search' ? (
+                                <SearchResults
+                                  results={result.results}
+                                  query={result.query}
+                                  answer={result.answer}
+                                  images={result.images}
+                                  responseTime={result.responseTime}
+                                />
+                              ) : (
+                                <pre>{JSON.stringify(result, null, 2)}</pre>
+                              )}
+                            </div>
+                          );
+                        }
+                        return null;
+                      }
+                      case 'reasoning':
+                        return (
+                          <MessageReasoning
+                            key={index}
+                            isLoading={isLoading}
+                            reasoning={part.reasoning}
+                          />
+                        );
+                      case 'file':
+                        return (
+                          <PreviewAttachment
+                            key={index}
+                            attachment={{
+                              url: part.data,
+                              // Only include mimeType if present
+                              ...(part.mimeType ? { mimeType: part.mimeType } : {}),
+                            }}
+                          />
+                        );
+                      case 'source':
+                        return (
+                          <div key={index} className="text-xs text-muted-foreground">
+                            <a href={part.source.url} target="_blank" rel="noopener noreferrer">
+                              {part.source.title || part.source.url}
+                            </a>
+                          </div>
+                        );
+                      default:
+                        console.warn(`Unhandled message part type: ${(part as any).type}`);
+                        return null;
+                    }
+                  })}
+
+                  {/* Display attachment from database (legacy) */}
+                  {(message as any).attachmentUrl && (
+                    <div className={cn(
+                      "flex items-start gap-3 p-3 rounded-lg shadow-sm",
+                      message.role === 'user' ? "bg-zinc-800/20 ml-auto dark:bg-zinc-700/20" : "bg-muted/80"
+                    )}>
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center justify-center w-10 h-10 rounded-md bg-zinc-800/20 dark:bg-zinc-700/20 shrink-0">
+                          {getFileIcon(fileType)}
+                        </div>
+                        <div className="flex flex-col overflow-hidden">
+                          <span className="text-sm font-medium truncate max-w-[150px] sm:max-w-[200px]">
+                            {fileName}
+                          </span>
+                          <span className="text-xs text-muted-foreground capitalize">
+                            {fileType} file
+                          </span>
+                        </div>
                       </div>
+                      <a
+                        href={(message as any).attachmentUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-2 sm:mt-0 sm:ml-auto py-1.5 px-3 text-sm bg-zinc-800/20 hover:bg-zinc-800/30 text-zinc-800 dark:text-zinc-300 rounded-md transition-colors"
+                      >
+                        Open
+                      </a>
                     </div>
                   )}
 
-{typeof message.content === 'string' && message.content.trim() !== '' && (
-  <div className="w-full overflow-hidden break-words">
-    <ResponseStream
-      textStream={message.content}
-      mode="fade"
-      speed={20}
-      className="prose max-w-full text-foreground"
-    />
-  </div>
-)}
+                  {!isReadonly && (
+                    <MessageActions
+                      key={`action-${message.id}`}
+                      chatId={chatId}
+                      message={message}
+                      vote={vote}
+                      isLoading={isLoading}
+                      reload={reload}
+                    />
+                  )}
                 </div>
               </div>
-            )}
-
-            {message.content && typeof message.content === 'string' && mode === 'edit' && (
-              <div className="flex flex-row gap-2 items-start">
-                <div className="size-8" />
-
-                <MessageEditor
-                  key={message.id}
-                  message={message}
-                  setMode={setMode}
-                  setMessages={setMessages}
-                  reload={reload}
-                />
-              </div>
-            )}
-
-            {message.toolInvocations && message.toolInvocations.length > 0 && (
-              <div className="flex flex-col gap-4">
-                {message.toolInvocations.map((toolInvocation) => {
-                  const { toolName, toolCallId, state, args } = toolInvocation;
-
-                  if (state === 'result') {
-                    const { result } = toolInvocation;
-
-                    return (
-                      <div key={toolCallId}>
-                        {toolName === 'getWeather' ? (
-                          <Weather weatherAtLocation={result} />
-                        ) : toolName === 'createDocument' ? (
-                          <DocumentPreview
-                            isReadonly={isReadonly}
-                            result={result}
-                          />
-                        ) : toolName === 'updateDocument' ? (
-                          <DocumentToolResult
-                            type="update"
-                            result={result}
-                            isReadonly={isReadonly}
-                          />
-                        ) : toolName === 'requestSuggestions' ? (
-                          <DocumentToolResult
-                            type="request-suggestions"
-                            result={result}
-                            isReadonly={isReadonly}
-                          />
-                        ) : toolName === 'search' ? (
-                          <SearchResults
-                            results={result.results}
-                            query={result.query}
-                            answer={result.answer}
-                            images={result.images}
-                            responseTime={result.responseTime}
-                          />
-                        ) : (
-                          <pre>{JSON.stringify(result, null, 2)}</pre>
-                        )}
-                      </div>
-                    );
-                  }
-                  return (
-                    <div
-                      key={toolCallId}
-                      className={cx({
-                        skeleton: ['getWeather', 'search'].includes(toolName),
-                      })}
-                    >
-                      {toolName === 'getWeather' ? (
-                        <Weather />
-                      ) : toolName === 'createDocument' ? (
-                        <DocumentPreview isReadonly={isReadonly} args={args} />
-                      ) : toolName === 'updateDocument' ? (
-                        <DocumentToolCall
-                          type="update"
-                          args={args}
-                          isReadonly={isReadonly}
-                        />
-                      ) : toolName === 'requestSuggestions' ? (
-                        <DocumentToolCall
-                          type="request-suggestions"
-                          args={args}
-                          isReadonly={isReadonly}
-                        />
-                      ) : toolName === 'search' ? (
-                        <SearchProgress
-                          status="searching"
-                          query={args.query}
-                        />
-                      ) : null}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            {!isReadonly && (
-              <MessageActions
-                key={`action-${message.id}`}
-                chatId={chatId}
-                message={message}
-                vote={vote}
-                isLoading={isLoading}
-                reload={reload}
-              />
-            )}
-          </div>
-        </div>
             </motion.div>
           </TooltipTrigger>
           <TooltipContent side="bottom">
@@ -436,7 +352,7 @@ export const PreviewMessage = memo(
     if (prevProps.message.reasoning !== nextProps.message.reasoning)
       return false;
     if (prevProps.message.content !== nextProps.message.content) return false;
-    if (prevProps.message.attachmentUrl !== nextProps.message.attachmentUrl) 
+    if ((prevProps.message as any).attachmentUrl !== (nextProps.message as any).attachmentUrl)
       return false;
     if (
       !equal(

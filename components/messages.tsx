@@ -47,7 +47,7 @@ function PureMessages({
           <PreviewMessage
             key={message.id}
             chatId={chatId}
-            message={message}
+            message={{ ...message, parts: message.parts ?? [] }}
             isLoading={isLoading && messages.length - 1 === index}
             vote={
               votes

@@ -21,10 +21,11 @@ import {
 } from './schema';
 import { ArtifactKind } from '@/components/artifact';
 
-// Extended message type for AI SDK attachments
-interface ExtendedMessage extends Message {
-  experimental_attachments?: Array<{ url: string; name: string; contentType: string }>;
-}
+// Rename imported Message type from schema to avoid conflicts
+import { type Message as DBSchemaMessage } from './schema';
+
+// Re-export the type for external use
+export type { DBSchemaMessage };
 
 // Optionally, if not using email/pass login, you can
 // use the Drizzle adapter for Auth.js / NextAuth
@@ -152,7 +153,7 @@ export async function getChatById({ id }: { id: string }) {
   }
 }
 
-export async function saveMessages({ messages }: { messages: Array<ExtendedMessage | any> }) {
+export async function saveMessages({ messages }: { messages: Array<DBSchemaMessage> }) {
   try {
     // Periksa apakah array pesan kosong
     if (!messages || messages.length === 0) {
@@ -160,35 +161,25 @@ export async function saveMessages({ messages }: { messages: Array<ExtendedMessa
       return { success: false, reason: 'empty_messages' };
     }
 
-    // Process messages to handle attachmentUrl
-    const processedMessages = messages.map(message => {
-      // Create a new message object that includes all fields from the original message
-      const processedMessage = { ...message };
-
-      // Ensure attachmentUrl is defined (either from message or from experimental_attachments)
-      if (!('attachmentUrl' in processedMessage) || processedMessage.attachmentUrl === undefined) {
-        // Extract attachmentUrl from experimental_attachments if present
-        if (message.experimental_attachments && message.experimental_attachments.length > 0) {
-          processedMessage.attachmentUrl = message.experimental_attachments[0].url;
-        } else {
-          processedMessage.attachmentUrl = null;
-        }
-      }
-
-      return processedMessage;
-    });
-
-    return await db.insert(message).values(processedMessages);
+    // Directly insert the messages assuming they match the schema
+    return await db.insert(message).values(messages);
   } catch (error) {
     console.error('Failed to save messages in database', error);
     throw error;
   }
 }
 
-export async function getMessagesByChatId({ id }: { id: string }) {
+export async function getMessagesByChatId({ id }: { id: string }): Promise<DBSchemaMessage[]> {
   try {
     return await db
-      .select()
+      .select({
+        id: message.id,
+        chatId: message.chatId,
+        role: message.role,
+        parts: message.parts,
+        createdAt: message.createdAt,
+        attachments: message.attachments,
+      })
       .from(message)
       .where(eq(message.chatId, id))
       .orderBy(asc(message.createdAt));
@@ -356,11 +347,23 @@ export async function getSuggestionsByDocumentId({
   }
 }
 
-export async function getMessageById({ id }: { id: string }) {
+export async function getMessageById({ id }: { id: string }): Promise<DBSchemaMessage | undefined> {
   try {
-    return await db.select().from(message).where(eq(message.id, id));
+    const [selectedMessage] = await db
+      .select({
+        id: message.id,
+        chatId: message.chatId,
+        role: message.role,
+        parts: message.parts,
+        createdAt: message.createdAt,
+        attachments: message.attachments,
+      })
+      .from(message)
+      .where(eq(message.id, id));
+
+    return selectedMessage;
   } catch (error) {
-    console.error('Failed to get message by id from database');
+    console.error('Failed to get message by id from database', error);
     throw error;
   }
 }
