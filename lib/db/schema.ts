@@ -19,18 +19,14 @@ export const user = pgTable('User', {
   name: varchar('name', { length: 100 }),
   // Subscription fields
   isPaid: boolean('isPaid'),
-  paidUntil: timestamp('paidUntil'),
   createdAt: timestamp('createdAt'),
   updatedAt: timestamp('updatedAt'),
   subscriptionStatus: varchar('subscriptionStatus', { enum: ['inactive', 'active', 'pending_activation', 'past_due', 'cancelled'] }).default('inactive'),
   subscriptionId: varchar('subscriptionId'),
-  subscriptionProvider: varchar('subscriptionProvider'),
-  subscriptionStartedAt: timestamp('subscriptionStartedAt'),
   currentPeriodEnd: timestamp('currentPeriodEnd'),
   // New Midtrans subscription fields
   planId: varchar('planId', { length: 50 }),
   midtransPaymentTokenId: text('midtransPaymentTokenId'),
-  midtransSubscriptionId: varchar('midtransSubscriptionId', { length: 100 }),
 });
 
 export type User = InferSelectModel<typeof user>;
