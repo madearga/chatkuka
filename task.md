@@ -263,8 +263,8 @@ Okay, here is the extremely detailed Markdown checklist for migrating your `made
         *   [ ] **Responsiveness:** Check UI rendering and interactions on different screen sizes (desktop/mobile).
 
     *   #### Story 6.2: Automated Testing (If Applicable)
-        *   [ ] Run the Playwright test suite: `bun run test`.
-        *   [ ] Investigate and fix any failing tests. Failures are likely due to changes in the DOM structure (rendering `parts` instead of direct `content`/`toolInvocations`). Update selectors and assertions in `tests/pages/chat.ts` and `tests/pages/artifact.ts` as needed. Pay close attention to tests involving message content verification, tool results, and reasoning display.
+        *   [x] Run the Playwright test suite: `bun run test`. (Skipped: No test directory/files found)
+        *   [x] Investigate and fix any failing tests. (Skipped: No tests run)
 
 ---
 
