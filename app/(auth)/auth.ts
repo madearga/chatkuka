@@ -61,45 +61,49 @@ export const {
     async jwt({ token, user, account, profile }) {
       try {
         // Log the token and user for debugging
-        console.log('JWT Callback - Token:', token);
-        console.log('JWT Callback - User:', user);
-        console.log('JWT Callback - Account:', account);
+        // console.log('JWT Callback - Token:', token);
+        // console.log('JWT Callback - User:', user);
+        // console.log('JWT Callback - Account:', account);
 
-        // Initial sign in
+        // Initial sign in or account linking
         if (account && user) {
-          // Add user ID to token
           token.id = user.id;
-          // Add account info to token
           token.provider = account.provider;
-          // Add any additional user info you want to store
           if (profile) {
             token.name = profile.name || user.name;
             token.email = profile.email || user.email;
           }
+          // Set initial status from the user object provided during sign-in/linking
+          token.subscriptionStatus = (user as any).subscriptionStatus || 'inactive';
+        }
 
-          // Add subscription status to token
-          if ((user as any).subscriptionStatus) {
-            token.subscriptionStatus = (user as any).subscriptionStatus;
+        // Always try to refresh user data from DB if token.id exists
+        if (token.id) {
+          // console.log(`JWT Callback: Refreshing DB data for user ID: ${token.id}`);
+          const dbUser = await getUserById(token.id as string);
+          if (dbUser) {
+            // Always update the token with the latest status from the database
+            token.subscriptionStatus = dbUser.subscriptionStatus || 'inactive';
+            // Optionally update other fields like name/email if they can change
+            token.name = dbUser.name || token.name;
+            token.email = dbUser.email || token.email;
+            // console.log(`JWT Callback: Updated token subscriptionStatus to: ${token.subscriptionStatus}`);
           } else {
-            // Default to inactive for new users
-            token.subscriptionStatus = 'inactive';
+            // Handle case where user might have been deleted?
+            // console.log(`JWT Callback: User with ID ${token.id} not found in DB during refresh.`);
+            // Optionally clear parts of the token or return null to force re-auth
+            token.subscriptionStatus = 'inactive'; // Default if user not found
           }
         }
 
-        // If token already has an ID but we need to update subscription status
-        if (token.id && !token.subscriptionStatus) {
-          // Fetch the latest user data from the database
-          const users = await getUserById(token.id as string);
-          if (users) {
-            token.subscriptionStatus = users.subscriptionStatus || 'inactive';
-          } else {
-            token.subscriptionStatus = 'inactive';
-          }
-        }
+        // Removed the old conditional fetch block:
+        // if (token.id && !token.subscriptionStatus) { ... }
 
+        // console.log('JWT Callback - Returning Token:', token);
         return token;
       } catch (error) {
         console.error('Error in JWT callback:', error);
+        // Return original token on error to avoid breaking session completely
         return token;
       }
     },
@@ -108,26 +112,22 @@ export const {
       token,
     }) {
       try {
-        // Log the session and token for debugging
-        console.log('Session Callback - Session:', session);
-        console.log('Session Callback - Token:', token);
+        // console.log('Session Callback - Session:', session);
+        // console.log('Session Callback - Token:', token);
 
-        if (session.user) {
-          // Copy information from the token to the session
+        if (session.user && token.id) { // Ensure token.id exists
           session.user.id = token.id as string;
-          // Add any other token properties you want in the session
           if (token.name) session.user.name = token.name as string;
           if (token.email) session.user.email = token.email as string;
 
-          // Add subscription status to session
-          if (token.subscriptionStatus) {
-            (session.user as any).subscriptionStatus = token.subscriptionStatus as string;
-          } else {
-            // Default to inactive if not set
-            (session.user as any).subscriptionStatus = 'inactive';
-          }
+          // Use the (now hopefully up-to-date) status from the token
+          (session.user as any).subscriptionStatus = token.subscriptionStatus || 'inactive';
+        } else {
+          // Handle cases where token might be incomplete
+          console.warn('Session Callback: Token ID missing or session.user missing.', { token, session });
         }
 
+        // console.log('Session Callback - Returning Session:', session);
         return session;
       } catch (error) {
         console.error('Error in session callback:', error);
