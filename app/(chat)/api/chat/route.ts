@@ -304,38 +304,40 @@ export async function POST(request: Request) {
           messages,
           maxSteps: 5,
           tools,
-          onFinish: async (response) => {
-            console.log('Stream finished. Response:', response);
+          onFinish: async ({ text, toolCalls, toolResults, finishReason, usage }) => {
+            // Removed console.log for production brevity, can be re-added for debugging
+            // console.log('Stream finished. Response Text:', text);
+            // console.log('Stream finished. Usage:', usage);
+            // console.log('Stream finished. Finish Reason:', finishReason);
 
-            // Use intermediate 'unknown' cast as suggested by TS error
-            const finalAssistantMessage = (response as unknown as { message: Message })
-              .message;
-
-            // Check if the final message exists and is from the assistant
-            if (!finalAssistantMessage || finalAssistantMessage.role !== 'assistant') {
+            // Check if the response finished correctly and there is text content
+            if ((finishReason !== 'stop' && finishReason !== 'tool-calls') || !text) {
               console.error(
-                'onFinish: No final assistant message found or role is not assistant.',
-                finalAssistantMessage
+                'onFinish: Invalid finishReason or no text content. Reason:',
+                finishReason,
+                'Text:',
+                text
               );
-              return; // Exit if no valid message to save
+              // Optionally save a generic error message? Or just log and exit.
+              return; // Exit if no valid text content to save as assistant message
             }
 
             try {
-              // Construct the message object to save to the database using DBSchemaMessage type
-              const messageToSave: DBSchemaMessage = {
-                id: finalAssistantMessage.id || generateUUID(),
-                role: finalAssistantMessage.role,
-                // content: '', // Deprecated, store main content in parts - Removed as not part of DBSchemaMessage
-                parts: finalAssistantMessage.parts, // Store the full parts array
-                // Access attachments safely after asserting the message type
-                attachments: (finalAssistantMessage as any).experimental_attachments ?? [],
+              // Construct the assistant message object to save
+              const assistantMessageToSave: DBSchemaMessage = {
+                id: generateUUID(), // Generate a new UUID for the assistant message
+                role: 'assistant',
+                parts: [{ type: 'text', text: text }], // Use the final text content
+                // TODO: Potentially include toolCalls and toolResults in parts if needed by your schema/UI
+                attachments: [], // Default to empty attachments for now
                 createdAt: new Date(),
                 chatId: id, // Associate with the current chat
               };
 
-              // Ensure the object conforms to what saveMessages expects (an array)
-              await saveMessages({ messages: [messageToSave] });
-              console.log('Successfully saved final assistant message');
+              // Save the constructed message
+              await saveMessages({ messages: [assistantMessageToSave] });
+              console.log('Successfully saved final assistant message with text content.');
+
             } catch (error) {
               console.error('Failed to save final assistant message', error);
             }
