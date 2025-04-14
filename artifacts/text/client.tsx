@@ -55,6 +55,22 @@ export const textArtifact = new Artifact<'text', TextArtifactMetadata>({
         };
       });
     }
+
+    // Handle info messages
+    if (streamPart.type === 'info' && streamPart.message) {
+      toast.info(streamPart.message);
+    }
+
+    // Handle error messages
+    if (streamPart.type === 'error' && streamPart.message) {
+      toast.error(streamPart.message);
+
+      // Update artifact status to show it's no longer streaming
+      setArtifact((draftArtifact) => ({
+        ...draftArtifact,
+        status: 'idle',
+      }));
+    }
   },
   content: ({
     mode,

@@ -1,146 +1,297 @@
-Okay, here is the extremely detailed Markdown checklist for implementing enhancements to improve the AI's recognition and triggering of the `updateDocument` tool, designed for execution by an AI Coding Agent.
+Oke, ini adalah *checklist* yang sangat terperinci, dirancang untuk AI Coding Agent, guna mengimplementasikan kemampuan agar *artifact* tetap terlihat pada chat publik meskipun sesi pengguna telah berakhir atau pengguna tidak login, meniru perilaku `chat.vercel.ai`.
 
-**CRITICAL PRE-REQUISITES:**
-1.  **Backup:** Ensure a backup of the current codebase, especially the targeted files, exists.
-2.  **Branch:** Create a new Git branch specifically for these changes (e.g., `feat/improve-update-tool-recognition`).
-3.  **Understanding:** The primary goal is to make the AI more reliably choose the `updateDocument` tool when users ask for modifications to existing artifacts, rather than just generating text in the chat.
+**Tujuan Utama:** Memodifikasi *codebase* `madearga-chatkuka.git` sehingga ketika sebuah chat diatur ke 'public', URL chat tersebut (`/chat/[id]`) dapat diakses dan menampilkan riwayat pesan beserta *artifact preview* oleh siapa saja (termasuk pengguna yang tidak login), sementara chat 'private' tetap memerlukan autentikasi.
 
----
-
-### **Project Checklist: Improve `updateDocument` Tool Recognition for User Friendliness**
-
-**Goal:** Modify the AI tool definitions, system prompts, and potentially add minor UI cues to significantly increase the likelihood that the AI uses the `updateDocument` tool when users (especially non-technical ones) request changes to existing artifacts.
+**Prasyarat:** AI Agent memiliki akses penuh ke *codebase*, dapat menjalankan perintah `bun`, berinteraksi dengan database, dan memahami Next.js App Router, AI SDK, Drizzle, dan NextAuth.
 
 ---
 
-**Epic 1: Enrich `updateDocument` Tool Definition**
+### **Project Checklist: Implement Public Chat Artifact Persistence**
 
-*   **Goal:** Make the tool's description and parameter hints clearer and more comprehensive for the AI model to understand its purpose and usage context.
-*   **Target File:** `lib/ai/tools/update-document.ts`
+---
 
-    *   #### Story 1.1: Enhance Tool Description Field
-        *   **Goal:** Expand the main description to include more keywords, synonyms, and contextual clues that users might employ when asking for modifications.
-        *   [ ] Locate the `updateDocument` constant which uses the `tool()` function.
-        *   [ ] Identify the `description` property within the `tool()` configuration object.
-        *   [ ] **Replace** the current `description` string with a more detailed version. Incorporate synonyms like "modify", "edit", "change", "add to", "fix", "rewrite", "correct", "improve". Explicitly mention artifact types ("text", "code", "sheet", "image"). Emphasize that it applies to *existing* artifacts currently visible or recently discussed.
-        *   **Example Enhanced Description (incorporate and adapt):**
+**Epic 1: Modifikasi Kontrol Akses Level Halaman (Page-Level)**
+
+*   **Goal:** Mengizinkan Server Component halaman chat (`/chat/[id]/page.tsx`) untuk me-render konten chat publik meskipun pengguna tidak terautentikasi.
+*   **Rationale:** Halaman ini adalah pertahanan terakhir sebelum rendering. Ia perlu memeriksa visibilitas chat dari database sebelum memutuskan apakah akses diizinkan atau tidak.
+
+    *   #### **Story 1.1: Sesuaikan Logika Pemeriksaan Sesi & Visibilitas di Halaman Chat**
+        *   **Kontext:** Saat ini, halaman `/chat/[id]/page.tsx` kemungkinan langsung mengembalikan `notFound()` atau redirect jika `session` tidak ada, tanpa memeriksa visibilitas chat.
+        *   **Requirements:** Halaman harus memeriksa `chat.visibility`. Jika 'public', render halaman (dalam mode read-only). Jika 'private', *baru* periksa sesi dan kepemilikan.
+
+        *   **Task 1.1.1:** ✅ Buka file `app/(chat)/chat/[id]/page.tsx`.
+        *   **Task 1.1.2:** ✅ Temukan blok kode setelah `const chat = await getChatById({ id });` dan `const session = await auth();` yang melakukan pemeriksaan akses. Blok ini kemungkinan terlihat seperti:
             ```typescript
-            description: 'Modify, edit, change, add to, fix, or rewrite the content of an *existing* document or artifact (like text, code, sheet, or image) currently shown in the workspace, based on user instructions. Use this tool when the user asks to make changes, corrections, additions, or improvements to the artifact they are currently viewing or have just interacted with. Do NOT use this for creating new documents.',
+            if (chat.visibility === 'private') {
+              if (!session || !session.user) {
+                return notFound(); // Atau redirect('/login')
+              }
+              if (session.user.id !== chat.userId) {
+                return notFound();
+              }
+            }
+            // Mungkin ada check lain di sini yang mengasumsikan session selalu ada
             ```
-        *   [ ] Verify the new description is syntactically correct within the JavaScript object.
+        *   **Task 1.1.3:** ✅ **Modifikasi** logika pemeriksaan tersebut menjadi seperti berikut:
+            ```typescript
+            const session = await auth(); // Ambil sesi
 
-    *   #### Story 1.2: Refine Parameter Descriptions
-        *   **Goal:** Make the purpose of the `id` and `description` parameters unambiguous to the AI.
-        *   [ ] Within the same `tool()` configuration object, locate the `parameters` property, which uses `z.object({...})`.
-        *   [ ] Find the `id` parameter definition (`z.string().describe(...)`).
-        *   [ ] **Modify** the `.describe()` content for `id` to emphasize it refers to an *existing* artifact that needs *modification*.
-        *   **Example `id` Description:** `'The unique identifier (ID) of the *existing* document artifact that the user wants to modify or update.'`
-        *   [ ] Find the `description` parameter definition (`z.string().describe(...)`).
-        *   [ ] **Modify** the `.describe()` content for `description` to clarify it holds the *user's specific instructions* about *what changes* to make.
-        *   **Example `description` Description:** `'A detailed description, based on the user\'s request, specifying exactly *what changes*, modifications, additions, or corrections should be made to the content of the existing document.'`
-        *   [ ] Verify the updated descriptions are syntactically correct within the Zod schema.
+            let canView = false;
+            let isOwner = false;
 
----
+            if (chat.visibility === 'public') {
+              canView = true; // Chat publik bisa dilihat siapa saja
+              if (session?.user?.id === chat.userId) {
+                isOwner = true; // Jika ada sesi dan dia pemiliknya
+              }
+            } else { // chat.visibility === 'private'
+              if (session?.user?.id === chat.userId) {
+                canView = true; // Hanya pemilik yang bisa lihat chat private
+                isOwner = true;
+              }
+            }
 
-**Epic 2: Strengthen System Prompt Instructions**
+            if (!canView) {
+              // Jika tidak bisa lihat (private & bukan pemilik/tidak login),
+              // redirect ke login atau tampilkan notFound
+              // Pilih salah satu:
+              // 1. Redirect (lebih user-friendly jika ingin login):
+              //    redirect(`/login?callbackUrl=/chat/${id}`);
+              // 2. Not Found (lebih ketat):
+                   notFound();
+            }
 
-*   **Goal:** Provide the AI with explicit heuristics and guidelines on when to prioritize using the `updateDocument` tool over generating plain text.
-*   **Target File:** `lib/ai/prompts.ts`
+            // Jika bisa lihat, lanjutkan ke rendering
+            // Variabel 'isOwner' menentukan apakah chat read-only atau tidak
+            const isReadonly = !isOwner;
 
-    *   #### Story 2.1: Add Update Prioritization Rules to Artifacts Prompt
-        *   **Goal:** Embed clear rules within the existing artifact instructions to guide the AI's decision-making process.
-        *   [ ] Locate the `artifactsPrompt` template literal variable (or the logic within `systemPrompt` function that incorporates artifact instructions).
-        *   [ ] **Append** a new section clearly titled (e.g., `**Prioritizing Artifact Updates:**` or similar) to the existing `artifactsPrompt` content.
-        *   [ ] **Add Rule 1 (Contextual Reference):** Instruct the AI that when the user uses pronouns ("it", "this") or references ("the code", "the document") shortly after an artifact was created or discussed, it should *strongly assume* the user wants to update *that specific artifact*.
-        *   **Add Rule 2 (Keywords):** Instruct the AI that if the user's request contains keywords like "change", "edit", "modify", "add", "fix", "correct", "improve", "rewrite" *in relation to the content of the visible/active artifact*, it should **strongly prefer** using the `updateDocument` tool.
-        *   **Add Rule 3 (Clarification):** Instruct the AI that if it's uncertain whether the user wants an update or a new response, it should *ask the user for clarification* (e.g., "Should I apply that change to the document in the workspace?").
-        *   **Add Rule 4 (Distinction):** Reiterate that `updateDocument` is for *existing* artifacts, contrasting it with `createDocument` for *new* ones.
-        *   **Example Text to Add (adapt and integrate):**
-            ```text
+            // ... (kode untuk mengambil messagesFromDb dan cookieStore tetap sama) ...
 
-            **Prioritizing Artifact Updates:**
-            - When the user refers to "this document", "the code", "it", "the text", etc., immediately after an artifact has been created or interacted with, assume they intend to **update that artifact**.
-            - If the user asks for "changes", "edits", "modifications", "additions", "corrections", "improvements", or similar actions related to the content currently displayed in the artifact workspace, **you MUST strongly prefer using the `updateDocument` tool**. Do *not* just generate the modified text in the chat response unless explicitly asked to.
-            - If you are unsure whether to update the artifact or generate a new response, **ask the user for clarification** (e.g., "Should I update the document in the workspace with that change?").
-            - Remember: `updateDocument` modifies *existing* artifacts; `createDocument` makes *new* ones.
+            // Pastikan isReadonly diteruskan ke komponen Chat
+            return (
+              <>
+                <Chat
+                  id={chat.id}
+                  initialMessages={convertToUIMessages(messagesFromDb)}
+                  selectedChatModel={chatModelFromCookie?.value || DEFAULT_CHAT_MODEL}
+                  selectedVisibilityType={chat.visibility}
+                  isReadonly={isReadonly} // <-- Gunakan variabel isReadonly
+                />
+                <DataStreamHandler id={id} />
+              </>
+            );
             ```
-        *   [ ] Ensure the added text is correctly formatted within the template literal (respecting newlines and markdown).
-        *   [ ] Review the `systemPrompt` function to ensure the `artifactsPrompt` (with the new rules) is correctly included for the relevant models (likely all except maybe the reasoning-specific one).
+        *   **Task 1.1.4:** ✅ Pastikan variabel `isReadonly` (yang bernilai `!isOwner`) diteruskan dengan benar ke komponen `<Chat>`.
+        *   **Task 1.1.5:** ✅ Hapus blok `if (!session || !session.user)` yang mungkin ada *sebelum* pemeriksaan visibilitas jika itu menghalangi pemeriksaan visibilitas publik.
 
 ---
 
-**Epic 3: Implement Frontend Assistance (Optional but Recommended)**
+**Epic 2: Modifikasi Kontrol Akses Middleware**
 
-*   **Goal:** Provide users with explicit UI controls to trigger artifact updates, reducing reliance on natural language interpretation.
-*   **Target Files:** `components/artifact.tsx`, `components/code-editor.tsx`, `components/text-editor.tsx`, `components/image-editor.tsx` (potentially), `components/chat.tsx` (for `append` or similar function).
+*   **Goal:** Mengizinkan *request* untuk URL `/chat/[id]` mencapai Server Component halaman (dari Epic 1) meskipun pengguna tidak login, sehingga halaman tersebut dapat melakukan pemeriksaan visibilitas berbasis database.
+*   **Rationale:** Middleware berjalan lebih awal. Melakukan query DB di middleware untuk setiap request `/chat/[id]` akan berdampak pada performa. Cara yang lebih umum (dan kemungkinan digunakan oleh `chat.vercel.ai`) adalah membiarkan middleware mengizinkan request ke *pattern* URL chat, dan *page component*-lah yang melakukan validasi akses akhir berdasarkan data chat spesifik.
 
-    *   #### Story 3.1: Add "Edit This Artifact" Button/Interaction
-        *   **Goal:** Create a clear visual cue on the artifact itself that allows users to initiate an edit request.
-        *   [ ] Open `components/artifact.tsx`.
-        *   [ ] **Decision:** Choose an appropriate location for an "Edit" button/icon. Possibilities:
-            *   Next to the artifact title in the header.
-            *   As part of the `ArtifactActions` bar at the top right.
-            *   As a floating button overlaying the content (less recommended for usability). Let's target the header near the title or in the actions bar.
-        *   [ ] **If adding to header:**
-            *   Locate the `div` containing the artifact title.
-            *   Import `Button` and `PencilEditIcon`.
-            *   Add a small, icon-only `Button` next to the title.
-            *   Wrap it in `Tooltip` for accessibility.
-        *   [ ] **If adding to `ArtifactActions`:**
-            *   This might require modifying the `Artifact` class definition (`components/create-artifact.tsx`) to include a standard "start edit" action, or adding it directly within `components/artifact-actions.tsx` if structure allows. Let's assume adding it directly to `ArtifactActions` for now.
-            *   Open `components/artifact-actions.tsx`.
-            *   Import `Button` and `PencilEditIcon`.
-            *   Add a new `Tooltip`-wrapped `Button` to the list of actions, potentially as the first action.
-        *   [ ] **Implement `onClick` Handler:**
-            *   The `onClick` handler should *not* directly modify state.
-            *   It should use the `append` function (which needs to be available in this component's context, likely passed down from `components/chat.tsx` via `components/artifact.tsx`).
-            *   **Retrieve** the current artifact's `id` (e.g., `artifact.documentId`).
-            *   **Call** `append` with a user message explicitly stating the intent to edit *this specific artifact*.
-            *   **Example Prompt Structure:** `append({ role: 'user', content: \`I want to edit the artifact '${artifact.title}' (ID: ${artifact.documentId}). Please apply the following changes: \` })`. *Refinement:* Pre-filling the main input is better UX.
-            *   **Revised `onClick`:**
-                1.  Get the `setInput` function (pass it down from `Chat` -> `Artifact` -> `ArtifactActions`).
-                2.  Get the main textarea `ref` (pass it down or use context).
-                3.  Call `setInput(\`Edit artifact '${artifact.title}' (ID: ${artifact.documentId}): \`)`.
-                4.  Focus the main textarea (`textareaRef.current?.focus()`).
-        *   [ ] Add appropriate styling (e.g., `variant="ghost"`, `size="icon"`).
-        *   [ ] Add a descriptive tooltip (e.g., "Request edit for this artifact").
+    *   #### **Story 2.1: Relaksasi Aturan Middleware untuk Rute `/chat/[id]`**
+        *   **Kontext:** Middleware saat ini (`middleware.ts`) kemungkinan besar memiliki aturan yang secara eksplisit memblokir akses ke semua rute di bawah `/` (termasuk `/chat/[id]`) jika pengguna tidak login (kecuali untuk `/login`, `/register`, `/api/auth`).
+        *   **Requirements:** Middleware harus mengizinkan request ke `/chat/[...]` untuk diteruskan ke *page component* meskipun tidak ada sesi aktif.
 
-    *   #### Story 3.2: Review and Clarify Toolbar Action Prompts
-        *   **Goal:** Ensure the prompts sent when clicking existing toolbar buttons (e.g., "Add comments") are clear about modifying the *current* artifact.
-        *   [ ] Open the `client.tsx` file for each artifact type (e.g., `artifacts/code/client.tsx`, `artifacts/text/client.tsx`).
-        *   [ ] Locate the `toolbar` array definition within the `new Artifact(...)` configuration.
-        *   [ ] Review the `onClick` handler for each toolbar item, specifically the `content` string passed to `appendMessage`.
-        *   [ ] **If** a prompt seems ambiguous (e.g., just "Add comments"), modify it to be more specific, referencing the current context.
-        *   **Example Modification (Code Artifact - Add Comments):**
-            *   *Potentially Ambiguous:* `content: 'Add comments to the code snippet for understanding'`
-            *   *More Explicit:* `content: 'Add comments to *this* code artifact to explain it.'`
-        *   [ ] Repeat this review for all relevant toolbar actions across all artifact types. *Self-correction:* Directly adding the ID might be brittle if `appendMessage` context changes. Relying on clearer natural language like "this artifact" or "the current code" within the prompt sent is safer.
+        *   **Task 2.1.1:** ✅ Buka file `middleware.ts`.
+        *   **Task 2.1.2:** ✅ Temukan logika di dalam *callback* `NextAuth(...).auth(async (req) => { ... })`.
+        *   **Task 2.1.3:** ✅ Cari kondisi yang menangani akses ke rute chat saat tidak login. Ini mungkin terlihat seperti:
+            ```typescript
+            const requiresAuth = !isPublicPath(path); // isPublicPath mungkin tidak menganggap /chat/[id] public
+            if (requiresAuth && !isLoggedIn) {
+              // ... logika redirect ke /login ...
+              return NextResponse.redirect(loginUrl);
+            }
+            ```
+            Atau, jika menggunakan logika `authorized` dari `authConfig` sebelumnya:
+            ```typescript
+            // Di dalam authorized callback
+            if (isOnChat) {
+              if (isLoggedIn) return true;
+              return false; // <-- INI YANG PERLU DIUBAH
+            }
+            ```
+        *   **Task 2.1.4:** ✅ **Modifikasi** logika tersebut. Secara spesifik, jika path *match* dengan pola `/chat/[id]` (Anda mungkin perlu menambahkan helper atau regex untuk ini, atau perbarui `isPublicPath` jika digunakan) DAN `!isLoggedIn`, **jangan langsung redirect/return false**. Izinkan request tersebut lolos (`return NextResponse.next()` atau `return true` dalam konteks `authorized` callback).
+            *   **Pendekatan dengan `NextAuth(...).auth` wrapper (lebih modern):**
+                ```typescript
+                export default NextAuth(authConfig).auth(async (req) => {
+                  const { nextUrl } = req;
+                  const session = req.auth;
+                  const isLoggedIn = !!session;
+                  const path = nextUrl.pathname;
+                  const isChatPath = /^\/chat\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(path); // Regex untuk /chat/[uuid]
+
+                  // 1. Bypass Midtrans webhook (sudah ada)
+                  if (path === '/api/payment/notification') {
+                    return NextResponse.next();
+                  }
+
+                  // 2. Cek Rute Publik Standar (login, register, api/auth)
+                  const isStdPublic = isPublicPath(path); // Pastikan isPublicPath TIDAK mencakup /chat/[id]
+
+                  if (isStdPublic) {
+                    // Jika sudah login dan mengakses login/register, redirect ke home
+                    if (isLoggedIn && (path === '/login' || path === '/register')) {
+                      return NextResponse.redirect(new URL('/', nextUrl.origin));
+                    }
+                    // Izinkan akses ke rute publik standar lainnya
+                    return NextResponse.next();
+                  }
+
+                  // 3. Cek Rute Chat Spesifik (/chat/[id])
+                  if (isChatPath) {
+                    // Izinkan request lolos ke page component, baik login maupun tidak.
+                    // Page component akan handle visibilitas.
+                    return NextResponse.next();
+                  }
+
+                  // 4. Rute Lainnya (membutuhkan login)
+                  if (!isLoggedIn) {
+                    const loginUrl = new URL('/login', nextUrl.origin);
+                    loginUrl.searchParams.set('callbackUrl', path);
+                    return NextResponse.redirect(loginUrl);
+                  }
+
+                  // 5. Pengguna sudah login dan mengakses rute terproteksi selain chat
+                  return NextResponse.next();
+                });
+                ```
+            *   **Pendekatan dengan `authorized` callback (jika masih menggunakan itu):**
+                ```typescript
+                // Di dalam authConfig callbacks:
+                authorized({ auth, request: { nextUrl } }) {
+                  const isLoggedIn = !!auth?.user;
+                  const path = nextUrl.pathname;
+                  const isChatPath = /^\/chat\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(path);
+                  const isOnRegister = path.startsWith('/register');
+                  const isOnLogin = path.startsWith('/login');
+                  const isOnAuth = path.startsWith('/api/auth');
+
+                  if (isOnAuth) return true; // Selalu izinkan rute NextAuth
+
+                  // Jika sudah login dan ada di login/register, redirect ke home
+                  if (isLoggedIn && (isOnLogin || isOnRegister)) {
+                    return Response.redirect(new URL('/', nextUrl));
+                  }
+
+                  // Izinkan akses ke login/register jika belum login
+                  if (!isLoggedIn && (isOnLogin || isOnRegister)) {
+                    return true;
+                  }
+
+                  // Jika ini rute chat spesifik, biarkan page component yg memutuskan
+                  if (isChatPath) {
+                    return true;
+                  }
+
+                  // Untuk semua rute lain, perlukan login
+                  if (!isLoggedIn) {
+                    return false; // Akan redirect ke login page (didefinisikan di authConfig.pages)
+                  }
+
+                  // Jika sudah login dan bukan di login/register/chat, izinkan
+                  return true;
+                },
+                ```
+        *   **Task 2.1.5:** ✅ Pastikan `matcher` di `config` middleware tidak secara tidak sengaja mengecualikan `/chat/[id]`. Konfigurasi `matcher` yang ada (`'/((?!_next/static|...$).*)'`) seharusnya sudah mencakupnya.
 
 ---
 
-**Epic 4: Verification and Iteration**
+**Epic 3: Penyempurnaan UI untuk Chat Publik**
 
-*   **Goal:** Systematically test the changes with various user inputs and refine the descriptions/prompts based on observed AI behavior.
+*   **Goal:** Memberikan indikasi visual dan fungsionalitas yang jelas saat sebuah chat bersifat publik.
+*   **Rationale:** Pengguna perlu tahu status visibilitas chat dan cara membagikannya jika publik.
 
-    *   #### Story 4.1: Execute Defined Test Cases
-        *   **Goal:** Verify the AI now correctly triggers `updateDocument` for common modification requests.
-        *   [ ] Create an artifact (e.g., a simple Python code snippet or a short text paragraph).
-        *   [ ] **Test Case 1 (Direct Command):** Send prompt: "Change the first sentence of this document to '[new sentence]'". **Verify:** AI calls `updateDocument`. Artifact updates.
-        *   [ ] **Test Case 2 (Synonym):** Send prompt: "Modify the code artifact to include error handling." **Verify:** AI calls `updateDocument`. Artifact updates.
-        *   [ ] **Test Case 3 (Implicit Reference):** Send prompt: "Add a concluding paragraph." (immediately after creating a text artifact). **Verify:** AI calls `updateDocument`. Artifact updates.
-        *   [ ] **Test Case 4 (Pronoun):** Send prompt: "Fix the typo in it." (referring to the artifact). **Verify:** AI calls `updateDocument`. Artifact updates.
-        *   [ ] **Test Case 5 (Awkward Phrasing):** Send prompt: "Make the code better." **Verify:** AI might ask for clarification (as per new system prompt) or attempt `updateDocument`. Observe the behavior.
-        *   [ ] **Test Case 6 (Frontend Button):** Click the newly added "Edit" button (if implemented). Type a change description. Send. **Verify:** AI calls `updateDocument`. Artifact updates.
-        *   [ ] **Test Case 7 (Toolbar Button):** Click an existing toolbar button (e.g., "Add comments" on code). **Verify:** AI calls `updateDocument`. Artifact updates.
-        *   [ ] **Test Case 8 (Negative Test):** Ask a general question unrelated to the artifact. **Verify:** AI responds in chat, *does not* call `updateDocument`.
+    *   #### **Story 3.1: Tambahkan Fungsionalitas "Copy Link"**
+        *   **Kontext:** Saat chat bersifat publik, pengguna mungkin ingin menyalin link untuk dibagikan.
+        *   **Requirements:** Muncul opsi "Copy Link" di menu "More" pada item chat di sidebar *hanya jika* chat tersebut publik.
 
-    *   #### Story 4.2: Analyze Failures and Refine
-        *   **Goal:** Identify why the AI failed to use the tool (if applicable) and adjust prompts/descriptions accordingly.
-        *   [ ] **If** any test case fails (AI responds in chat instead of updating):
-            *   [ ] Note the exact prompt used.
-            *   [ ] Hypothesize why the AI failed (e.g., description not specific enough, prompt too ambiguous, context lost).
-            *   [ ] **Iterate:** Go back to Epic 1 or Epic 2 and refine the relevant description or system prompt rule based on the hypothesis.
-            *   [ ] Re-run the failing test case.
-            *   [ ] Repeat until the desired level of reliability is achieved for common update requests. Document the refinements made.
+        *   **Task 3.1.1:** ✅ Buka file `components/sidebar-history.tsx` (tidak ada file sidebar-history-item.tsx terpisah).
+        *   **Task 3.1.2:** ✅ Temukan komponen `PureChatItem`.
+        *   **Task 3.1.3:** ✅ Di dalam `DropdownMenuContent`, *di atas* item "Delete", tambahkan item baru untuk "Copy Link".
+        *   **Task 3.1.4:** ✅ Gunakan hook `useChatVisibility` (sudah ada) untuk mendapatkan `visibilityType`.
+        *   **Task 3.1.5:** ✅ Tambahkan kondisi `disabled={visibilityType !== 'public'}` pada `DropdownMenuItem` "Copy Link".
+        *   **Task 3.1.6:** ✅ Implementasikan `onSelect` untuk `DropdownMenuItem` "Copy Link":
+            ```typescript
+            onSelect={() => {
+              if (visibilityType === 'public') {
+                const url = `${window.location.origin}/chat/${chat.id}`;
+                navigator.clipboard.writeText(url)
+                  .then(() => {
+                    toast.success('Public link copied!');
+                  })
+                  .catch(err => {
+                    toast.error('Failed to copy link.');
+                    console.error('Failed to copy link: ', err);
+                  });
+              } else {
+                toast.info('Set chat to public to copy link.');
+              }
+            }}
+            ```
+        *   **Task 3.1.7 (Optional):** ✅ Tambahkan ikon `LinkIcon` (atau yang sesuai) di sebelah teks "Copy Link".
+
+    *   #### **Story 3.2: Indikator Visual untuk Chat Publik (Opsional)**
+        *   **Kontext:** Memberi tanda visual cepat pada item chat di sidebar jika bersifat publik.
+        *   **Requirements:** Ikon (misalnya GlobeIcon) muncul di sebelah judul chat publik.
+
+        *   **Task 3.2.1:** ✅ Buka file `components/sidebar-history.tsx` (tidak ada file sidebar-history-item.tsx terpisah).
+        *   **Task 3.2.2:** ✅ Di dalam `SidebarMenuButton` (sebelum `<span>{chat.title}</span>`), tambahkan ikon secara kondisional:
+            ```typescript
+            <SidebarMenuButton asChild isActive={isActive} className={`flex-grow ${isActive ? 'active-gold' : ''}`}>
+              <Link href={`/chat/${chat.id}`} onClick={() => setOpenMobile(false)} className="flex items-center gap-2"> {/* Tambah flex & gap */}
+                {visibilityType === 'public' && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                       {/* Cegah event click menyebar ke Link */}
+                       <span onClick={(e) => e.stopPropagation()} aria-label="Public chat">
+                         <GlobeIcon size={12} className="text-muted-foreground flex-shrink-0" />
+                       </span>
+                    </TooltipTrigger>
+                    <TooltipContent side="right" align="center">
+                       Public Chat
+                    </TooltipContent>
+                  </Tooltip>
+                )}
+                <span className="truncate">{chat.title}</span>
+              </Link>
+            </SidebarMenuButton>
+            ```
+        *   **Task 3.2.3:** ✅ Pastikan `Tooltip` dan komponen terkait diimpor jika belum.
+
+---
+
+**Epic 4: Verifikasi Akhir & Pengujian**
+
+*   **Goal:** Memastikan semua perubahan berfungsi sesuai harapan dan tidak menimbulkan masalah baru.
+
+    *   #### **Story 4.1: Pengujian Skenario Chat Publik**
+        *   **Task 4.1.1:** Login ke aplikasi.
+        *   **Task 4.1.2:** Buat chat baru (misalnya tentang "Essay Silicon Valley") dan pastikan artifact teks terbuat.
+        *   **Task 4.1.3:** Klik ikon "More" (...) pada item chat "Essay Silicon Valley" di sidebar.
+        *   **Task 4.1.4:** Pilih "Share" -> "Public". Verifikasi ikon globe kecil mungkin muncul di sebelah judul chat.
+        *   **Task 4.1.5:** Klik lagi ikon "More", pilih "Copy Link". Verifikasi toast sukses muncul.
+        *   **Task 4.1.6:** Buka *incognito window* atau browser lain (tanpa login).
+        *   **Task 4.1.7:** Paste URL yang disalin ke address bar.
+        *   **Task 4.1.8:** **Verifikasi:** Halaman chat "Essay Silicon Valley" berhasil dimuat. Pesan-pesan terlihat. *Preview artifact* teks juga terlihat. Input chat di bagian bawah seharusnya *disabled* atau tidak ada.
+        *   **Task 4.1.9:** Kembali ke browser tempat Anda login. Klik "More" -> "Share" -> "Private".
+        *   **Task 4.1.10:** Refresh halaman di *incognito window*.
+        *   **Task 4.1.11:** **Verifikasi:** Anda seharusnya dialihkan ke halaman login, atau halaman chat menampilkan error "Not Found".
+
+    *   #### **Story 4.2: Pengujian Skenario Chat Privat**
+        *   **Task 4.2.1:** Login ke aplikasi.
+        *   **Task 4.2.2:** Buat chat baru (pastikan statusnya private by default atau atur ke private).
+        *   **Task 4.2.3:** Salin URL chat tersebut.
+        *   **Task 4.2.4:** Logout.
+        *   **Task 4.2.5:** Coba akses URL chat privat yang disalin.
+        *   **Task 4.2.6:** **Verifikasi:** Anda dialihkan ke halaman login.
+
+    *   #### **Story 4.3: Pengujian Regresi**
+        *   **Task 4.3.1:** Login. Pastikan Anda dapat membuat dan berinteraksi dengan chat privat seperti biasa.
+        *   **Task 4.3.2:** Pastikan artifact (teks, kode, gambar) dibuat dan ditampilkan dengan benar dalam chat privat.
+        *   **Task 4.3.3:** Pastikan fitur lain (voting, edit pesan, model selector, dll.) masih berfungsi normal di chat privat.
+        *   **Task 4.3.4:** Pastikan middleware masih melindungi rute lain yang memerlukan autentikasi (misalnya, halaman `/subscription` jika ada).
 
 ---

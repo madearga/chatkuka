@@ -223,8 +223,8 @@ export async function POST(request: Request) {
         // Combine standard tools
         const tools = {
           getWeather,
-          createDocument: createDocument({ session, dataStream }),
-          updateDocument: updateDocument({ session, dataStream }),
+          createDocument: createDocument({ session, dataStream, selectedModel: selectedChatModel }),
+          updateDocument: updateDocument({ session, dataStream, selectedModel: selectedChatModel }),
           requestSuggestions: requestSuggestions({
             session,
             dataStream,

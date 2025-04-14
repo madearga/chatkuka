@@ -29,13 +29,23 @@ export default NextAuth(authConfig).auth(async (req) => {
   const isLoggedIn = !!session;
   const path = nextUrl.pathname;
 
+  // Regex untuk mendeteksi path chat spesifik (/chat/[uuid])
+  const isChatPath = /^\/chat\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(path);
+
   // 1. Bypass Midtrans webhook BEFORE any auth/premium checks
   if (path === '/api/payment/notification') {
     // console.log('Webhook path detected, bypassing middleware logic.');
     return NextResponse.next();
   }
 
-  // 2. Authentication Check: Redirect to login if accessing a protected route without a session
+  // 2. Cek Rute Chat Spesifik (/chat/[id])
+  if (isChatPath) {
+    // Izinkan request lolos ke page component, baik login maupun tidak.
+    // Page component akan handle visibilitas.
+    return NextResponse.next();
+  }
+
+  // 3. Authentication Check: Redirect to login if accessing a protected route without a session
   const requiresAuth = !isPublicPath(path);
   if (requiresAuth && !isLoggedIn) {
     const loginUrl = new URL('/login', nextUrl.origin); // Use origin for base URL

@@ -19,15 +19,30 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
 
   const session = await auth();
 
-  if (chat.visibility === 'private') {
-    if (!session || !session.user) {
-      return notFound();
-    }
+  let canView = false;
+  let isOwner = false;
 
-    if (session.user.id !== chat.userId) {
-      return notFound();
+  if (chat.visibility === 'public') {
+    canView = true; // Chat publik bisa dilihat siapa saja
+    if (session?.user?.id === chat.userId) {
+      isOwner = true; // Jika ada sesi dan dia pemiliknya
+    }
+  } else { // chat.visibility === 'private'
+    if (session?.user?.id === chat.userId) {
+      canView = true; // Hanya pemilik yang bisa lihat chat private
+      isOwner = true;
     }
   }
+
+  if (!canView) {
+    // Jika tidak bisa lihat (private & bukan pemilik/tidak login),
+    // tampilkan notFound
+    return notFound();
+  }
+
+  // Jika bisa lihat, lanjutkan ke rendering
+  // Variabel 'isOwner' menentukan apakah chat read-only atau tidak
+  const isReadonly = !isOwner;
 
   const messagesFromDb = await getMessagesByChatId({
     id,
@@ -44,7 +59,7 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
           initialMessages={convertToUIMessages(messagesFromDb)}
           selectedChatModel={DEFAULT_CHAT_MODEL}
           selectedVisibilityType={chat.visibility}
-          isReadonly={session?.user?.id !== chat.userId}
+          isReadonly={isReadonly}
         />
         <DataStreamHandler id={id} />
       </>
@@ -58,7 +73,7 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
         initialMessages={convertToUIMessages(messagesFromDb)}
         selectedChatModel={chatModelFromCookie.value}
         selectedVisibilityType={chat.visibility}
-        isReadonly={session?.user?.id !== chat.userId}
+        isReadonly={isReadonly}
       />
       <DataStreamHandler id={id} />
     </>

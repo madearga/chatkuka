@@ -15,6 +15,7 @@ import {
   MoreHorizontalIcon,
   ShareIcon,
   TrashIcon,
+  LinkIcon,
 } from '@/components/icons';
 import {
   AlertDialog,
@@ -46,6 +47,11 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from '@/components/ui/sidebar';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import type { Chat } from '@/lib/db/schema';
 import { fetcher } from '@/lib/utils';
 import { useChatVisibility } from '@/hooks/use-chat-visibility';
@@ -77,8 +83,20 @@ const PureChatItem = ({
   return (
     <SidebarMenuItem className="flex items-center">
       <SidebarMenuButton asChild isActive={isActive} className={`flex-grow ${isActive ? 'active-gold' : ''}`}>
-        <Link href={`/chat/${chat.id}`} onClick={() => setOpenMobile(false)}>
-          <span>{chat.title}</span>
+        <Link href={`/chat/${chat.id}`} onClick={() => setOpenMobile(false)} className="flex items-center gap-2">
+          {visibilityType === 'public' && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span onClick={(e) => e.stopPropagation()} aria-label="Public chat">
+                  <GlobeIcon size={12} className="text-muted-foreground flex-shrink-0" />
+                </span>
+              </TooltipTrigger>
+              <TooltipContent side="right" align="center">
+                Public Chat
+              </TooltipContent>
+            </Tooltip>
+          )}
+          <span className="truncate">{chat.title}</span>
         </Link>
       </SidebarMenuButton>
 
@@ -130,6 +148,31 @@ const PureChatItem = ({
               </DropdownMenuSubContent>
             </DropdownMenuPortal>
           </DropdownMenuSub>
+
+          <DropdownMenuItem
+            className="cursor-pointer"
+            disabled={visibilityType !== 'public'}
+            onSelect={() => {
+              if (visibilityType === 'public') {
+                const url = `${window.location.origin}/chat/${chat.id}`;
+                navigator.clipboard.writeText(url)
+                  .then(() => {
+                    toast.success('Public link copied!');
+                  })
+                  .catch(err => {
+                    toast.error('Failed to copy link.');
+                    console.error('Failed to copy link: ', err);
+                  });
+              } else {
+                toast.info('Set chat to public to copy link.');
+              }
+            }}
+          >
+            <LinkIcon size={16} />
+            <span>Copy Link</span>
+          </DropdownMenuItem>
+
+          <DropdownMenuSeparator />
 
           <DropdownMenuItem
             className="cursor-pointer text-destructive focus:bg-destructive/15 focus:text-destructive dark:text-red-500"

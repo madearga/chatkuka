@@ -874,7 +874,7 @@ export const CheckCircleFillIcon = ({ size = 16 }: { size?: number }) => {
   );
 };
 
-export const GlobeIcon = ({ size = 16 }: { size?: number }) => {
+export const GlobeIcon = ({ size = 16, className }: { size?: number; className?: string }) => {
   return (
     <svg
       height={size}
@@ -882,6 +882,7 @@ export const GlobeIcon = ({ size = 16 }: { size?: number }) => {
       viewBox="0 0 16 16"
       width={size}
       style={{ color: 'currentcolor' }}
+      className={className}
     >
       <path
         fillRule="evenodd"
@@ -944,6 +945,25 @@ export const ShareIcon = ({ size = 16 }: { size?: number }) => {
         fillRule="evenodd"
         clipRule="evenodd"
         d="M15 11.25V10.5H13.5V11.25V12.75C13.5 13.1642 13.1642 13.5 12.75 13.5H3.25C2.83579 13.5 2.5 13.1642 2.5 12.75L2.5 3.25C2.5 2.83579 2.83579 2.5 3.25 2.5H5.75H6.5V1H5.75H3.25C2.00736 1 1 2.00736 1 3.25V12.75C1 13.9926 2.00736 15 3.25 15H12.75C13.9926 15 15 13.9926 15 12.75V11.25ZM15 5.5L10.5 1V4C7.46243 4 5 6.46243 5 9.5V10L5.05855 9.91218C6.27146 8.09281 8.31339 7 10.5 7V10L15 5.5Z"
+        fill="currentColor"
+      ></path>
+    </svg>
+  );
+};
+
+export const LinkIcon = ({ size = 16 }: { size?: number }) => {
+  return (
+    <svg
+      height={size}
+      strokeLinejoin="round"
+      viewBox="0 0 16 16"
+      width={size}
+      style={{ color: 'currentcolor' }}
+    >
+      <path
+        fillRule="evenodd"
+        clipRule="evenodd"
+        d="M7.5 4H7V2.5H7.5H9C10.3807 2.5 11.5 3.61929 11.5 5V5.5V6H10V5.5V5C10 4.44772 9.55228 4 9 4H7.5ZM6 10H7.5V11.5H6C4.61929 11.5 3.5 10.3807 3.5 9V8.5V8H5V8.5V9C5 9.55228 5.44772 10 6 10ZM8 6H7H6V8H7H8H9H10V6H9H8Z"
         fill="currentColor"
       ></path>
     </svg>

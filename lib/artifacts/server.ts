@@ -21,6 +21,7 @@ export interface CreateDocumentCallbackProps {
   title: string;
   dataStream: DataStreamWriter;
   session: Session;
+  selectedModel?: string;
 }
 
 export interface UpdateDocumentCallbackProps {
@@ -28,6 +29,7 @@ export interface UpdateDocumentCallbackProps {
   description: string;
   dataStream: DataStreamWriter;
   session: Session;
+  selectedModel?: string;
 }
 
 export interface DocumentHandler<T = ArtifactKind> {
