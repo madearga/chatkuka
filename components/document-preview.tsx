@@ -33,6 +33,9 @@ export function DocumentPreview({
   result,
   args,
 }: DocumentPreviewProps) {
+  // Log the received props
+  console.log('[DocumentPreview] Received props:', { isReadonly, result, args });
+
   const { artifact, setArtifact } = useArtifact();
 
   const { data: documents, isLoading: isDocumentsFetching } = useSWR<

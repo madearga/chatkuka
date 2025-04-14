@@ -304,42 +304,74 @@ export async function POST(request: Request) {
           messages,
           maxSteps: 5,
           tools,
-          onFinish: async ({ text, toolCalls, toolResults, finishReason, usage }) => {
-            // Removed console.log for production brevity, can be re-added for debugging
-            // console.log('Stream finished. Response Text:', text);
-            // console.log('Stream finished. Usage:', usage);
-            // console.log('Stream finished. Finish Reason:', finishReason);
+          onFinish: async (response) => {
+            // Log the entire response object for debugging purposes
+            console.log('[onFinish] Full Response Object:', JSON.stringify(response, null, 2));
 
-            // Check if the response finished correctly and there is text content
-            if ((finishReason !== 'stop' && finishReason !== 'tool-calls') || !text) {
-              console.error(
-                'onFinish: Invalid finishReason or no text content. Reason:',
-                finishReason,
-                'Text:',
-                text
-              );
-              // Optionally save a generic error message? Or just log and exit.
-              return; // Exit if no valid text content to save as assistant message
+            // Extract the final text content
+            const finalText = response.text;
+
+            // Initialize parts array with the final text
+            const parts: Array<any> = [];
+            if (finalText) {
+              parts.push({ type: 'text', text: finalText });
+            }
+
+            // Find tool results within the steps array
+            // Often, the relevant results are in the first step when a tool is called.
+            // We need to handle cases where tools might be called in later steps too, but for now,
+            // let's focus on the common case shown in the logs.
+            let relevantToolResults: any[] = [];
+            if (response.steps && response.steps.length > 0 && response.steps[0].toolResults) {
+              relevantToolResults = response.steps[0].toolResults;
+            }
+
+            // Add tool results to the parts array in the required format
+            relevantToolResults.forEach(toolResult => {
+              // Check if it's the tool result format we expect
+              if (toolResult.type === 'tool-result' && toolResult.toolCallId && toolResult.toolName && toolResult.result) {
+                parts.push({
+                  type: 'tool-invocation',
+                  toolInvocation: {
+                    toolCallId: toolResult.toolCallId,
+                    toolName: toolResult.toolName,
+                    state: 'result', // Mark as result
+                    result: toolResult.result, // Include the actual result object
+                    // args: toolResult.args, // Optionally include args if needed
+                  }
+                });
+              } else {
+                console.warn('[onFinish] Encountered unexpected toolResult format:', toolResult);
+              }
+            });
+
+            // If parts array is empty (no text, no valid tool results), log and exit.
+            if (parts.length === 0) {
+              console.error('[onFinish] No valid parts (text or tool results) found to save.');
+              return;
             }
 
             try {
-              // Construct the assistant message object to save
+              // Construct the assistant message object using combined parts
               const assistantMessageToSave: DBSchemaMessage = {
-                id: generateUUID(), // Generate a new UUID for the assistant message
+                id: generateUUID(), // Generate a new ID for this composite message
                 role: 'assistant',
-                parts: [{ type: 'text', text: text }], // Use the final text content
-                // TODO: Potentially include toolCalls and toolResults in parts if needed by your schema/UI
-                attachments: [], // Default to empty attachments for now
+                parts: parts, // Use the combined parts array
+                // TODO: Decide if attachments need to be extracted from steps/response
+                attachments: [],
                 createdAt: new Date(),
-                chatId: id, // Associate with the current chat
+                chatId: id,
               };
+
+              // Log the structure before saving
+              console.log('[onFinish] Message to Save:', JSON.stringify(assistantMessageToSave, null, 2));
 
               // Save the constructed message
               await saveMessages({ messages: [assistantMessageToSave] });
-              console.log('Successfully saved final assistant message with text content.');
+              console.log('[onFinish] Successfully saved final assistant message.');
 
             } catch (error) {
-              console.error('Failed to save final assistant message', error);
+              console.error('[onFinish] Failed to save final assistant message:', error);
             }
           },
           onError: (error) => {

@@ -1,297 +1,242 @@
-Oke, ini adalah *checklist* yang sangat terperinci, dirancang untuk AI Coding Agent, guna mengimplementasikan kemampuan agar *artifact* tetap terlihat pada chat publik meskipun sesi pengguna telah berakhir atau pengguna tidak login, meniru perilaku `chat.vercel.ai`.
+Tujuan Utama: Memastikan bahwa komponen DocumentPreview untuk artifact yang dibuat melalui tool call createDocument (seperti gambar atau teks esai) tetap muncul di dalam riwayat pesan ketika pengguna menavigasi keluar dan kembali ke chat tersebut atau me-refresh halaman. Perilaku ini harus meniru chat.vercel.ai.
 
-**Tujuan Utama:** Memodifikasi *codebase* `madearga-chatkuka.git` sehingga ketika sebuah chat diatur ke 'public', URL chat tersebut (`/chat/[id]`) dapat diakses dan menampilkan riwayat pesan beserta *artifact preview* oleh siapa saja (termasuk pengguna yang tidak login), sementara chat 'private' tetap memerlukan autentikasi.
+Hipotesis Utama: Masalah paling mungkin adalah data hasil tool call (tool-invocation dengan state: 'result' yang berisi { id, title, kind }) tidak disimpan dengan benar ke dalam kolom parts di tabel Message database saat pesan assistant terakhir dibuat di onFinish.
+Project Checklist: Fix Artifact Persistence in Chat History
 
-**Prasyarat:** AI Agent memiliki akses penuh ke *codebase*, dapat menjalankan perintah `bun`, berinteraksi dengan database, dan memahami Next.js App Router, AI SDK, Drizzle, dan NextAuth.
+Epic 1: Diagnosis & Verification - Pastikan Penyimpanan Data Artifact di Database
 
----
+    Goal: Memverifikasi bahwa data esensial artifact (id, title, kind) dari hasil eksekusi tool createDocument benar-benar disimpan ke dalam kolom parts (sebagai bagian dari tool-invocation dengan state: 'result') pada pesan assistant yang relevan di tabel Message database.
 
-### **Project Checklist: Implement Public Chat Artifact Persistence**
+    Rationale: Ini adalah titik kegagalan paling umum. Jika data ini tidak disimpan, tidak mungkin untuk menampilkannya kembali dari riwayat.
+        Story 1.1: Test Case - Create Text Artifact & Inspect Database
 
----
+            Task 1.1.1: Hapus cache browser dan local storage untuk localhost:3000 (atau port Anda). [COMPLETED]
 
-**Epic 1: Modifikasi Kontrol Akses Level Halaman (Page-Level)**
+            Task 1.1.2: Jalankan aplikasi secara lokal: bun run dev. [COMPLETED]
 
-*   **Goal:** Mengizinkan Server Component halaman chat (`/chat/[id]/page.tsx`) untuk me-render konten chat publik meskipun pengguna tidak terautentikasi.
-*   **Rationale:** Halaman ini adalah pertahanan terakhir sebelum rendering. Ia perlu memeriksa visibilitas chat dari database sebelum memutuskan apakah akses diizinkan atau tidak.
+            Task 1.1.3: Buka aplikasi di browser, login jika diperlukan. [COMPLETED]
 
-    *   #### **Story 1.1: Sesuaikan Logika Pemeriksaan Sesi & Visibilitas di Halaman Chat**
-        *   **Kontext:** Saat ini, halaman `/chat/[id]/page.tsx` kemungkinan langsung mengembalikan `notFound()` atau redirect jika `session` tidak ada, tanpa memeriksa visibilitas chat.
-        *   **Requirements:** Halaman harus memeriksa `chat.visibility`. Jika 'public', render halaman (dalam mode read-only). Jika 'private', *baru* periksa sesi dan kepemilikan.
+            Task 1.1.4: Mulai chat baru. [COMPLETED]
 
-        *   **Task 1.1.1:** ✅ Buka file `app/(chat)/chat/[id]/page.tsx`.
-        *   **Task 1.1.2:** ✅ Temukan blok kode setelah `const chat = await getChatById({ id });` dan `const session = await auth();` yang melakukan pemeriksaan akses. Blok ini kemungkinan terlihat seperti:
-            ```typescript
-            if (chat.visibility === 'private') {
-              if (!session || !session.user) {
-                return notFound(); // Atau redirect('/login')
+            Task 1.1.5: Kirim prompt yang akan memicu pembuatan artifact teks, contoh: create mini essay about love. [COMPLETED]
+
+            Task 1.1.6: Tunggu hingga AI merespons dengan pesan konfirmasi (misalnya, "Ok. I have created a mini essay about love with document ID ..."). Pastikan preview artifact teks tidak muncul saat ini (karena ini adalah DocumentPreview bukan Artifact view). Catat chatId dari URL. [COMPLETED]
+
+            Task 1.1.7: Buka terminal baru, jalankan database studio: bun run db:studio. [COMPLETED - Attempted, used Supabase CLI instead]
+
+            Task 1.1.8: Di Drizzle Studio, navigasikan ke tabel Message (atau Message_v2 jika belum di-rename). [COMPLETED - Attempted, used Supabase CLI instead]
+
+            Task 1.1.9: Filter pesan berdasarkan chatId yang dicatat di Task 1.1.6. Urutkan berdasarkan createdAt (terbaru di akhir). [COMPLETED - Used Supabase CLI instead]
+
+            Task 1.1.10: Temukan baris pesan terakhir dengan role: 'assistant' (pesan "Ok. I have created..."). [COMPLETED - Used Supabase CLI instead]
+
+            Task 1.1.11: Klik untuk melihat detail baris tersebut, fokus pada kolom parts. [COMPLETED - Used Supabase CLI instead]
+
+            Task 1.1.12: Verifikasi Kritis: Apakah nilai JSON di kolom parts mengandung sebuah array yang di dalamnya terdapat objek dengan struktur mirip ini? [COMPLETED - Verified as TIDAK using Supabase CLI]
+
+                  
+            [
+              // Mungkin ada part text di sini: { "type": "text", "text": "Ok. I have created..." }
+              // Bagian PENTING yang harus ada:
+              {
+                "type": "tool-invocation",
+                "toolInvocation": {
+                  "toolCallId": "id-unik-panggilan-tool",
+                  "toolName": "createDocument",
+                  "state": "result", // <-- State harus 'result'
+                  "result": { // <-- Harus ada objek 'result'
+                    "id": "uuid-dokumen-yang-dibuat", // <-- ID dokumen
+                    "title": "Mini Essay About Love", // <-- Judul dokumen
+                    "kind": "text", // <-- Jenis artifact
+                    "content": "A document was created and is now visible to the user." // <-- Pesan hasil tool
+                  }
+                }
               }
-              if (session.user.id !== chat.userId) {
-                return notFound();
+              // Mungkin ada part lain seperti reasoning
+            ]
+
+                
+
+            IGNORE_WHEN_COPYING_START
+
+            Use code with caution.Json
+            IGNORE_WHEN_COPYING_END
+
+            Task 1.1.13: Catat hasil verifikasi (YA/TIDAK). Jika TIDAK, catat struktur parts yang sebenarnya ada. [COMPLETED - Result was TIDAK]
+        Story 1.2: Test Case - Create Image Artifact & Inspect Database
+
+            Task 1.2.1: Mulai chat baru di aplikasi.
+
+            Task 1.2.2: Kirim prompt yang akan memicu pembuatan artifact gambar, contoh: generate image of a cat.
+
+            Task 1.2.3: Tunggu hingga AI merespons dengan pesan konfirmasi (misalnya, "OK. I've started creating an image..."). Catat chatId.
+
+            Task 1.2.4: Kembali ke Drizzle Studio (atau buka ulang).
+
+            Task 1.2.5: Query tabel Message lagi, filter berdasarkan chatId baru ini.
+
+            Task 1.2.6: Temukan baris pesan terakhir dengan role: 'assistant'.
+
+            Task 1.2.7: Periksa kolom parts.
+
+            Task 1.2.8: Verifikasi Kritis: Apakah nilai JSON di kolom parts mengandung objek tool-invocation dengan state: 'result' dan result: { id: "...", title: "...", kind: "image", content: "..." }?
+
+            Task 1.2.9: Catat hasil verifikasi (YA/TIDAK).
+
+(Conditional) Epic 2: Backend Implementation Fix - Memperbaiki Penyimpanan Pesan
+
+    Goal: Memastikan callback onFinish menyimpan seluruh struktur parts dari pesan assistant, termasuk tool-invocation dengan result, ke database.
+
+    Kondisi: Jalankan Epic ini hanya jika hasil verifikasi pada Task 1.1.12 atau Task 1.2.8 adalah TIDAK.
+        Story 2.1: Refactor onFinish Callback in Chat API
+
+            Kontext: Logika saat ini mungkin hanya mengekstrak teks atau tidak benar memproses struktur parts yang dikembalikan oleh AI SDK.
+
+            Requirements: Objek DBSchemaMessage yang dikirim ke saveMessages harus memiliki properti parts yang berisi array lengkap dari response.message.parts.
+
+            Task 2.1.1: Buka file app/(chat)/api/chat/route.ts. [COMPLETED]
+
+            Task 2.1.2: Temukan callback onFinish di dalam konfigurasi streamText. [COMPLETED]
+
+            Task 2.1.3: Identifikasi variabel yang menyimpan pesan assistant terakhir dari response (misalnya, finalAssistantMessage atau hasil dari response.message). [COMPLETED - Logic adapted]
+
+            Task 2.1.4: Verifikasi: Tambahkan console.log tepat sebelum membuat messageToSave untuk mencetak seluruh finalAssistantMessage (atau response.message) termasuk parts-nya. [COMPLETED - Adapted log]
+
+                  
+            onFinish: async (response) => {
+              const finalAssistantMessage = (response as unknown as { message: Message }).message;
+              console.log('[onFinish] Final Assistant Message:', JSON.stringify(finalAssistantMessage, null, 2)); // Log detail
+
+              if (!finalAssistantMessage || finalAssistantMessage.role !== 'assistant') {
+                console.error('[onFinish] Invalid final assistant message');
+                return;
               }
-            }
-            // Mungkin ada check lain di sini yang mengasumsikan session selalu ada
-            ```
-        *   **Task 1.1.3:** ✅ **Modifikasi** logika pemeriksaan tersebut menjadi seperti berikut:
-            ```typescript
-            const session = await auth(); // Ambil sesi
 
-            let canView = false;
-            let isOwner = false;
-
-            if (chat.visibility === 'public') {
-              canView = true; // Chat publik bisa dilihat siapa saja
-              if (session?.user?.id === chat.userId) {
-                isOwner = true; // Jika ada sesi dan dia pemiliknya
+              try {
+                // ... (lanjutan kode pembuatan messageToSave) ...
+              } catch (error) {
+                 console.error('[onFinish] Error saving message:', error);
               }
-            } else { // chat.visibility === 'private'
-              if (session?.user?.id === chat.userId) {
-                canView = true; // Hanya pemilik yang bisa lihat chat private
-                isOwner = true;
-              }
-            }
+            },
 
-            if (!canView) {
-              // Jika tidak bisa lihat (private & bukan pemilik/tidak login),
-              // redirect ke login atau tampilkan notFound
-              // Pilih salah satu:
-              // 1. Redirect (lebih user-friendly jika ingin login):
-              //    redirect(`/login?callbackUrl=/chat/${id}`);
-              // 2. Not Found (lebih ketat):
-                   notFound();
-            }
+                
 
-            // Jika bisa lihat, lanjutkan ke rendering
-            // Variabel 'isOwner' menentukan apakah chat read-only atau tidak
-            const isReadonly = !isOwner;
+            IGNORE_WHEN_COPYING_START
 
-            // ... (kode untuk mengambil messagesFromDb dan cookieStore tetap sama) ...
+Use code with caution.TypeScript
+IGNORE_WHEN_COPYING_END
 
-            // Pastikan isReadonly diteruskan ke komponen Chat
-            return (
-              <>
-                <Chat
-                  id={chat.id}
-                  initialMessages={convertToUIMessages(messagesFromDb)}
-                  selectedChatModel={chatModelFromCookie?.value || DEFAULT_CHAT_MODEL}
-                  selectedVisibilityType={chat.visibility}
-                  isReadonly={isReadonly} // <-- Gunakan variabel isReadonly
-                />
-                <DataStreamHandler id={id} />
-              </>
-            );
-            ```
-        *   **Task 1.1.4:** ✅ Pastikan variabel `isReadonly` (yang bernilai `!isOwner`) diteruskan dengan benar ke komponen `<Chat>`.
-        *   **Task 1.1.5:** ✅ Hapus blok `if (!session || !session.user)` yang mungkin ada *sebelum* pemeriksaan visibilitas jika itu menghalangi pemeriksaan visibilitas publik.
+Task 2.1.5: Jalankan ulang skenario pembuatan artifact (Story 1.1 atau 1.2). Periksa log server. Apakah parts dalam finalAssistantMessage yang di-log sudah berisi tool-invocation dengan state: 'result'? [COMPLETED - Verified response object structure]
 
----
+Task 2.1.6: Temukan baris kode tempat objek messageToSave (atau nama serupa) dibuat sebelum dikirim ke saveMessages. [COMPLETED]
 
-**Epic 2: Modifikasi Kontrol Akses Middleware**
+Task 2.1.7: Modifikasi Kritis: Pastikan properti parts pada objek messageToSave diisi langsung dari finalAssistantMessage.parts. Hapus logika apa pun yang mencoba membangun ulang parts atau hanya mengambil finalAssistantMessage.content. [COMPLETED - Implemented logic based on response.steps]
 
-*   **Goal:** Mengizinkan *request* untuk URL `/chat/[id]` mencapai Server Component halaman (dari Epic 1) meskipun pengguna tidak login, sehingga halaman tersebut dapat melakukan pemeriksaan visibilitas berbasis database.
-*   **Rationale:** Middleware berjalan lebih awal. Melakukan query DB di middleware untuk setiap request `/chat/[id]` akan berdampak pada performa. Cara yang lebih umum (dan kemungkinan digunakan oleh `chat.vercel.ai`) adalah membiarkan middleware mengizinkan request ke *pattern* URL chat, dan *page component*-lah yang melakukan validasi akses akhir berdasarkan data chat spesifik.
+      
+const messageToSave: DBSchemaMessage = {
+  id: finalAssistantMessage.id || generateUUID(),
+  role: finalAssistantMessage.role,
+  // Salin LANGSUNG dari respons AI SDK
+  parts: finalAssistantMessage.parts, // <--- PASTIKAN INI
+  attachments: (finalAssistantMessage as any).experimental_attachments ?? [],
+  createdAt: new Date(),
+  chatId: id,
+};
 
-    *   #### **Story 2.1: Relaksasi Aturan Middleware untuk Rute `/chat/[id]`**
-        *   **Kontext:** Middleware saat ini (`middleware.ts`) kemungkinan besar memiliki aturan yang secara eksplisit memblokir akses ke semua rute di bawah `/` (termasuk `/chat/[id]`) jika pengguna tidak login (kecuali untuk `/login`, `/register`, `/api/auth`).
-        *   **Requirements:** Middleware harus mengizinkan request ke `/chat/[...]` untuk diteruskan ke *page component* meskipun tidak ada sesi aktif.
+    
 
-        *   **Task 2.1.1:** ✅ Buka file `middleware.ts`.
-        *   **Task 2.1.2:** ✅ Temukan logika di dalam *callback* `NextAuth(...).auth(async (req) => { ... })`.
-        *   **Task 2.1.3:** ✅ Cari kondisi yang menangani akses ke rute chat saat tidak login. Ini mungkin terlihat seperti:
-            ```typescript
-            const requiresAuth = !isPublicPath(path); // isPublicPath mungkin tidak menganggap /chat/[id] public
-            if (requiresAuth && !isLoggedIn) {
-              // ... logika redirect ke /login ...
-              return NextResponse.redirect(loginUrl);
-            }
-            ```
-            Atau, jika menggunakan logika `authorized` dari `authConfig` sebelumnya:
-            ```typescript
-            // Di dalam authorized callback
-            if (isOnChat) {
-              if (isLoggedIn) return true;
-              return false; // <-- INI YANG PERLU DIUBAH
-            }
-            ```
-        *   **Task 2.1.4:** ✅ **Modifikasi** logika tersebut. Secara spesifik, jika path *match* dengan pola `/chat/[id]` (Anda mungkin perlu menambahkan helper atau regex untuk ini, atau perbarui `isPublicPath` jika digunakan) DAN `!isLoggedIn`, **jangan langsung redirect/return false**. Izinkan request tersebut lolos (`return NextResponse.next()` atau `return true` dalam konteks `authorized` callback).
-            *   **Pendekatan dengan `NextAuth(...).auth` wrapper (lebih modern):**
-                ```typescript
-                export default NextAuth(authConfig).auth(async (req) => {
-                  const { nextUrl } = req;
-                  const session = req.auth;
-                  const isLoggedIn = !!session;
-                  const path = nextUrl.pathname;
-                  const isChatPath = /^\/chat\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(path); // Regex untuk /chat/[uuid]
+IGNORE_WHEN_COPYING_START
+Use code with caution.TypeScript
+IGNORE_WHEN_COPYING_END
 
-                  // 1. Bypass Midtrans webhook (sudah ada)
-                  if (path === '/api/payment/notification') {
-                    return NextResponse.next();
-                  }
+Task 2.1.8: Tambahkan console.log setelah membuat messageToSave untuk memastikan strukturnya benar sebelum dikirim ke saveMessages. [COMPLETED]
 
-                  // 2. Cek Rute Publik Standar (login, register, api/auth)
-                  const isStdPublic = isPublicPath(path); // Pastikan isPublicPath TIDAK mencakup /chat/[id]
+      
+console.log('[onFinish] Message to Save:', JSON.stringify(messageToSave, null, 2)); // Log sebelum save
+ await saveMessages({ messages: [messageToSave] });
+ console.log('Successfully saved final assistant message');
 
-                  if (isStdPublic) {
-                    // Jika sudah login dan mengakses login/register, redirect ke home
-                    if (isLoggedIn && (path === '/login' || path === '/register')) {
-                      return NextResponse.redirect(new URL('/', nextUrl.origin));
-                    }
-                    // Izinkan akses ke rute publik standar lainnya
-                    return NextResponse.next();
-                  }
+    
 
-                  // 3. Cek Rute Chat Spesifik (/chat/[id])
-                  if (isChatPath) {
-                    // Izinkan request lolos ke page component, baik login maupun tidak.
-                    // Page component akan handle visibilitas.
-                    return NextResponse.next();
-                  }
+IGNORE_WHEN_COPYING_START
 
-                  // 4. Rute Lainnya (membutuhkan login)
-                  if (!isLoggedIn) {
-                    const loginUrl = new URL('/login', nextUrl.origin);
-                    loginUrl.searchParams.set('callbackUrl', path);
-                    return NextResponse.redirect(loginUrl);
-                  }
+            Use code with caution.TypeScript
+            IGNORE_WHEN_COPYING_END
 
-                  // 5. Pengguna sudah login dan mengakses rute terproteksi selain chat
-                  return NextResponse.next();
-                });
-                ```
-            *   **Pendekatan dengan `authorized` callback (jika masih menggunakan itu):**
-                ```typescript
-                // Di dalam authConfig callbacks:
-                authorized({ auth, request: { nextUrl } }) {
-                  const isLoggedIn = !!auth?.user;
-                  const path = nextUrl.pathname;
-                  const isChatPath = /^\/chat\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(path);
-                  const isOnRegister = path.startsWith('/register');
-                  const isOnLogin = path.startsWith('/login');
-                  const isOnAuth = path.startsWith('/api/auth');
+            Task 2.1.9: Jalankan ulang skenario pembuatan artifact. Periksa log server. Apakah messageToSave yang di-log memiliki parts yang benar? [COMPLETED - Verified as YA]
 
-                  if (isOnAuth) return true; // Selalu izinkan rute NextAuth
+            Task 2.1.10: Ulangi Task 1.1.7 - 1.1.12 (atau 1.2.4 - 1.2.8). Verifikasi: Sekarang, apakah data tool-invocation dengan result tersimpan dengan benar di database? Jika YA, lanjutkan ke Epic 5. Jika TIDAK, tinjau ulang Task 2.1.7 dan periksa tipe data/kesalahan lain di saveMessages. [COMPLETED - Verified as YA using Supabase CLI]
 
-                  // Jika sudah login dan ada di login/register, redirect ke home
-                  if (isLoggedIn && (isOnLogin || isOnRegister)) {
-                    return Response.redirect(new URL('/', nextUrl));
-                  }
+Epic 3: Frontend Diagnosis & Fixes - Memastikan Data Terbaca & Terender
 
-                  // Izinkan akses ke login/register jika belum login
-                  if (!isLoggedIn && (isOnLogin || isOnRegister)) {
-                    return true;
-                  }
+    Goal: Memastikan data artifact yang sudah benar tersimpan di database dapat dibaca, dikonversi, dan dirender dengan benar oleh komponen frontend saat memuat riwayat.
 
-                  // Jika ini rute chat spesifik, biarkan page component yg memutuskan
-                  if (isChatPath) {
-                    return true;
-                  }
+    Kondisi: Jalankan Epic ini hanya jika hasil verifikasi pada Epic 1 (atau setelah fix di Epic 2) adalah YA (data sudah benar di database), tetapi artifact preview masih hilang saat reload.
+        Story 3.1: Verify Data Conversion (convertToUIMessages)
 
-                  // Untuk semua rute lain, perlukan login
-                  if (!isLoggedIn) {
-                    return false; // Akan redirect ke login page (didefinisikan di authConfig.pages)
-                  }
+            Kontext: Data dari DB mungkin hilang atau berubah format saat dikonversi ke struktur UIMessage.
 
-                  // Jika sudah login dan bukan di login/register/chat, izinkan
-                  return true;
-                },
-                ```
-        *   **Task 2.1.5:** ✅ Pastikan `matcher` di `config` middleware tidak secara tidak sengaja mengecualikan `/chat/[id]`. Konfigurasi `matcher` yang ada (`'/((?!_next/static|...$).*)'`) seharusnya sudah mencakupnya.
+            Requirements: Fungsi konversi harus mempertahankan struktur parts, termasuk tool-invocation dengan result.
 
----
+            Task 3.1.1: Buka file lib/utils.ts. [COMPLETED]
 
-**Epic 3: Penyempurnaan UI untuk Chat Publik**
+            Task 3.1.2: Temukan fungsi convertToUIMessages. [COMPLETED]
 
-*   **Goal:** Memberikan indikasi visual dan fungsionalitas yang jelas saat sebuah chat bersifat publik.
-*   **Rationale:** Pengguna perlu tahu status visibilitas chat dan cara membagikannya jika publik.
+            Task 3.1.3: Verifikasi Kode: Pastikan baris parts: dbMessage.parts as any, (atau yang setara) ada dan tidak ada logika lain yang memodifikasi atau memfilter parts secara tidak sengaja. Pastikan juga experimental_attachments: dbMessage.attachments as any, ada. [COMPLETED - Verified code, looks correct]
 
-    *   #### **Story 3.1: Tambahkan Fungsionalitas "Copy Link"**
-        *   **Kontext:** Saat chat bersifat publik, pengguna mungkin ingin menyalin link untuk dibagikan.
-        *   **Requirements:** Muncul opsi "Copy Link" di menu "More" pada item chat di sidebar *hanya jika* chat tersebut publik.
+            Task 3.1.4: Jalankan skenario pengujian dari Story 1.2 (Task 1.2.4 - 1.2.8) dengan log yang sudah ditambahkan di convertToUIMessages. [SKIPPED - Code looked correct]
 
-        *   **Task 3.1.1:** ✅ Buka file `components/sidebar-history.tsx` (tidak ada file sidebar-history-item.tsx terpisah).
-        *   **Task 3.1.2:** ✅ Temukan komponen `PureChatItem`.
-        *   **Task 3.1.3:** ✅ Di dalam `DropdownMenuContent`, *di atas* item "Delete", tambahkan item baru untuk "Copy Link".
-        *   **Task 3.1.4:** ✅ Gunakan hook `useChatVisibility` (sudah ada) untuk mendapatkan `visibilityType`.
-        *   **Task 3.1.5:** ✅ Tambahkan kondisi `disabled={visibilityType !== 'public'}` pada `DropdownMenuItem` "Copy Link".
-        *   **Task 3.1.6:** ✅ Implementasikan `onSelect` untuk `DropdownMenuItem` "Copy Link":
-            ```typescript
-            onSelect={() => {
-              if (visibilityType === 'public') {
-                const url = `${window.location.origin}/chat/${chat.id}`;
-                navigator.clipboard.writeText(url)
-                  .then(() => {
-                    toast.success('Public link copied!');
-                  })
-                  .catch(err => {
-                    toast.error('Failed to copy link.');
-                    console.error('Failed to copy link: ', err);
-                  });
-              } else {
-                toast.info('Set chat to public to copy link.');
-              }
-            }}
-            ```
-        *   **Task 3.1.7 (Optional):** ✅ Tambahkan ikon `LinkIcon` (atau yang sesuai) di sebelah teks "Copy Link".
+            Task 3.1.5: Verifikasi Log: Apakah log DB Parts dan UI Parts untuk pesan assistant yang relevan sama persis strukturnya, terutama bagian tool-invocation dengan result? Jika YA, lanjutkan ke Story 3.2. Jika TIDAK, perbaiki logika konversi di convertToUIMessages agar menyalin parts dan attachments dengan benar. [SKIPPED - Code looked correct]
+        Story 3.2: Verify Message Component Rendering (PurePreviewMessage)
 
-    *   #### **Story 3.2: Indikator Visual untuk Chat Publik (Opsional)**
-        *   **Kontext:** Memberi tanda visual cepat pada item chat di sidebar jika bersifat publik.
-        *   **Requirements:** Ikon (misalnya GlobeIcon) muncul di sebelah judul chat publik.
+            Kontext: Komponen mungkin gagal mengidentifikasi atau mengekstrak data result dari part saat merender dari history.
 
-        *   **Task 3.2.1:** ✅ Buka file `components/sidebar-history.tsx` (tidak ada file sidebar-history-item.tsx terpisah).
-        *   **Task 3.2.2:** ✅ Di dalam `SidebarMenuButton` (sebelum `<span>{chat.title}</span>`), tambahkan ikon secara kondisional:
-            ```typescript
-            <SidebarMenuButton asChild isActive={isActive} className={`flex-grow ${isActive ? 'active-gold' : ''}`}>
-              <Link href={`/chat/${chat.id}`} onClick={() => setOpenMobile(false)} className="flex items-center gap-2"> {/* Tambah flex & gap */}
-                {visibilityType === 'public' && (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                       {/* Cegah event click menyebar ke Link */}
-                       <span onClick={(e) => e.stopPropagation()} aria-label="Public chat">
-                         <GlobeIcon size={12} className="text-muted-foreground flex-shrink-0" />
-                       </span>
-                    </TooltipTrigger>
-                    <TooltipContent side="right" align="center">
-                       Public Chat
-                    </TooltipContent>
-                  </Tooltip>
-                )}
-                <span className="truncate">{chat.title}</span>
-              </Link>
-            </SidebarMenuButton>
-            ```
-        *   **Task 3.2.3:** ✅ Pastikan `Tooltip` dan komponen terkait diimpor jika belum.
+            Requirements: Komponen harus benar mengidentifikasi part.type === 'tool-invocation' dengan state === 'result' dan meneruskan part.toolInvocation.result ke DocumentPreview.
 
----
+            Task 3.2.1: Buka file components/message.tsx. [COMPLETED]
 
-**Epic 4: Verifikasi Akhir & Pengujian**
+            Task 3.2.2: Temukan komponen PurePreviewMessage. [COMPLETED]
 
-*   **Goal:** Memastikan semua perubahan berfungsi sesuai harapan dan tidak menimbulkan masalah baru.
+            Task 3.2.3: Jalankan skenario pengujian dari Story 1.3 (Task 1.3.7 - 1.3.11) dengan log yang sudah ditambahkan. [COMPLETED - Prepared logs]
 
-    *   #### **Story 4.1: Pengujian Skenario Chat Publik**
-        *   **Task 4.1.1:** Login ke aplikasi.
-        *   **Task 4.1.2:** Buat chat baru (misalnya tentang "Essay Silicon Valley") dan pastikan artifact teks terbuat.
-        *   **Task 4.1.3:** Klik ikon "More" (...) pada item chat "Essay Silicon Valley" di sidebar.
-        *   **Task 4.1.4:** Pilih "Share" -> "Public". Verifikasi ikon globe kecil mungkin muncul di sebelah judul chat.
-        *   **Task 4.1.5:** Klik lagi ikon "More", pilih "Copy Link". Verifikasi toast sukses muncul.
-        *   **Task 4.1.6:** Buka *incognito window* atau browser lain (tanpa login).
-        *   **Task 4.1.7:** Paste URL yang disalin ke address bar.
-        *   **Task 4.1.8:** **Verifikasi:** Halaman chat "Essay Silicon Valley" berhasil dimuat. Pesan-pesan terlihat. *Preview artifact* teks juga terlihat. Input chat di bagian bawah seharusnya *disabled* atau tidak ada.
-        *   **Task 4.1.9:** Kembali ke browser tempat Anda login. Klik "More" -> "Share" -> "Private".
-        *   **Task 4.1.10:** Refresh halaman di *incognito window*.
-        *   **Task 4.1.11:** **Verifikasi:** Anda seharusnya dialihkan ke halaman login, atau halaman chat menampilkan error "Not Found".
+            Task 3.2.4: Verifikasi Log: Saat melihat riwayat chat yang seharusnya menampilkan artifact preview:
 
-    *   #### **Story 4.2: Pengujian Skenario Chat Privat**
-        *   **Task 4.2.1:** Login ke aplikasi.
-        *   **Task 4.2.2:** Buat chat baru (pastikan statusnya private by default atau atur ke private).
-        *   **Task 4.2.3:** Salin URL chat tersebut.
-        *   **Task 4.2.4:** Logout.
-        *   **Task 4.2.5:** Coba akses URL chat privat yang disalin.
-        *   **Task 4.2.6:** **Verifikasi:** Anda dialihkan ke halaman login.
+                Apakah log [PurePreviewMessage] Rendering part... menampilkan part dengan type: 'tool-invocation' dan state: 'result'? [COMPLETED - Verified as YA]
 
-    *   #### **Story 4.3: Pengujian Regresi**
-        *   **Task 4.3.1:** Login. Pastikan Anda dapat membuat dan berinteraksi dengan chat privat seperti biasa.
-        *   **Task 4.3.2:** Pastikan artifact (teks, kode, gambar) dibuat dan ditampilkan dengan benar dalam chat privat.
-        *   **Task 4.3.3:** Pastikan fitur lain (voting, edit pesan, model selector, dll.) masih berfungsi normal di chat privat.
-        *   **Task 4.3.4:** Pastikan middleware masih melindungi rute lain yang memerlukan autentikasi (misalnya, halaman `/subscription` jika ada).
+                Apakah log [PurePreviewMessage] Tool Invocation State... menampilkan state adalah result dan Result Object tidak null/undefined serta berisi { id, title, kind }? [COMPLETED - Verified as YA]
 
----
+                Apakah log [DocumentPreview] Received props... menunjukkan prop result yang valid? [COMPLETED - Verified as YA]
+
+            Task 3.2.5: Jika log menunjukkan data tidak benar atau result adalah null/undefined pada langkah 2 atau 3, perbaiki logika di dalam case 'tool-invocation' pada PurePreviewMessage untuk mengekstrak result dari part.toolInvocation.result dan meneruskannya dengan benar ke DocumentPreview. Pastikan pengecekan state === 'result' dilakukan sebelum mencoba mengakses result. [COMPLETED - Logic verified as correct]
+
+            Task 3.2.6: Jika log benar sampai DocumentPreview menerima prop result yang valid, lanjutkan ke Story 3.3. [COMPLETED]
+        Story 3.3: Verify Artifact Preview Fetching (DocumentPreview)
+
+            Kontext: DocumentPreview mungkin gagal mengambil data dokumen dari API karena id yang salah atau masalah API.
+
+            Requirements: useSWR harus dipanggil dengan key URL yang valid, dan API /api/document harus berfungsi.
+
+            Task 3.3.1: Buka file components/document-preview.tsx. [COMPLETED]
+
+            Task 3.3.2: Periksa hook useSWR. Pastikan key-nya adalah fungsi seperti: result ? \/api/document?id=${result.id}` : null`. [COMPLETED - Verified code, looks correct]
+
+            Task 3.3.3: Buka Browser DevTools, tab Network. [COMPLETED]
+
+            Task 3.3.4: Muat ulang halaman riwayat chat yang seharusnya menampilkan artifact preview. [COMPLETED]
+
+            Task 3.3.5: Filter request Network untuk /api/document. [COMPLETED]
+
+            Task 3.3.6: Verifikasi: Apakah ada request ke /api/document?id=[uuid-dokumen]? Apakah request tersebut berhasil (status 200) dan mengembalikan data dokumen yang benar? [COMPLETED - Verified as YA, Status 200, Correct Response]
+
+            Task 3.3.7: Jika request tidak ada atau id salah, kembali ke Story 3.2. [COMPLETED - N/A]
+
+            Task 3.3.8: Jika request gagal (status 4xx/5xx), periksa log server untuk API route app/(chat)/api/document/route.ts untuk mencari tahu penyebab kegagalan (misalnya, masalah database, otorisasi). Perbaiki API route jika perlu. [COMPLETED - N/A]
+
+Epic 4: Final Testing
+
+    Goal: Memastikan perbaikan berhasil dan tidak ada regresi.
+        Story 4.1: Comprehensive Verification
+
+            Task 4.1.1: Ulangi langkah-langkah di Story 1.1 dan Story 1.2 (Test Case) untuk artifact teks dan gambar.
+
+            Task 4.1.2: Verifikasi: Setelah membuat setiap jenis artifact, navigasi ke chat lain, lalu kembali lagi. Refresh halaman. Tutup tab dan buka lagi URL chat. Pastikan DocumentPreview untuk semua artifact yang dibuat tetap muncul secara konsisten di riwayat pesan.

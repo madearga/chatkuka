@@ -188,9 +188,11 @@ const PurePreviewMessage = ({
                           </div>
                         );
                       case 'tool-invocation': {
+                        // Log the incoming part
+                        console.log('[PurePreviewMessage] Rendering part...', part);
+
                         const { toolInvocation } = part;
                         const { toolName, toolCallId, state, args } = toolInvocation;
-                        // The result property is only present when state === 'result'
                         const result = (toolInvocation as any).result;
                         if (state === 'call') {
                           return (
@@ -221,6 +223,8 @@ const PurePreviewMessage = ({
                           );
                         }
                         if (state === 'result' && result !== undefined) {
+                          // Log state and result when condition is met
+                          console.log('[PurePreviewMessage] Tool Invocation State:', state, 'Result Object:', result);
                           return (
                             <div key={toolCallId}>
                               {toolName === 'getWeather' ? (
