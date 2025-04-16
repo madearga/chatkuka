@@ -175,7 +175,7 @@ const PurePreviewMessage = ({
                               className={cn(
                                 'flex-grow break-words max-w-full overflow-hidden',
                                 message.role === 'user'
-                                  ? 'bg-primary text-primary-foreground px-3 py-2 rounded-xl group-data-[role=user]/message:ml-auto'
+                                  ? 'bg-primary text-white dark:text-white px-3 py-2 rounded-xl group-data-[role=user]/message:ml-auto'
                                   : 'bg-muted/50 text-foreground border border-border/50 px-3 py-2 rounded-xl'
                               )}
                             >
@@ -320,7 +320,7 @@ const PurePreviewMessage = ({
                         href={(message as any).attachmentUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="mt-2 sm:mt-0 sm:ml-auto py-1.5 px-3 text-sm bg-zinc-800/20 hover:bg-zinc-800/30 text-zinc-800 dark:text-zinc-300 rounded-md transition-colors"
+                        className="mt-2 sm:mt-0 sm:ml-auto py-1.5 px-3 text-sm bg-zinc-800/20 hover:bg-zinc-800/30 text-zinc-800 dark:text-white dark:bg-zinc-700/50 dark:hover:bg-zinc-700/70 rounded-md transition-colors"
                       >
                         Open
                       </a>
