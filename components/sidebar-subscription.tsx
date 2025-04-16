@@ -2,6 +2,7 @@
 
 import { CreditCard } from 'lucide-react';
 import { useState } from 'react';
+import { cn } from '@/lib/utils';
 
 import { SubscriptionStatus } from '@/components/subscription-status';
 import {
@@ -25,8 +26,16 @@ export function SidebarSubscription() {
       <DialogTrigger asChild>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton className="bg-primary text-primary-foreground hover:bg-primary/90">
-              <CreditCard className="size-4" />
+            <SidebarMenuButton className={cn(
+              "bg-primary",
+              "text-primary-foreground",
+              "hover:bg-primary/90",
+              "h-10",
+              "px-3",
+              "rounded-md",
+              "border border-primary/20"
+            )}>
+              <CreditCard className="size-4 mr-2" />
               <span>Subscription</span>
             </SidebarMenuButton>
           </SidebarMenuItem>

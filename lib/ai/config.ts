@@ -148,6 +148,34 @@ export const SUGGESTIONS = [
   },
 ];
 
+// --- OVERVIEW SUGGESTIONS ---
+export const suggestions = [
+  {
+    title: "Explain quantum computing in simple terms",
+    prompt: "Explain quantum computing in simple terms"
+  },
+  {
+    title: "Generate a creative story about a time traveler",
+    prompt: "Generate a creative story about a time traveler who visits ancient Rome"
+  },
+  {
+    title: "What are the best practices for learning a new language?",
+    prompt: "What are the best practices for learning a new language?"
+  },
+  {
+    title: "Create a workout plan for building strength",
+    prompt: "Create a 4-week workout plan for building strength with minimal equipment"
+  },
+  {
+    title: "Suggest healthy meal prep ideas for a week",
+    prompt: "Suggest healthy meal prep ideas for a week that are quick to make"
+  },
+  {
+    title: "How can I improve my productivity while working from home?",
+    prompt: "How can I improve my productivity while working from home?"
+  }
+];
+
 // --- MISC ---
 export const TRANSITION_DURATION = 0.25;
 export const TRANSITION_SPRING = {

@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { PlusIcon } from './icons'; // Removed VercelIcon import
 import { useSidebar } from './ui/sidebar';
 import { memo } from 'react';
+import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 import { VisibilityType, VisibilitySelector } from './visibility-selector';
 
@@ -30,7 +31,14 @@ function PureChatHeader({
   const isMobile = windowWidth < 640; // sm breakpoint
 
   return (
-    <header className="flex sticky top-0 z-10 bg-background py-1.5 items-center px-2 md:px-4 mobile-safe-area header-gold">
+    <header className={cn(
+      "flex sticky top-0 z-10",
+      "bg-background",
+      "py-1.5 px-2 md:px-4",
+      "items-center",
+      "mobile-safe-area",
+      "border-b border-border"
+    )}>
       {/* Left side - toggle and model selector */}
       <div className="flex items-center gap-1 sm:gap-2 min-w-0 flex-1">
         <SidebarToggle />
@@ -57,7 +65,7 @@ function PureChatHeader({
           <TooltipTrigger asChild>
             <Button
               variant="outline"
-              className="md:px-2 px-2 h-8 sm:h-9 flex-shrink-0 btn-gold"
+              className={cn("md:px-2 px-2 h-8 sm:h-9 flex-shrink-0", "hover:bg-accent")}
               onClick={() => {
                 router.push('/');
                 router.refresh();

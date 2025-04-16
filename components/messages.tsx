@@ -3,6 +3,7 @@ import { PreviewMessage, ThinkingMessage } from './message';
 import { useScrollToBottom } from './use-scroll-to-bottom';
 import { Overview } from './overview';
 import { memo } from 'react';
+import { cn } from '@/lib/utils';
 import { Vote } from '@/lib/db/schema';
 import equal from 'fast-deep-equal';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -37,7 +38,13 @@ function PureMessages({
   return (
     <div
       ref={messagesContainerRef}
-      className="flex flex-col min-w-0 w-full gap-6 flex-1 overflow-y-auto px-2 sm:px-4 pt-4 mobile-scroll"
+      className={cn(
+        "flex flex-col min-w-0 w-full",
+        "gap-6",
+        "flex-1 overflow-y-auto",
+        "px-2 sm:px-4 pt-4",
+        "mobile-scroll"
+      )}
       style={{ scrollbarGutter: 'stable both-edges' }}
     >
       {messages.length === 0 && <Overview />}

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useParams, usePathname, useRouter } from 'next/navigation';
 import type { User } from 'next-auth';
 import { memo, useEffect, useState } from 'react';
+import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import useSWR from 'swr';
 
@@ -82,7 +83,7 @@ const PureChatItem = ({
 
   return (
     <SidebarMenuItem className="flex items-center">
-      <SidebarMenuButton asChild isActive={isActive} className={`flex-grow ${isActive ? 'active-gold' : ''}`}>
+      <SidebarMenuButton asChild isActive={isActive} className={cn('flex-grow px-2 py-1.5 h-8 text-sm hover:bg-sidebar-accent', isActive ? 'active-gold' : '')}>
         <Link href={`/chat/${chat.id}`} onClick={() => setOpenMobile(false)} className="flex items-center gap-2">
           {visibilityType === 'public' && (
             <Tooltip>
@@ -96,22 +97,22 @@ const PureChatItem = ({
               </TooltipContent>
             </Tooltip>
           )}
-          <span className="truncate">{chat.title}</span>
+          <span className="truncate text-sm">{chat.title}</span>
         </Link>
       </SidebarMenuButton>
 
       <DropdownMenu modal={true}>
         <DropdownMenuTrigger asChild>
           <SidebarMenuAction
-            className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground mr-0.5 relative !right-auto !top-auto"
+            className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground mr-0.5 relative !right-auto !top-auto h-6 w-6"
             showOnHover={!isActive}
           >
-            <MoreHorizontalIcon />
+            <MoreHorizontalIcon size={14} />
             <span className="sr-only">More</span>
           </SidebarMenuAction>
         </DropdownMenuTrigger>
 
-        <DropdownMenuContent side="bottom" align="end">
+        <DropdownMenuContent side="bottom" align="end" className="w-48 p-1">
           <DropdownMenuSub>
             <DropdownMenuSubTrigger className="cursor-pointer">
               <ShareIcon />
@@ -120,7 +121,7 @@ const PureChatItem = ({
             <DropdownMenuPortal>
               <DropdownMenuSubContent>
                 <DropdownMenuItem
-                  className="cursor-pointer flex-row justify-between"
+                  className="cursor-pointer flex-row justify-between text-sm py-1.5"
                   onClick={() => {
                     setVisibilityType('private');
                   }}
@@ -134,7 +135,7 @@ const PureChatItem = ({
                   ) : null}
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                  className="cursor-pointer flex-row justify-between"
+                  className="cursor-pointer flex-row justify-between text-sm py-1.5"
                   onClick={() => {
                     setVisibilityType('public');
                   }}
@@ -150,7 +151,7 @@ const PureChatItem = ({
           </DropdownMenuSub>
 
           <DropdownMenuItem
-            className="cursor-pointer"
+            className="cursor-pointer text-sm py-1.5"
             disabled={visibilityType !== 'public'}
             onSelect={() => {
               if (visibilityType === 'public') {
@@ -175,7 +176,7 @@ const PureChatItem = ({
           <DropdownMenuSeparator />
 
           <DropdownMenuItem
-            className="cursor-pointer text-destructive focus:bg-destructive/15 focus:text-destructive dark:text-red-500"
+            className="cursor-pointer text-destructive focus:bg-destructive/15 focus:text-destructive dark:text-red-500 text-sm py-1.5"
             onSelect={() => onDelete(chat.id)}
           >
             <TrashIcon />

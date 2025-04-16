@@ -101,7 +101,7 @@ export function PureMultimodalInput({
 
   useEffect(() => {
     setIsHydrated(true);
-    
+
     if (textareaRef.current) {
       adjustHeight();
     }
@@ -128,14 +128,14 @@ export function PureMultimodalInput({
 
   useEffect(() => {
     if (!isHydrated || !textareaRef.current) return;
-    
+
     const domValue = textareaRef.current.value;
     const finalValue = domValue || localStorageInput || '';
-    
+
     if (finalValue !== input) {
       setInput(finalValue);
     }
-    
+
     adjustHeight();
   }, [isHydrated, localStorageInput, setInput]);
 
@@ -208,11 +208,11 @@ export function PureMultimodalInput({
 
   const uploadFile = useCallback(async (file: File) => {
     const formData = new FormData();
-    
+
     // Add the required fields for the upload
     formData.append('file', file);
     formData.append('chatId', chatId); // Add chatId for message attachment
-    
+
     try {
       const response = await fetch('/api/files/upload', {
         method: 'POST',
@@ -244,7 +244,7 @@ export function PureMultimodalInput({
   const handleFileChange = useCallback(
     async (event: ChangeEvent<HTMLInputElement>) => {
       const files = Array.from(event.target.files || []);
-      
+
       if (files.length === 0) return;
 
       setUploadQueue(files.map((file) => file.name));
@@ -252,7 +252,7 @@ export function PureMultimodalInput({
       try {
         // Process files one by one to show individual progress
         const uploadedAttachments: Attachment[] = [];
-        
+
         for (const file of files) {
           const attachment = await uploadFile(file);
           if (attachment) {
@@ -265,7 +265,7 @@ export function PureMultimodalInput({
             ...currentAttachments,
             ...uploadedAttachments,
           ]);
-          
+
           // Show toast on successful upload
           toast.success(
             uploadedAttachments.length === 1
@@ -290,12 +290,12 @@ export function PureMultimodalInput({
   const handleAIInputSubmit = (value: string, withSearch: boolean) => {
     // Pastikan nilai tidak kosong dan tidak sedang dalam proses submit
     if (!value.trim() || isSubmitting) return;
-    
+
     setIsSubmitting(true);
     setInput(value);
     setLastInputValue(value);
     setIsSearchEnabled(withSearch);
-    
+
     window.history.replaceState({}, '', `/chat/${chatId}`);
 
     try {
@@ -323,7 +323,7 @@ export function PureMultimodalInput({
       // Reset state setelah submit
       setAttachments([]);
       setLocalStorageInput('');
-      
+
       // Tampilkan toast jika search diaktifkan
       if (withSearch) {
         toast.success('Searching the web for information...', {
@@ -347,10 +347,10 @@ export function PureMultimodalInput({
       // Create a DataTransfer object
       const dataTransfer = new DataTransfer();
       dataTransfer.items.add(file);
-      
+
       // Set the files property of the input element
       fileInputRef.current.files = dataTransfer.files;
-      
+
       // Trigger the onChange event handler
       const event = new Event('change', { bubbles: true });
       fileInputRef.current.dispatchEvent(event);
@@ -398,9 +398,11 @@ export function PureMultimodalInput({
       <div className="flex flex-col w-full gap-2 relative">
         <div
           className={cn(
-            'relative w-full p-0 overflow-hidden rounded-lg border bg-background flex flex-col',
+            'relative w-full p-0 overflow-hidden rounded-xl border flex flex-col',
+            'bg-black/5 dark:bg-white/5',
             'focus-within:ring-1 focus-within:ring-ring focus-within:border-input',
             'dark:border-zinc-700',
+            'shadow-sm',
             className,
           )}
         >
@@ -411,8 +413,10 @@ export function PureMultimodalInput({
             name="message"
             value={input}
             className={cn(
-              'min-h-[24px] w-full resize-none border-0 bg-transparent py-4 pr-20 max-h-[300px] overflow-y-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-ring', 
-              'text-sm sm:text-base placeholder:text-muted-foreground',
+              "min-h-[24px] w-full resize-none border-0 bg-transparent",
+              "py-3 px-4 pr-20 max-h-[300px] overflow-y-auto",
+              "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-offset-0 focus-visible:ring-ring",
+              "text-sm sm:text-base placeholder:text-muted-foreground placeholder:opacity-70",
               input.length === 0 && 'min-h-[48px]'
             )}
             spellCheck={false}
@@ -429,7 +433,7 @@ export function PureMultimodalInput({
             onKeyDown={handleKeyDown}
             suppressHydrationWarning
           />
-          
+
           {input.trim().length > 0 && !isLoading && (
             <Button
               type="button"
@@ -447,20 +451,25 @@ export function PureMultimodalInput({
               <X size={16} />
             </Button>
           )}
-          
+
           {/* Always show button container with DeepSeek-inspired styling */}
-          <div className="absolute right-1 bottom-1 flex items-center chat-input-buttons">
+          <div className="absolute right-2 bottom-2 flex items-center gap-1 chat-input-buttons">
             {/* Search web button - now toggles search mode instead of component */}
             <button
               type="button"
               aria-label={isSearchEnabled ? "Disable web search" : "Enable web search"}
               onClick={() => setIsSearchEnabled(!isSearchEnabled)}
               title={isSearchEnabled ? "Disable web search" : "Enable web search"}
-              className={cn("p-1.5 rounded-full", isSearchEnabled ? "text-blue-500" : "text-muted-foreground hover:text-foreground")}
+              className={cn(
+                "p-1.5 rounded-full",
+                isSearchEnabled
+                  ? "bg-blue-500/15 text-blue-500"
+                  : "bg-black/5 dark:bg-white/5 text-black/40 dark:text-white/40 hover:text-black dark:hover:text-white"
+              )}
             >
               <Globe className={isSearchEnabled ? "text-blue-500" : ""} size={18} />
             </button>
-            
+
             {/* Upload button */}
             <button
               type="button"
@@ -472,11 +481,11 @@ export function PureMultimodalInput({
                   fileInputRef.current.click();
                 }
               }}
-              className="p-1.5 rounded-full text-muted-foreground hover:text-foreground"
+              className="p-1.5 rounded-full bg-black/5 dark:bg-white/5 text-black/40 dark:text-white/40 hover:text-black dark:hover:text-white"
             >
               <PaperclipIcon size={18} />
             </button>
-            
+
             {/* Send/Stop button */}
             {isLoading ? (
               <button
@@ -496,8 +505,10 @@ export function PureMultimodalInput({
                 type="button"
                 aria-label={isSearchEnabled ? "Search web" : "Send message"}
                 className={cn(
-                  "p-1.5 rounded-full", 
-                  input.trim() ? 'bg-primary text-primary-foreground hover:bg-primary/90' : 'text-muted-foreground bg-primary/10'
+                  "p-1.5 rounded-full",
+                  input.trim()
+                    ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                    : 'bg-black/5 dark:bg-white/5 text-black/40 dark:text-white/40'
                 )}
                 onClick={(event) => {
                   event.preventDefault();
@@ -522,7 +533,7 @@ export function PureMultimodalInput({
 
       {/* Display selected files */}
       {uploadQueue.length > 0 && <UploadProgress files={uploadQueue} />}
-      
+
       {/* Display attached files ready to be sent */}
       {attachments.length > 0 && (
         <div className="flex flex-wrap gap-2 mt-2">
@@ -531,10 +542,10 @@ export function PureMultimodalInput({
             const filename = attachment.name?.split('/').pop() || 'File';
             // Get file extension for display
             const extension = filename.split('.').pop()?.toUpperCase() || '';
-            
+
             return (
-              <div 
-                key={attachment.url} 
+              <div
+                key={attachment.url}
                 className="bg-muted text-xs rounded-md p-2 flex items-center gap-2"
               >
                 <div className="flex items-center justify-center w-5 h-5 rounded bg-primary/10 text-[10px] font-semibold">
@@ -555,7 +566,7 @@ export function PureMultimodalInput({
           })}
         </div>
       )}
-      
+
       {/* Hidden file input */}
       <input
         ref={fileInputRef}

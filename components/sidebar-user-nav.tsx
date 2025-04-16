@@ -4,6 +4,7 @@ import Image from 'next/image';
 import type { User } from 'next-auth';
 import { signOut } from 'next-auth/react';
 import { useTheme } from 'next-themes';
+import { cn } from '@/lib/utils';
 
 import {
   DropdownMenu,
@@ -26,7 +27,16 @@ export function SidebarUserNav({ user }: { user: User }) {
       <SidebarMenuItem>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <SidebarMenuButton className="data-[state=open]:bg-sidebar-accent bg-background data-[state=open]:text-sidebar-accent-foreground h-10 gold-accent">
+            <SidebarMenuButton className={cn(
+              "data-[state=open]:bg-sidebar-accent",
+              "bg-background",
+              "data-[state=open]:text-sidebar-accent-foreground",
+              "h-10",
+              "px-3",
+              "rounded-md",
+              "border border-border",
+              "hover:bg-sidebar-accent/50"
+            )}>
               <Image
                 src={`https://avatar.vercel.sh/${user.email}`}
                 alt={user.email ?? 'User Avatar'}
@@ -40,10 +50,10 @@ export function SidebarUserNav({ user }: { user: User }) {
           </DropdownMenuTrigger>
           <DropdownMenuContent
             side="top"
-            className="w-[--radix-popper-anchor-width]"
+            className="w-[--radix-popper-anchor-width] p-1"
           >
             <DropdownMenuItem
-              className="cursor-pointer text-gold-accent"
+              className="cursor-pointer text-sm py-1.5"
               onSelect={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
             >
               {`Toggle ${theme === 'light' ? 'dark' : 'light'} mode`}
@@ -52,7 +62,7 @@ export function SidebarUserNav({ user }: { user: User }) {
             <DropdownMenuItem asChild>
               <button
                 type="button"
-                className="w-full cursor-pointer text-gold-accent"
+                className="w-full cursor-pointer text-sm py-1.5 text-destructive"
                 onClick={() => {
                   signOut({
                     redirectTo: '/',

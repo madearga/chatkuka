@@ -9,12 +9,25 @@ export enum ModelTier {
 
 // Map models to their required tier
 export const MODEL_TIER_MAP: Record<string, ModelTier> = {
-  'chat-model-small': ModelTier.FREE, // Gemini 2.0 Flash - available to all users
-  'chat-model-large': ModelTier.PAID, // Gemini 2.5 Pro - paid users only
-  'chat-model-reasoning': ModelTier.PAID, // Reasoning model - paid users only
-  'chat-model-image-gen': ModelTier.FREE, // Image generation model - available to all users
-  'openai-gpt4o-mini': ModelTier.FREE, // OpenAI GPT-4o Mini - available to all users
-  'chatgpt-4o': ModelTier.PAID, // Latest OpenAI GPT-4o model - paid users only
+  // Google Models
+  'chat-model-small': ModelTier.FREE, // Gemini Flash 2.0
+
+  // OpenAI
+  'openai-gpt4o-mini': ModelTier.FREE, // OpenAI GPT-4o Mini
+  'chatgpt-4.1-nano': ModelTier.FREE, // OpenAI GPT-4.1 Nano
+  'chatgpt-4.1-mini': ModelTier.FREE, // OpenAI GPT-4.1 Mini
+
+  // Google Models
+  'chat-model-large': ModelTier.PAID, // Gemini Pro 2.5
+  'gemini-2.0-flash-thinking': ModelTier.PAID, // Gemini 2.0 Flash Thinking
+
+  // OpenAI
+  'chatgpt-4o': ModelTier.PAID, // Latest OpenAI GPT-4o model
+  'chatgpt-4.1': ModelTier.PAID, // OpenAI GPT-4.1
+
+  // DeepSeek
+  'chat-model-reasoning': ModelTier.PAID, // DeepSeek-R1-Distill-Llama-70B
+  'deepseek-v3': ModelTier.PAID, // DeepSeek-V3
 };
 
 // Check if a user has access to a specific model

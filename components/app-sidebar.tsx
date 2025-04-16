@@ -18,18 +18,24 @@ import {
 } from '@/components/ui/sidebar';
 import Link from 'next/link';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
+import { cn } from '@/lib/utils';
 
 export function AppSidebar({ user }: { user: User | undefined }) {
   const router = useRouter();
   const { setOpenMobile } = useSidebar();
 
   return (
-    <Sidebar className="group-data-[side=left]:border-r-0">
+    <Sidebar className={cn(
+      "group-data-[side=left]:border-r",
+      "border-sidebar-border",
+      "bg-sidebar",
+      "group-data-[side=left]:border-r-0"
+    )}>
       <SidebarHeader>
         <SidebarMenu>
-          <div className="flex flex-row justify-between items-center">
+          <div className="flex flex-row justify-between items-center px-2">
             <div className="flex flex-row gap-3 items-center">
-              <span className="text-lg font-semibold px-2 hover:bg-muted rounded-md cursor-pointer">
+              <span className="text-base font-semibold px-2 hover:bg-sidebar-accent rounded-md cursor-pointer">
                 Chatbot
               </span>
             </div>
@@ -37,8 +43,9 @@ export function AppSidebar({ user }: { user: User | undefined }) {
               <TooltipTrigger asChild>
                 <Button
                   variant="ghost"
+                  size="sm"
                   type="button"
-                  className="p-2 h-fit"
+                  className="p-2 h-fit w-8 rounded-full hover:bg-sidebar-accent"
                   onClick={() => {
                     setOpenMobile(false);
                     router.push('/');

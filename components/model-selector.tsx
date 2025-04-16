@@ -70,7 +70,7 @@ export function ModelSelector({
             className,
           )}
         >
-          <Button variant="outline" className="md:px-2 px-2 h-8 md:h-[34px] text-xs sm:text-sm">
+          <Button variant="outline" className="md:px-2 px-2 h-8 md:h-[34px] text-xs sm:text-sm flex items-center gap-1">
             <span className="truncate max-w-[80px] sm:max-w-none">
               {selectedChatModel?.name}
             </span>
@@ -82,13 +82,13 @@ export function ModelSelector({
             const { id, tier } = chatModel;
             const isPaidModel = tier === ModelTier.PAID;
             const isModelAvailable = availableModelIds.includes(id);
-            
+
             return (
               <DropdownMenuItem
                 key={id}
                 onSelect={() => {
                   setOpen(false);
-                  
+
                   // If this is a paid model and user doesn't have access, redirect to subscription page
                   if (isPaidModel && !isPaidUser) {
                     setSelectedProModel(chatModel.name);

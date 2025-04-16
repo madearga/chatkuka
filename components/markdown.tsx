@@ -12,21 +12,21 @@ const components: Partial<Components> = {
   pre: ({ children }) => <>{children}</>,
   ol: ({ node, children, ...props }) => {
     return (
-      <ol className="list-decimal list-outside ml-4" {...props}>
+      <ol className="list-decimal list-outside ml-6 my-4 space-y-2" {...props}>
         {children}
       </ol>
     );
   },
   li: ({ node, children, ...props }) => {
     return (
-      <li className="py-1" {...props}>
+      <li className="py-0.5 pl-1" {...props}>
         {children}
       </li>
     );
   },
   ul: ({ node, children, ...props }) => {
     return (
-      <ul className="list-decimal list-outside ml-4" {...props}>
+      <ul className="list-disc list-outside ml-6 my-4 space-y-2" {...props}>
         {children}
       </ul>
     );
@@ -131,25 +131,25 @@ interface MarkdownProps {
   [key: string]: any;
 }
 
-const NonMemoizedMarkdown = ({ 
-  children, 
+const NonMemoizedMarkdown = ({
+  children,
   content,
   className,
   ...props // Capture other props but don't use them
 }: MarkdownProps) => {
   // Use either content or children, prioritizing children
   const markdownText = children || content || '';
-  
+
   // Pre-process the markdown to handle source references
   const processedMarkdown = useMemo(() => {
     if (!markdownText) return '';
-    
+
     // Check if the markdown contains source references
     if (markdownText.includes('[Source')) {
       // We'll let the paragraph component handle it
       return markdownText;
     }
-    
+
     return markdownText;
   }, [markdownText]);
 

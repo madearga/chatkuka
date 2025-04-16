@@ -142,7 +142,7 @@ const PurePreviewMessage = ({
                 )}
               >
                 {message.role === 'assistant' && (
-                  <div className="size-8 flex items-center rounded-full justify-center ring-1 shrink-0 ring-border bg-background">
+                  <div className="size-8 flex items-center rounded-full justify-center ring-1 shrink-0 ring-border bg-background/80">
                     <div className="translate-y-px">
                       <SparklesIcon size={14} />
                     </div>
@@ -174,7 +174,9 @@ const PurePreviewMessage = ({
                             <div
                               className={cn(
                                 'flex-grow break-words max-w-full overflow-hidden',
-                                message.role === 'user' ? 'bg-zinc-200 text-zinc-900 px-3 py-2 rounded-xl dark:bg-zinc-700 dark:text-zinc-100' : 'bg-muted/50 border border-border/50 px-3 py-2 rounded-xl'
+                                message.role === 'user'
+                                  ? 'bg-primary text-primary-foreground px-3 py-2 rounded-xl group-data-[role=user]/message:ml-auto'
+                                  : 'bg-muted/50 text-foreground border border-border/50 px-3 py-2 rounded-xl'
                               )}
                             >
                               <ResponseStream
