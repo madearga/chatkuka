@@ -54,7 +54,7 @@ export function AIInputWithSearch({
   const handleSubmit = () => {
     if (value.trim() && !isSubmitting) {
       setIsSubmitting(true);
-      
+
       try {
         onSubmit?.(value, showSearch);
         setValue("");
@@ -92,7 +92,7 @@ export function AIInputWithSearch({
               id={id}
               value={value}
               placeholder={showSearch ? "Search the web..." : "Send a message..."}
-              className="w-full rounded-xl rounded-b-none px-4 py-3 bg-black/5 dark:bg-white/5 border-none dark:text-white placeholder:text-black/70 dark:placeholder:text-white/70 resize-none focus-visible:ring-0 leading-[1.2]"
+              className="w-full rounded-xl rounded-b-none px-3 sm:px-4 py-2 sm:py-3 bg-black/5 dark:bg-white/5 border-none dark:text-white placeholder:text-black/70 dark:placeholder:text-white/70 resize-none focus-visible:ring-0 leading-[1.2] text-sm sm:text-base"
               ref={textareaRef}
               disabled={isSubmitting}
               onKeyDown={(e) => {
@@ -109,25 +109,25 @@ export function AIInputWithSearch({
           </div>
 
           <div className="h-12 bg-black/5 dark:bg-white/5 rounded-b-xl">
-            <div className="absolute left-3 bottom-3 flex items-center gap-2">
+            <div className="absolute left-2 sm:left-3 bottom-3 flex items-center gap-1 sm:gap-2">
               <label className={cn(
                 "cursor-pointer rounded-lg p-2 bg-black/5 dark:bg-white/5",
                 isSubmitting && "opacity-50 cursor-not-allowed"
               )}>
-                <input 
-                  type="file" 
-                  className="hidden" 
+                <input
+                  type="file"
+                  className="hidden"
                   onChange={handleFileChange}
                   disabled={isSubmitting}
                 />
-                <Paperclip className="w-4 h-4 text-black/40 dark:text-white/40 hover:text-black dark:hover:text-white transition-colors" />
+                <Paperclip className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-black/40 dark:text-white/40 hover:text-black dark:hover:text-white transition-colors" />
               </label>
               <button
                 type="button"
                 onClick={() => setShowSearch(!showSearch)}
                 disabled={isSubmitting}
                 className={cn(
-                  "rounded-full transition-all flex items-center gap-2 px-1.5 py-1 border h-8",
+                  "rounded-full transition-all flex items-center gap-1 sm:gap-2 px-1 sm:px-1.5 py-1 border h-7 sm:h-8",
                   showSearch
                     ? "bg-sky-500/15 border-sky-400 text-sky-500"
                     : "bg-black/5 dark:bg-white/5 border-transparent text-black/40 dark:text-white/40 hover:text-black dark:hover:text-white",
@@ -157,7 +157,7 @@ export function AIInputWithSearch({
                   >
                     <Globe
                       className={cn(
-                        "w-4 h-4",
+                        "w-3.5 h-3.5 sm:w-4 sm:h-4",
                         showSearch
                           ? "text-sky-500"
                           : "text-inherit"
@@ -175,7 +175,7 @@ export function AIInputWithSearch({
                       }}
                       exit={{ width: 0, opacity: 0 }}
                       transition={{ duration: 0.2 }}
-                      className="text-sm overflow-hidden whitespace-nowrap text-sky-500 flex-shrink-0"
+                      className="text-xs sm:text-sm overflow-hidden whitespace-nowrap text-sky-500 flex-shrink-0"
                     >
                       Search
                     </motion.span>
@@ -183,20 +183,20 @@ export function AIInputWithSearch({
                 </AnimatePresence>
               </button>
             </div>
-            <div className="absolute right-3 bottom-3">
+            <div className="absolute right-2 sm:right-3 bottom-3">
               <button
                 type="button"
                 onClick={handleSubmit}
                 disabled={!value.trim() || isSubmitting}
                 className={cn(
-                  "rounded-lg p-2 transition-colors",
+                  "rounded-lg p-1.5 sm:p-2 transition-colors",
                   value && !isSubmitting
                     ? "bg-sky-500/15 text-sky-500"
                     : "bg-black/5 dark:bg-white/5 text-black/40 dark:text-white/40",
                   isSubmitting && "opacity-50 cursor-not-allowed"
                 )}
               >
-                <Send className="w-4 h-4" />
+                <Send className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </button>
             </div>
           </div>
@@ -204,4 +204,4 @@ export function AIInputWithSearch({
       </div>
     </div>
   );
-} 
+}

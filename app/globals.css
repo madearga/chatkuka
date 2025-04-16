@@ -622,6 +622,18 @@ button[type="button"]:hover {
   }
 }
 
+/* Hide input area buttons when sidebar is open on mobile */
+[data-mobile-sidebar-open="true"] .chat-input-buttons {
+    display: none !important;
+}
+
+/* Hide the entire input area when sidebar is open on mobile */
+@media screen and (max-width: 640px) {
+    [data-mobile-sidebar-open="true"] {
+        visibility: hidden;
+    }
+}
+
 /* Mobile-specific styles without causing hydration issues */
 @media screen and (max-width: 640px) {
     /* Better tap targets for mobile */

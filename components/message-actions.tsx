@@ -64,12 +64,12 @@ export function PureMessageActions({
 
   return (
     <TooltipProvider delayDuration={0}>
-      <div className="flex flex-row gap-2">
+      <div className="flex flex-row gap-1 sm:gap-2">
         {message.role === 'user' && (
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
-                className="py-1 px-2 h-fit text-muted-foreground"
+                className="py-0.5 px-1.5 sm:py-1 sm:px-2 h-fit text-muted-foreground"
                 variant="outline"
                 onClick={handleCopy}
                 disabled={isLoading}
@@ -86,7 +86,7 @@ export function PureMessageActions({
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
-                  className="py-1 px-2 h-fit text-muted-foreground"
+                  className="py-0.5 px-1.5 sm:py-1 sm:px-2 h-fit text-muted-foreground"
                   variant="outline"
                   onClick={() => reload()}
                   disabled={isLoading}
@@ -100,7 +100,7 @@ export function PureMessageActions({
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
-                  className="py-1 px-2 h-fit text-muted-foreground"
+                  className="py-0.5 px-1.5 sm:py-1 sm:px-2 h-fit text-muted-foreground"
                   variant="outline"
                   onClick={handleCopy}
                   disabled={isLoading}
@@ -114,7 +114,7 @@ export function PureMessageActions({
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
-                  className="py-1 px-2 h-fit text-muted-foreground !pointer-events-auto"
+                  className="py-0.5 px-1.5 sm:py-1 sm:px-2 h-fit text-muted-foreground !pointer-events-auto"
                   variant="outline"
                   disabled={isLoading || vote?.isUpvoted}
                   onClick={async () => {
@@ -166,7 +166,7 @@ export function PureMessageActions({
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
-                  className="py-1 px-2 h-fit text-muted-foreground !pointer-events-auto"
+                  className="py-0.5 px-1.5 sm:py-1 sm:px-2 h-fit text-muted-foreground !pointer-events-auto"
                   variant="outline"
                   disabled={isLoading || (vote && !vote.isUpvoted)}
                   onClick={async () => {

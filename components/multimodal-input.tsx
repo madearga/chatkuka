@@ -18,6 +18,7 @@ import {
   type ChangeEvent,
   memo,
 } from 'react';
+import { useSidebar } from '@/components/ui/sidebar';
 import { toast } from 'sonner';
 import { useLocalStorage, useWindowSize } from 'usehooks-ts';
 import { nanoid } from 'nanoid';
@@ -92,6 +93,7 @@ export function PureMultimodalInput({
 }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { width } = useWindowSize();
+  const { isMobile, openMobile } = useSidebar();
   const [isSearchEnabled, setIsSearchEnabled] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [lastInputValue, setLastInputValue] = useState("");
@@ -394,7 +396,9 @@ export function PureMultimodalInput({
   };
 
   return (
-    <div className={`flex gap-2 flex-col w-full overflow-y-auto ${className || ''}`}>
+    <div
+      className={`flex gap-2 flex-col w-full overflow-y-auto ${className || ''}`}
+      data-mobile-sidebar-open={isMobile && openMobile ? "true" : "false"}>
       <div className="flex flex-col w-full gap-2 relative">
         <div
           className={cn(
@@ -414,9 +418,9 @@ export function PureMultimodalInput({
             value={input}
             className={cn(
               "min-h-[24px] w-full resize-none border-0 bg-transparent",
-              "py-3 px-4 pr-20 max-h-[300px] overflow-y-auto",
+              "py-1.5 sm:py-3 px-2 sm:px-4 pr-14 sm:pr-20 max-h-[300px] overflow-y-auto",
               "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-offset-0 focus-visible:ring-ring",
-              "text-sm sm:text-base placeholder:text-muted-foreground placeholder:opacity-70",
+              "text-sm sm:text-base placeholder:text-muted-foreground placeholder:opacity-70 dark:text-white",
               input.length === 0 && 'min-h-[48px]'
             )}
             spellCheck={false}
@@ -439,7 +443,7 @@ export function PureMultimodalInput({
               type="button"
               variant="ghost"
               size="icon"
-              className="absolute right-[50px] sm:right-[60px] bottom-[10px] h-6 w-6 p-1 text-muted-foreground hover:text-foreground z-10"
+              className="absolute right-[36px] sm:right-[60px] bottom-[8px] sm:bottom-[10px] h-5 w-5 sm:h-6 sm:w-6 p-0.5 sm:p-1 text-muted-foreground hover:text-foreground z-10"
               onClick={(e) => {
                 e.preventDefault();
                 setInput('');
@@ -448,7 +452,7 @@ export function PureMultimodalInput({
               }}
               aria-label="Clear input"
             >
-              <X size={16} />
+              <X size={14} className="sm:size-[16px]" />
             </Button>
           )}
 
@@ -505,7 +509,7 @@ export function PureMultimodalInput({
                 type="button"
                 aria-label={isSearchEnabled ? "Search web" : "Send message"}
                 className={cn(
-                  "p-1.5 rounded-full",
+                  "p-1 sm:p-1.5 rounded-full",
                   input.trim()
                     ? 'bg-primary text-primary-foreground hover:bg-primary/90'
                     : 'bg-black/5 dark:bg-white/5 text-black/40 dark:text-white/40'
@@ -516,7 +520,7 @@ export function PureMultimodalInput({
                 }}
                 disabled={input.length === 0 || uploadQueue.length > 0 || isSubmitting}
               >
-                <ArrowUp size={18} />
+                <ArrowUp size={16} className="sm:size-[18px]" />
               </button>
             )}
           </div>

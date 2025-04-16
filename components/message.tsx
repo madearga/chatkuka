@@ -124,7 +124,7 @@ const PurePreviewMessage = ({
         <Tooltip>
           <TooltipTrigger asChild>
             <motion.div
-              className="w-full mx-auto max-w-3xl px-2 sm:px-4 group/message"
+              className="w-full mx-auto max-w-3xl px-0.5 sm:px-4 group/message"
               initial={{ y: 5, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               exit={{ opacity: 0, y: -5, transition: { duration: 0.1 } }}
@@ -134,7 +134,7 @@ const PurePreviewMessage = ({
             >
               <div
                 className={cn(
-                  'flex gap-3 sm:gap-4 w-full group-data-[role=user]/message:ml-auto group-data-[role=user]/message:max-w-2xl',
+                  'flex gap-2 sm:gap-4 w-full group-data-[role=user]/message:ml-auto group-data-[role=user]/message:max-w-2xl',
                   {
                     'w-full': mode === 'edit',
                     'group-data-[role=user]/message:w-fit': mode !== 'edit',
@@ -142,20 +142,20 @@ const PurePreviewMessage = ({
                 )}
               >
                 {message.role === 'assistant' && (
-                  <div className="size-8 flex items-center rounded-full justify-center ring-1 shrink-0 ring-border bg-background/80">
+                  <div className="size-7 sm:size-8 flex items-center rounded-full justify-center ring-1 shrink-0 ring-border bg-background/80">
                     <div className="translate-y-px">
-                      <SparklesIcon size={14} />
+                      <SparklesIcon size={12} />
                     </div>
                   </div>
                 )}
 
-                <div className="flex flex-col gap-4 w-full overflow-hidden max-w-full">
+                <div className="flex flex-col gap-2 sm:gap-3 w-full overflow-hidden max-w-full">
                   {/* Render message.parts */}
                   {message.parts?.map((part, index) => {
                     switch (part.type) {
                       case 'text':
                         return (
-                          <div key={index} className="flex flex-row items-start gap-2">
+                          <div key={index} className="flex flex-row items-start gap-1 sm:gap-2">
                             {message.role === 'user' && !isReadonly && mode === 'view' && (
                               <Tooltip>
                                 <TooltipTrigger asChild>
@@ -175,8 +175,8 @@ const PurePreviewMessage = ({
                               className={cn(
                                 'flex-grow break-words max-w-full overflow-hidden',
                                 message.role === 'user'
-                                  ? 'bg-primary text-white dark:text-white px-3 py-2 rounded-xl group-data-[role=user]/message:ml-auto'
-                                  : 'bg-muted/50 text-foreground border border-border/50 px-3 py-2 rounded-xl'
+                                  ? 'bg-primary text-white dark:bg-zinc-800 dark:text-white px-2 py-1.5 sm:px-3 sm:py-2 rounded-xl group-data-[role=user]/message:ml-auto'
+                                  : 'bg-muted/50 text-foreground border border-border/50 px-2 py-1.5 sm:px-3 sm:py-2 rounded-xl'
                               )}
                             >
                               <ResponseStream
@@ -184,7 +184,10 @@ const PurePreviewMessage = ({
                                 mode="typewriter"
                                 speed={100}
                                 characterChunkSize={2}
-                                className="prose max-w-full text-foreground"
+                                className={cn(
+                                  "prose max-w-full text-sm sm:text-base",
+                                  message.role === 'user' ? 'text-white dark:text-white' : 'text-foreground'
+                                )}
                               />
                             </div>
                           </div>
