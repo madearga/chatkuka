@@ -36,7 +36,16 @@ import { SearchResults } from './search-results';
 import { SearchProgress, type SearchStatus } from './search-progress';
 
 import { File, FileText, FileSpreadsheet, FileCode } from 'lucide-react';
-import { ResponseStream } from './ui/response-stream';
+
+// Simple loading indicator component for text responses
+const ThinkingDots = () => (
+  <div className="flex space-x-1 items-center h-full py-1">
+    <span className="sr-only">Generating response...</span>
+    <div className="h-1.5 w-1.5 bg-current rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+    <div className="h-1.5 w-1.5 bg-current rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+    <div className="h-1.5 w-1.5 bg-current rounded-full animate-bounce"></div>
+  </div>
+);
 
 // Tambahkan interface untuk data pencarian
 interface SearchData {
@@ -184,18 +193,20 @@ const PurePreviewMessage = ({
                                   : 'bg-muted/50 text-foreground border border-border/50 px-2 py-1.5 sm:px-3 sm:py-2 rounded-xl',
                               )}
                             >
-                              <ResponseStream
-                                textStream={part.text}
-                                mode="typewriter"
-                                speed={100}
-                                characterChunkSize={2}
-                                className={cn(
-                                  'prose max-w-full text-sm sm:text-base',
-                                  message.role === 'user'
-                                    ? 'text-white dark:text-white'
-                                    : 'text-foreground',
-                                )}
-                              />
+                              {message.role === 'assistant' && isLoading ? (
+                                <ThinkingDots />
+                              ) : (
+                                <Markdown
+                                  className={cn(
+                                    'prose max-w-full text-sm sm:text-base',
+                                    message.role === 'user'
+                                      ? 'text-white dark:text-white'
+                                      : 'text-foreground',
+                                  )}
+                                >
+                                  {part.text}
+                                </Markdown>
+                              )}
                             </div>
                           </div>
                         );
