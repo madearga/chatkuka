@@ -41,6 +41,7 @@ function PureEditor({
   suggestions,
   status,
   isCurrentVersion,
+  onEditorViewChange,
 }: EditorProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<EditorView | null>(null);
@@ -82,9 +83,9 @@ function PureEditor({
         onEditorViewChange?.(null);
       }
     };
-    // NOTE: we only want to run this effect once
-    // eslint-disable-next-line
-  }, []);
+    // We still want to run this effect once, but include onEditorViewChange in deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onEditorViewChange]);
 
   useEffect(() => {
     if (editorRef.current) {
@@ -169,7 +170,8 @@ function areEqual(prevProps: EditorProps, nextProps: EditorProps) {
     prevProps.isCurrentVersion === nextProps.isCurrentVersion &&
     !(prevProps.status === 'streaming' && nextProps.status === 'streaming') &&
     prevProps.content === nextProps.content &&
-    prevProps.onSaveContent === nextProps.onSaveContent
+    prevProps.onSaveContent === nextProps.onSaveContent &&
+    prevProps.onEditorViewChange === nextProps.onEditorViewChange
   );
 }
 

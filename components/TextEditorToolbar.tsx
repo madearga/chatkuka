@@ -25,6 +25,10 @@ import {
   Quote,
   Link2,
   Unlink,
+  Heading1,
+  Heading2,
+  Heading3,
+  Text,
 } from 'lucide-react';
 import {
   documentSchema,
@@ -33,6 +37,13 @@ import {
   blockquoteNode,
   paragraphNode,
 } from '@/lib/editor/config';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 interface TextEditorToolbarProps {
   editorView: EditorView | null;
@@ -43,6 +54,7 @@ export const TextEditorToolbar: FC<TextEditorToolbarProps> = ({
   editorView,
   isDisabled,
 }) => {
+
   function runCommand(
     command: (
       state: import('prosemirror-state').EditorState,
@@ -55,8 +67,59 @@ export const TextEditorToolbar: FC<TextEditorToolbarProps> = ({
     editorView.focus();
   }
 
+  function applyHeadingStyle(level: number | null) {
+    if (!editorView) return;
+
+    if (level === null) {
+      // Apply paragraph style (normal text)
+      setBlockType(paragraphNode)(editorView.state, editorView.dispatch);
+    } else {
+      // Apply heading style with specified level
+      setBlockType(documentSchema.nodes.heading, { level })(editorView.state, editorView.dispatch);
+    }
+    editorView.focus();
+  }
+
   return (
     <div className="sticky top-0 z-10 flex items-center gap-1 border-b border-border/50 bg-background px-2 py-1 mb-2">
+      <Select
+        disabled={isDisabled}
+        onValueChange={(value) => {
+          const level = value === 'normal' ? null : parseInt(value.replace('h', ''));
+          applyHeadingStyle(level);
+        }}
+        defaultValue="normal"
+      >
+        <SelectTrigger className="h-7 px-2 text-xs border-none bg-transparent hover:bg-accent focus:ring-0 focus:ring-offset-0 w-[110px]">
+          <SelectValue placeholder="Normal text" />
+        </SelectTrigger>
+        <SelectContent align="start" sideOffset={4} className="min-w-[110px]">
+          <SelectItem value="normal" className="text-xs py-1">
+            <div className="flex items-center gap-2">
+              <Text className="size-3.5" />
+              <span>Normal text</span>
+            </div>
+          </SelectItem>
+          <SelectItem value="h1" className="text-xs py-1">
+            <div className="flex items-center gap-2">
+              <Heading1 className="size-3.5" />
+              <span>Heading 1</span>
+            </div>
+          </SelectItem>
+          <SelectItem value="h2" className="text-xs py-1">
+            <div className="flex items-center gap-2">
+              <Heading2 className="size-3.5" />
+              <span>Heading 2</span>
+            </div>
+          </SelectItem>
+          <SelectItem value="h3" className="text-xs py-1">
+            <div className="flex items-center gap-2">
+              <Heading3 className="size-3.5" />
+              <span>Heading 3</span>
+            </div>
+          </SelectItem>
+        </SelectContent>
+      </Select>
       <Button
         variant="ghost"
         size="sm"
