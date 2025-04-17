@@ -4,10 +4,12 @@ import { isToday, isYesterday } from 'date-fns';
 import Link from 'next/link';
 import { useParams, usePathname, useRouter } from 'next/navigation';
 import type { User } from 'next-auth';
-import { memo, useEffect, useState } from 'react';
+import { memo, useEffect, useState, useCallback } from 'react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import useSWR from 'swr';
+import useSWR, { useSWRConfig } from 'swr';
+import { Pin, PinOff, Loader2 as LoaderIcon } from 'lucide-react';
+import { togglePinChat } from '@/app/(chat)/actions';
 
 import {
   CheckCircleFillIcon,
@@ -42,6 +44,7 @@ import {
 import {
   SidebarGroup,
   SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuAction,
   SidebarMenuButton,
@@ -72,9 +75,47 @@ const PureChatItem = ({
     chatId: chat.id,
     initialVisibility: chat.visibility,
   });
+  const [isPinning, setIsPinning] = useState(false);
+  const { mutate } = useSWRConfig();
+
+  const handleTogglePin = useCallback(async () => {
+    setIsPinning(true);
+    const newPinStatus = !chat.isPinned;
+
+    // Optimistic update
+    mutate('/api/history', (currentHistory: Chat[] | undefined) => {
+      if (!currentHistory) return [];
+      const updatedHistory = [...currentHistory];
+      const chatIndex = updatedHistory.findIndex(c => c.id === chat.id);
+      if (chatIndex !== -1) {
+        updatedHistory[chatIndex] = { ...updatedHistory[chatIndex], isPinned: newPinStatus };
+        // Re-sort array based on new rules
+        updatedHistory.sort((a, b) =>
+          (b.isPinned === a.isPinned ? 0 : b.isPinned ? 1 : -1) ||
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+      }
+      return updatedHistory;
+    }, false);
+
+    try {
+      const result = await togglePinChat({ chatId: chat.id, isPinned: newPinStatus });
+      if (!result.success) {
+        throw new Error(result.error || 'Server action failed');
+      }
+      toast.success(newPinStatus ? 'Chat pinned' : 'Chat unpinned');
+    } catch (error) {
+      console.error('Pin toggle failed:', error);
+      toast.error('Failed to update pin status');
+      // Rollback by revalidating from server
+      mutate('/api/history');
+    } finally {
+      setIsPinning(false);
+    }
+  }, [chat, mutate]);
 
   return (
-    <SidebarMenuItem className="flex items-center">
+    <SidebarMenuItem className="group flex items-center">
       <SidebarMenuButton
         asChild
         isActive={isActive}
@@ -109,6 +150,28 @@ const PureChatItem = ({
           <span className="truncate text-sm">{chat.title}</span>
         </Link>
       </SidebarMenuButton>
+
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <SidebarMenuAction
+            className="opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity h-6 w-6 p-1 relative !right-auto !top-auto mr-1 hover:bg-sidebar-accent"
+            onClick={handleTogglePin}
+            disabled={isPinning}
+            aria-label={chat.isPinned ? "Unpin chat" : "Pin chat"}
+          >
+            {isPinning ? (
+              <LoaderIcon size={14} className="animate-spin" />
+            ) : chat.isPinned ? (
+              <PinOff size={14} className="text-primary" />
+            ) : (
+              <Pin size={14} />
+            )}
+          </SidebarMenuAction>
+        </TooltipTrigger>
+        <TooltipContent side="right" align="center">
+          {chat.isPinned ? "Unpin chat" : "Pin chat"}
+        </TooltipContent>
+      </Tooltip>
 
       <DropdownMenu modal={true}>
         <DropdownMenuTrigger asChild>
@@ -200,6 +263,7 @@ const PureChatItem = ({
 
 export const ChatItem = memo(PureChatItem, (prevProps, nextProps) => {
   if (prevProps.isActive !== nextProps.isActive) return false;
+  if (prevProps.chat.isPinned !== nextProps.chat.isPinned) return false;
   return true;
 });
 
@@ -307,13 +371,41 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
           <SidebarMenu>
             {history &&
               (() => {
-                const groupedChats = groupChatsByDate(history);
+                // Filter pinned and unpinned chats
+                const pinnedChats = history?.filter(chat => chat.isPinned) || [];
+                const unpinnedChats = history?.filter(chat => !chat.isPinned) || [];
+
+                // Group unpinned chats by date
+                const groupedChats = groupChatsByDate(unpinnedChats);
 
                 return (
                   <>
+                    {/* Pinned section */}
+                    {pinnedChats.length > 0 && (
+                      <>
+                        <SidebarGroupLabel className="px-2 py-1 text-xs text-sidebar-foreground/50 flex items-center gap-1.5 mt-2">
+                          <Pin size={12} />
+                          Pinned
+                        </SidebarGroupLabel>
+                        {pinnedChats.map((chat) => (
+                          <ChatItem
+                            key={chat.id}
+                            chat={chat}
+                            isActive={chat.id === id}
+                            onDelete={(chatId) => {
+                              setDeleteId(chatId);
+                              setShowDeleteDialog(true);
+                            }}
+                            setOpenMobile={setOpenMobile}
+                          />
+                        ))}
+                      </>
+                    )}
+
+                    {/* Today section */}
                     {groupedChats.today.length > 0 && (
                       <>
-                        <div className="px-2 py-1 text-xs text-sidebar-foreground/50">
+                        <div className={cn("px-2 py-1 text-xs text-sidebar-foreground/50", pinnedChats.length > 0 && "mt-6")}>
                           Today
                         </div>
                         {groupedChats.today.map((chat) => (
@@ -331,9 +423,11 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
                       </>
                     )}
 
+                    {/* Yesterday section */}
                     {groupedChats.yesterday.length > 0 && (
                       <>
-                        <div className="px-2 py-1 text-xs text-sidebar-foreground/50 mt-6">
+                        <div className={cn("px-2 py-1 text-xs text-sidebar-foreground/50 mt-6",
+                          pinnedChats.length > 0 && groupedChats.today.length === 0 && "mt-6")}>
                           Yesterday
                         </div>
                         {groupedChats.yesterday.map((chat) => (
@@ -351,6 +445,7 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
                       </>
                     )}
 
+                    {/* Last 7 days section */}
                     {groupedChats.lastWeek.length > 0 && (
                       <>
                         <div className="px-2 py-1 text-xs text-sidebar-foreground/50 mt-6">
@@ -371,6 +466,7 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
                       </>
                     )}
 
+                    {/* Last 30 days section */}
                     {groupedChats.lastMonth.length > 0 && (
                       <>
                         <div className="px-2 py-1 text-xs text-sidebar-foreground/50 mt-6">
@@ -391,6 +487,7 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
                       </>
                     )}
 
+                    {/* Older section */}
                     {groupedChats.older.length > 0 && (
                       <>
                         <div className="px-2 py-1 text-xs text-sidebar-foreground/50 mt-6">

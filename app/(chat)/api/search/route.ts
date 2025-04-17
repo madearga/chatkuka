@@ -116,6 +116,7 @@ function transformSearchResults(searchResults: any[], query: string): Chat[] {
       createdAt: result.createdAt ? new Date(result.createdAt) : new Date(), // Ensure it's a Date object
       userId: result.userId || '',
       visibility: (result.visibility || 'private') as 'public' | 'private',
+      isPinned: result.isPinned || false, // Add isPinned field with default false
       // Add preview for display purposes (not part of Chat type)
       preview: preview || 'No preview available',
       // Add role for display purposes (not part of Chat type)

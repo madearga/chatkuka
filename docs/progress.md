@@ -1045,3 +1045,301 @@ For AI agents working with this codebase:
 
 ---
 Last updated: 2025-04-17
+
+## Pinned Chat History Implementation (April 17, 2025)
+
+### Overview
+We've implemented a new feature that allows users to pin important chats to the top of their sidebar. This enhancement improves user experience by making frequently accessed conversations more accessible and organized. The implementation includes database schema changes, backend logic, and frontend UI components.
+
+### Core Changes
+
+#### 1. Database Schema Update (`lib/db/schema.ts`)
+**Before:**
+```typescript
+export const chat = pgTable('Chat', {
+  id: uuid('id').primaryKey().notNull().defaultRandom(),
+  createdAt: timestamp('createdAt').notNull(),
+  title: text('title').notNull(),
+  userId: uuid('userId')
+    .notNull()
+    .references(() => user.id),
+  visibility: varchar('visibility', { enum: ['public', 'private'] })
+    .notNull()
+    .default('private'),
+});
+```
+
+**After:**
+```typescript
+export const chat = pgTable('Chat', {
+  id: uuid('id').primaryKey().notNull().defaultRandom(),
+  createdAt: timestamp('createdAt').notNull(),
+  title: text('title').notNull(),
+  userId: uuid('userId')
+    .notNull()
+    .references(() => user.id),
+  visibility: varchar('visibility', { enum: ['public', 'private'] })
+    .notNull()
+    .default('private'),
+  isPinned: boolean('isPinned').notNull().default(false),
+});
+```
+
+#### 2. Database Query Updates (`lib/db/queries.ts`)
+**Added new function:**
+```typescript
+export async function updateChatPinnedStatus({
+  chatId,
+  isPinned,
+}: {
+  chatId: string;
+  isPinned: boolean;
+}) {
+  try {
+    return await db.update(chat).set({ isPinned }).where(eq(chat.id, chatId));
+  } catch (error) {
+    console.error('Failed to update chat pinned status in database');
+    throw error;
+  }
+}
+```
+
+**Modified existing function:**
+```typescript
+export async function getChatsByUserId({ id }: { id: string }) {
+  try {
+    return await db
+      .select()
+      .from(chat)
+      .where(eq(chat.userId, id))
+      .orderBy(desc(chat.isPinned), desc(chat.createdAt));
+  } catch (error) {
+    console.error('Failed to get chats by user from database');
+    throw error;
+  }
+}
+```
+
+#### 3. Server Action Implementation (`app/(chat)/actions.ts`)
+```typescript
+const togglePinSchema = z.object({
+  chatId: z.string().uuid('Invalid Chat ID format'),
+  isPinned: z.boolean(),
+});
+
+export async function togglePinChat({
+  chatId,
+  isPinned,
+}: {
+  chatId: string;
+  isPinned: boolean;
+}) {
+  // Authentication check
+  const session = await auth();
+  if (!session?.user?.id) {
+    throw new Error('Unauthorized: User not logged in.');
+  }
+
+  // Input validation
+  const validation = togglePinSchema.safeParse({ chatId, isPinned });
+  if (!validation.success) {
+    console.error('Invalid input for togglePinChat:', validation.error.flatten());
+    throw new Error('Invalid input data provided.');
+  }
+
+  // Ownership check
+  const chatData = await getChatById({ id: validation.data.chatId });
+  if (!chatData) {
+    throw new Error('Chat not found.');
+  }
+  if (chatData.userId !== session.user.id) {
+    throw new Error('Permission denied: You do not own this chat.');
+  }
+
+  try {
+    // Update pin status
+    await updateChatPinnedStatus({
+      chatId: validation.data.chatId,
+      isPinned: validation.data.isPinned,
+    });
+
+    // Revalidate paths
+    revalidatePath('/api/history');
+    revalidatePath('/');
+    revalidatePath('/chat/[id]', 'layout');
+
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to toggle pin status:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to toggle pin status',
+    };
+  }
+}
+```
+
+#### 4. Frontend Implementation (`components/sidebar-history.tsx`)
+**Pin/Unpin Button:**
+```typescript
+<Tooltip>
+  <TooltipTrigger asChild>
+    <SidebarMenuAction
+      className="opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity h-6 w-6 p-1 relative !right-auto !top-auto mr-1 hover:bg-sidebar-accent"
+      onClick={handleTogglePin}
+      disabled={isPinning}
+      aria-label={chat.isPinned ? "Unpin chat" : "Pin chat"}
+    >
+      {isPinning ? (
+        <LoaderIcon size={14} className="animate-spin" />
+      ) : chat.isPinned ? (
+        <PinOff size={14} className="text-primary" />
+      ) : (
+        <Pin size={14} />
+      )}
+    </SidebarMenuAction>
+  </TooltipTrigger>
+  <TooltipContent side="right" align="center">
+    {chat.isPinned ? "Unpin chat" : "Pin chat"}
+  </TooltipContent>
+</Tooltip>
+```
+
+**Optimistic Updates:**
+```typescript
+const handleTogglePin = useCallback(async () => {
+  setIsPinning(true);
+  const newPinStatus = !chat.isPinned;
+
+  // Optimistic update
+  mutate('/api/history', (currentHistory: Chat[] | undefined) => {
+    if (!currentHistory) return [];
+    const updatedHistory = [...currentHistory];
+    const chatIndex = updatedHistory.findIndex(c => c.id === chat.id);
+    if (chatIndex !== -1) {
+      updatedHistory[chatIndex] = { ...updatedHistory[chatIndex], isPinned: newPinStatus };
+      // Re-sort array based on new rules
+      updatedHistory.sort((a, b) =>
+        (b.isPinned === a.isPinned ? 0 : b.isPinned ? 1 : -1) ||
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+    }
+    return updatedHistory;
+  }, false);
+
+  try {
+    const result = await togglePinChat({ chatId: chat.id, isPinned: newPinStatus });
+    if (!result.success) {
+      throw new Error(result.error || 'Server action failed');
+    }
+    toast.success(newPinStatus ? 'Chat pinned' : 'Chat unpinned');
+  } catch (error) {
+    console.error('Pin toggle failed:', error);
+    toast.error('Failed to update pin status');
+    // Rollback by revalidating from server
+    mutate('/api/history');
+  } finally {
+    setIsPinning(false);
+  }
+}, [chat, mutate]);
+```
+
+**Sidebar Layout Update:**
+```typescript
+// Filter pinned and unpinned chats
+const pinnedChats = history?.filter(chat => chat.isPinned) || [];
+const unpinnedChats = history?.filter(chat => !chat.isPinned) || [];
+
+// Group unpinned chats by date
+const groupedChats = groupChatsByDate(unpinnedChats);
+
+// Render pinned section
+{pinnedChats.length > 0 && (
+  <>
+    <SidebarGroupLabel className="px-2 py-1 text-xs text-sidebar-foreground/50 flex items-center gap-1.5 mt-2">
+      <Pin size={12} />
+      Pinned
+    </SidebarGroupLabel>
+    {pinnedChats.map((chat) => (
+      <ChatItem
+        key={chat.id}
+        chat={chat}
+        isActive={chat.id === id}
+        onDelete={(chatId) => {
+          setDeleteId(chatId);
+          setShowDeleteDialog(true);
+        }}
+        setOpenMobile={setOpenMobile}
+      />
+    ))}
+  </>
+)}
+```
+
+#### 5. Search API Update (`app/(chat)/api/search/route.ts`)
+Added isPinned field to search results:
+```typescript
+return {
+  id: result.id || generateUUID(),
+  title: result.title || 'Untitled',
+  createdAt: result.createdAt ? new Date(result.createdAt) : new Date(),
+  userId: result.userId || '',
+  visibility: (result.visibility || 'private') as 'public' | 'private',
+  isPinned: result.isPinned || false, // Add isPinned field with default false
+  // Add preview for display purposes (not part of Chat type)
+  preview: preview || 'No preview available',
+  // Add role for display purposes (not part of Chat type)
+  role: result.role || 'user',
+} as Chat;
+```
+
+### Key Benefits
+
+1. **Improved Organization**
+   - Users can keep important chats easily accessible
+   - Clear visual separation between pinned and regular chats
+   - Intuitive UI with hover-to-reveal pin/unpin buttons
+
+2. **Enhanced User Experience**
+   - Optimistic updates for immediate feedback
+   - Loading states during pin/unpin operations
+   - Toast notifications for success/failure
+
+3. **Robust Implementation**
+   - Comprehensive validation and error handling
+   - Proper authentication and authorization checks
+   - Efficient database queries with appropriate sorting
+
+### Testing Guidelines
+
+1. **Pin Functionality**
+   - Verify chat moves to Pinned section when pinned
+   - Confirm pin icon changes to unpin icon
+   - Check that pinned chats maintain chronological order
+
+2. **Unpin Functionality**
+   - Verify chat returns to date group when unpinned
+   - Confirm unpin icon changes back to pin icon
+   - Check that unpinned chats appear in correct date groups
+
+3. **Edge Cases**
+   - Test with no chats pinned
+   - Test with all chats pinned
+   - Verify behavior with newly created chats
+
+### Mobile Considerations
+
+- Pin/unpin buttons are visible on hover and tap
+- Responsive design maintains usability on small screens
+- Touch targets are appropriately sized for mobile interaction
+
+### Known Issues & TODOs
+
+1. [ ] Add keyboard shortcuts for pin/unpin actions
+2. [ ] Implement drag-and-drop reordering of pinned chats
+3. [ ] Add bulk pin/unpin functionality
+4. [ ] Consider adding pin categories or labels
+5. [ ] Implement pin limit for free tier users
+
+---
+Last updated: 2025-04-17
