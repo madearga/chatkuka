@@ -19,11 +19,15 @@ export const textDocumentHandler = createDocumentHandler<'text'>({
     });
 
     try {
+      // Set temperature to 1 for o3 and o4-mini models which don't support temperature=0
+      const needsDefaultTemp = modelToUse === 'openai-o3' || modelToUse === 'openai-o4-mini';
+
       const { fullStream } = streamText({
         model: myProvider.languageModel(modelToUse),
         system:
           'Write about the given topic. Markdown is supported. Use headings wherever appropriate.',
         prompt: title,
+        temperature: needsDefaultTemp ? 1 : 0, // Set temperature to 1 for models that require it
       });
 
       for await (const delta of fullStream) {
@@ -53,6 +57,7 @@ export const textDocumentHandler = createDocumentHandler<'text'>({
             system:
               'Write about the given topic. Markdown is supported. Use headings wherever appropriate.',
             prompt: title,
+            temperature: 0, // Default temperature for artifact-model
           });
 
           for await (const delta of fullStream) {
@@ -103,10 +108,14 @@ export const textDocumentHandler = createDocumentHandler<'text'>({
     });
 
     try {
+      // Set temperature to 1 for o3 and o4-mini models which don't support temperature=0
+      const needsDefaultTemp = modelToUse === 'openai-o3' || modelToUse === 'openai-o4-mini';
+
       const { fullStream } = streamText({
         model: myProvider.languageModel(modelToUse),
         system: updateDocumentPrompt(document.content, 'text'),
         prompt: description,
+        temperature: needsDefaultTemp ? 1 : 0, // Set temperature to 1 for models that require it
         providerOptions: {
           openai: {
             prediction: {
@@ -142,6 +151,7 @@ export const textDocumentHandler = createDocumentHandler<'text'>({
             model: myProvider.languageModel('artifact-model'),
             system: updateDocumentPrompt(document.content, 'text'),
             prompt: description,
+            temperature: 0, // Default temperature for artifact-model
             providerOptions: {
               openai: {
                 prediction: {

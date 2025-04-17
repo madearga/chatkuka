@@ -16,6 +16,8 @@ const requestyOpenAI = createOpenAI({
   compatibility: 'strict',
 });
 
+
+
 export const DEFAULT_CHAT_MODEL: string = 'chat-model-small';
 
 export const myProvider = customProvider({
@@ -32,6 +34,8 @@ export const myProvider = customProvider({
     'chatgpt-4.1-nano': requestyOpenAI('openai/gpt-4.1-nano'),
     'chatgpt-4.1-mini': requestyOpenAI('openai/gpt-4.1-mini'),
     'chatgpt-4.1': requestyOpenAI('openai/gpt-4.1-2025-04-14'),
+    'openai-o3': requestyOpenAI('openai/o3-2025-04-16'),
+    'openai-o4-mini': requestyOpenAI('openai/o4-mini'),
 
     // DeepSeek Models
     'chat-model-reasoning': wrapLanguageModel({
@@ -83,6 +87,18 @@ export const chatModels: Array<ChatModel> = [
     name: 'ChatGPT 4.1 Mini',
     description: 'Smaller version of GPT-4.1 with good performance.',
     tier: MODEL_TIER_MAP['chatgpt-4.1-mini'],
+  },
+  {
+    id: 'openai-o3',
+    name: 'OpenAI o3',
+    description: 'OpenAI o3 model with advanced capabilities and efficiency.',
+    tier: MODEL_TIER_MAP['openai-o3'],
+  },
+  {
+    id: 'openai-o4-mini',
+    name: 'OpenAI o4-mini',
+    description: 'OpenAI o4-mini model with advanced capabilities.',
+    tier: MODEL_TIER_MAP['openai-o4-mini'],
   },
 
   // Google Models

@@ -24,6 +24,8 @@ export const MODEL_TIER_MAP: Record<string, ModelTier> = {
   // OpenAI
   'chatgpt-4o': ModelTier.PAID, // Latest OpenAI GPT-4o model
   'chatgpt-4.1': ModelTier.PAID, // OpenAI GPT-4.1
+  'openai-o3': ModelTier.PAID, // OpenAI o3
+  'openai-o4-mini': ModelTier.PAID, // OpenAI o4-mini
 
   // DeepSeek
   'chat-model-reasoning': ModelTier.PAID, // DeepSeek-R1-Distill-Llama-70B

@@ -298,12 +298,16 @@ export async function POST(request: Request) {
           systemMessage += `\n\nThe user requested web search, but it's not available. Please inform them that search is unavailable and answer based on your knowledge.`;
         }
 
+        // Set temperature to 1 for o3 and o4-mini models which don't support temperature=0
+        const needsDefaultTemp = selectedChatModel === 'openai-o3' || selectedChatModel === 'openai-o4-mini';
+
         const result = streamText({
           model: myProvider.languageModel(selectedChatModel),
           system: systemMessage,
           messages,
           maxSteps: 5,
           tools,
+          temperature: needsDefaultTemp ? 1 : 0, // Set temperature to 1 for models that require it
           onFinish: async (response) => {
             // Log the entire response object for debugging purposes
             console.log('[onFinish] Full Response Object:', JSON.stringify(response, null, 2));
