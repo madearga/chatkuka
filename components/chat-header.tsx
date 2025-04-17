@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useWindowSize } from 'usehooks-ts';
 
-import { ModelSelector } from '@/components/model-selector';
+
 import { SidebarToggle } from '@/components/sidebar-toggle';
 import { Button } from '@/components/ui/button';
 import { PlusIcon } from './icons'; // Removed VercelIcon import
@@ -48,12 +48,7 @@ function PureChatHeader({
       <div className="flex items-center gap-1 sm:gap-2 min-w-0 flex-1">
         <SidebarToggle />
 
-        {!isReadonly && (
-          <ModelSelector
-            selectedModelId={selectedModelId}
-            className="shrink-0 max-w-[140px] sm:max-w-none"
-          />
-        )}
+
       </div>
 
       {/* Right side - search, new chat button and visibility */}
@@ -111,6 +106,5 @@ function PureChatHeader({
 }
 
 export const ChatHeader = memo(PureChatHeader, (prevProps, nextProps) => {
-  return prevProps.selectedModelId === nextProps.selectedModelId &&
-         prevProps.setIsSearchOpen === nextProps.setIsSearchOpen;
+  return prevProps.setIsSearchOpen === nextProps.setIsSearchOpen;
 });

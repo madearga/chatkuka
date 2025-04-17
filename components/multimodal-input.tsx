@@ -23,6 +23,7 @@ import { toast } from 'sonner';
 import { useLocalStorage, useWindowSize } from 'usehooks-ts';
 import { nanoid } from 'nanoid';
 import { cn, sanitizeUIMessages, generateUUID } from '@/lib/utils';
+import { ModelSelector } from '@/components/model-selector';
 import {
   Paperclip,
   SendIcon,
@@ -58,6 +59,7 @@ export function PureMultimodalInput({
   chatId,
   input,
   setInput,
+  selectedChatModel,
   isLoading,
   stop,
   attachments,
@@ -71,6 +73,7 @@ export function PureMultimodalInput({
   chatId: string;
   input: string;
   setInput: (value: string) => void;
+  selectedChatModel: string;
   isLoading: boolean;
   stop: () => void;
   attachments: Array<Attachment>;
@@ -413,6 +416,7 @@ export function PureMultimodalInput({
             'focus-within:ring-1 focus-within:ring-ring focus-within:border-input',
             'dark:border-zinc-700',
             'shadow-sm',
+            'flex flex-col',
             className,
           )}
         >
@@ -424,9 +428,10 @@ export function PureMultimodalInput({
             value={input}
             className={cn(
               'min-h-[24px] w-full resize-none border-0 bg-transparent',
-              'py-1.5 sm:py-3 px-2 sm:px-4 pr-14 sm:pr-20 max-h-[300px] overflow-y-auto',
-              'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-offset-0 focus-visible:ring-ring',
+              'py-1.5 sm:py-3 px-2 sm:px-4 max-h-[300px] overflow-y-auto',
+              'focus-visible:outline-none focus-visible:ring-0',
               'text-sm sm:text-base placeholder:text-muted-foreground placeholder:opacity-70 dark:text-white',
+              'rounded-t-xl',
               input.length === 0 && 'min-h-[48px]',
             )}
             spellCheck={false}
@@ -449,7 +454,7 @@ export function PureMultimodalInput({
               type="button"
               variant="ghost"
               size="icon"
-              className="absolute right-[36px] sm:right-[60px] bottom-[8px] sm:bottom-[10px] size-5 sm:size-6 p-0.5 sm:p-1 text-muted-foreground hover:text-foreground z-10"
+              className="absolute right-[36px] sm:right-[60px] top-[8px] sm:top-[10px] size-5 sm:size-6 p-0.5 sm:p-1 text-muted-foreground hover:text-foreground z-10"
               onClick={(e) => {
                 e.preventDefault();
                 setInput('');
@@ -462,82 +467,91 @@ export function PureMultimodalInput({
             </Button>
           )}
 
-          {/* Always show button container with DeepSeek-inspired styling */}
-          <div className="absolute right-2 bottom-2 flex items-center gap-1 chat-input-buttons">
-            {/* Search web button - now toggles search mode instead of component */}
-            <button
-              type="button"
-              aria-label={
-                isSearchEnabled ? 'Disable web search' : 'Enable web search'
-              }
-              onClick={() => setIsSearchEnabled(!isSearchEnabled)}
-              title={
-                isSearchEnabled ? 'Disable web search' : 'Enable web search'
-              }
-              className={cn(
-                'p-1.5 rounded-full',
-                isSearchEnabled
-                  ? 'bg-blue-500/15 text-blue-500'
-                  : 'bg-black/5 dark:bg-white/5 text-black/40 dark:text-white/40 hover:text-black dark:hover:text-white',
-              )}
-            >
-              <Globe
-                className={isSearchEnabled ? 'text-blue-500' : ''}
-                size={18}
-              />
-            </button>
+          {/* New bottom row for ModelSelector and action buttons */}
+          <div className="flex items-center justify-between px-2 sm:px-3 py-1.5 border-t dark:border-zinc-700 bg-transparent">
+            {/* ModelSelector */}
+            <ModelSelector
+              selectedModelId={selectedChatModel}
+              className={cn('h-7 text-xs px-1 border-none bg-transparent hover:bg-black/5 dark:hover:bg-white/5 ring-offset-0 focus-visible:ring-0')}
+            />
 
-            {/* Upload button */}
-            <button
-              type="button"
-              aria-label="Upload file"
-              disabled={isLoading}
-              onClick={(e) => {
-                e.preventDefault();
-                if (fileInputRef.current) {
-                  fileInputRef.current.click();
+            {/* Action buttons container */}
+            <div className="flex items-center gap-1 sm:gap-2 chat-input-buttons">
+              {/* Search web button - now toggles search mode instead of component */}
+              <button
+                type="button"
+                aria-label={
+                  isSearchEnabled ? 'Disable web search' : 'Enable web search'
                 }
-              }}
-              className="p-1.5 rounded-full bg-black/5 dark:bg-white/5 text-black/40 dark:text-white/40 hover:text-black dark:hover:text-white"
-            >
-              <PaperclipIcon size={18} />
-            </button>
-
-            {/* Send/Stop button */}
-            {isLoading ? (
-              <button
-                type="button"
-                aria-label="Stop generating"
-                onClick={(event) => {
-                  event.preventDefault();
-                  stop();
-                  setMessages((messages) => sanitizeUIMessages(messages));
-                }}
-                className="p-1.5 rounded-full bg-primary/10 text-primary hover:bg-primary/20"
-              >
-                <X size={18} />
-              </button>
-            ) : (
-              <button
-                type="button"
-                aria-label={isSearchEnabled ? 'Search web' : 'Send message'}
+                onClick={() => setIsSearchEnabled(!isSearchEnabled)}
+                title={
+                  isSearchEnabled ? 'Disable web search' : 'Enable web search'
+                }
                 className={cn(
-                  'p-1 sm:p-1.5 rounded-full',
-                  input.trim()
-                    ? 'bg-primary text-primary-foreground hover:bg-primary/90'
-                    : 'bg-black/5 dark:bg-white/5 text-black/40 dark:text-white/40',
+                  'p-1.5 rounded-full',
+                  isSearchEnabled
+                    ? 'bg-blue-500/15 text-blue-500'
+                    : 'bg-black/5 dark:bg-white/5 text-black/40 dark:text-white/40 hover:text-black dark:hover:text-white',
                 )}
-                onClick={(event) => {
-                  event.preventDefault();
-                  submitForm();
-                }}
-                disabled={
-                  input.length === 0 || uploadQueue.length > 0 || isSubmitting
-                }
               >
-                <ArrowUp size={16} className="sm:size-[18px]" />
+                <Globe
+                  className={isSearchEnabled ? 'text-blue-500' : ''}
+                  size={18}
+                />
               </button>
-            )}
+
+              {/* Upload button */}
+              <button
+                type="button"
+                aria-label="Upload file"
+                disabled={isLoading}
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (fileInputRef.current) {
+                    fileInputRef.current.click();
+                  }
+                }}
+                className="p-1.5 rounded-full bg-black/5 dark:bg-white/5 text-black/40 dark:text-white/40 hover:text-black dark:hover:text-white"
+              >
+                <PaperclipIcon size={18} />
+              </button>
+
+              {/* Send/Stop button */}
+              {isLoading ? (
+                <button
+                  type="button"
+                  aria-label="Stop generating"
+                  onClick={(event) => {
+                    event.preventDefault();
+                    stop();
+                    setMessages((messages) => sanitizeUIMessages(messages));
+                  }}
+                  className="p-1.5 rounded-full bg-primary/10 text-primary hover:bg-primary/20"
+                >
+                  <X size={18} />
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  aria-label={isSearchEnabled ? 'Search web' : 'Send message'}
+                  className={cn(
+                    'p-1 sm:p-1.5 rounded-full',
+                    input.trim()
+                      ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                      : 'bg-black/5 dark:bg-white/5 text-black/40 dark:text-white/40',
+                  )}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    submitForm();
+                  }}
+                  disabled={
+                    input.length === 0 || uploadQueue.length > 0 || isSubmitting
+                  }
+                >
+                  <ArrowUp size={16} className="sm:size-[18px]" />
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -606,6 +620,7 @@ export const MultimodalInput = memo(
   (prevProps, nextProps) => {
     if (prevProps.input !== nextProps.input) return false;
     if (prevProps.isLoading !== nextProps.isLoading) return false;
+    if (prevProps.selectedChatModel !== nextProps.selectedChatModel) return false;
     if (!equal(prevProps.attachments, nextProps.attachments)) return false;
 
     return true;
