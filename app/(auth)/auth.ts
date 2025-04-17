@@ -1,14 +1,12 @@
-import { compare } from 'bcrypt-ts';
 import NextAuth, {
   type User,
   type Session,
   type Account,
   type Profile,
 } from 'next-auth';
-import Credentials from 'next-auth/providers/credentials';
 import GoogleProvider from 'next-auth/providers/google';
 
-import { getUser, getUserByEmail, getUserById } from '@/lib/db/queries';
+import { getUserByEmail, getUserById } from '@/lib/db/queries';
 import { DrizzleAdapter } from '@/lib/db/auth-adapter';
 
 import { authConfig } from './auth.config';
@@ -35,31 +33,6 @@ export const {
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-    }),
-    Credentials({
-      credentials: {},
-      async authorize({ email, password }: any) {
-        try {
-          // First, try to find the user by email
-          const users = await getUser(email);
-          if (users.length === 0) return null;
-
-          const user = users[0];
-
-          // For regular email/password login, verify the password
-          if (password) {
-            // biome-ignore lint: Forbidden non-null assertion.
-            const passwordsMatch = await compare(password, user.password!);
-            if (!passwordsMatch) return null;
-            return user as any;
-          }
-
-          return null;
-        } catch (error) {
-          console.error('Error in authorize callback:', error);
-          return null;
-        }
-      },
     }),
   ],
   callbacks: {
