@@ -30,6 +30,7 @@ type EditorProps = {
   isCurrentVersion: boolean;
   currentVersionIndex: number;
   suggestions: Array<Suggestion>;
+  onEditorViewChange?: (view: EditorView | null) => void;
 };
 
 import { TextEditorToolbar } from '@/components/TextEditorToolbar';
@@ -67,12 +68,18 @@ function PureEditor({
       editorRef.current = new EditorView(containerRef.current, {
         state,
       });
+
+      // Call the callback with the editor view instance
+      onEditorViewChange?.(editorRef.current);
     }
 
     return () => {
       if (editorRef.current) {
         editorRef.current.destroy();
         editorRef.current = null;
+
+        // Call the callback with null when the editor is destroyed
+        onEditorViewChange?.(null);
       }
     };
     // NOTE: we only want to run this effect once
@@ -150,11 +157,7 @@ function PureEditor({
 
   return (
     <div className="relative flex flex-col">
-      <TextEditorToolbar
-        editorView={editorRef.current}
-        isDisabled={status === 'streaming' || !isCurrentVersion}
-      />
-      <div className="prose dark:prose-invert mt-2" ref={containerRef} />
+      <div className="prose dark:prose-invert w-full" ref={containerRef} />
     </div>
   );
 }

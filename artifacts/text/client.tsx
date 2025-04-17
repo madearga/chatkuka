@@ -2,6 +2,7 @@ import { Artifact } from '@/components/create-artifact';
 import { DiffView } from '@/components/diffview';
 import { DocumentSkeleton } from '@/components/document-skeleton';
 import { Editor } from '@/components/text-editor';
+import { TextEditorToolbar } from '@/components/TextEditorToolbar';
 import {
   ClockRewind,
   CopyIcon,
@@ -13,6 +14,8 @@ import {
 import { Suggestion } from '@/lib/db/schema';
 import { toast } from 'sonner';
 import { getSuggestions } from '../actions';
+import { useState } from 'react';
+import { EditorView } from 'prosemirror-view';
 
 interface TextArtifactMetadata {
   suggestions: Array<Suggestion>;
@@ -83,6 +86,8 @@ export const textArtifact = new Artifact<'text', TextArtifactMetadata>({
     isLoading,
     metadata,
   }) => {
+    const [editorViewInstance, setEditorViewInstance] = useState<EditorView | null>(null);
+
     if (isLoading) {
       return <DocumentSkeleton artifactKind="text" />;
     }
@@ -96,7 +101,14 @@ export const textArtifact = new Artifact<'text', TextArtifactMetadata>({
 
     return (
       <>
-        <div className="flex flex-row py-8 md:p-20 px-4">
+        {/* Render toolbar ONLY in edit mode and when editorView is available */}
+        {mode === 'edit' && editorViewInstance && (
+          <TextEditorToolbar
+            editorView={editorViewInstance}
+            isDisabled={status === 'streaming' || !isCurrentVersion}
+          />
+        )}
+        <div className="flex flex-row p-4">
           <Editor
             content={content}
             suggestions={metadata ? metadata.suggestions : []}
@@ -104,6 +116,7 @@ export const textArtifact = new Artifact<'text', TextArtifactMetadata>({
             currentVersionIndex={currentVersionIndex}
             status={status}
             onSaveContent={onSaveContent}
+            onEditorViewChange={setEditorViewInstance}
           />
 
           {metadata &&

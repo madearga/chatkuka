@@ -56,7 +56,7 @@ export const TextEditorToolbar: FC<TextEditorToolbarProps> = ({
   }
 
   return (
-    <div className="sticky top-0 z-10 flex items-center gap-1 border-b border-border/50 bg-muted/80 backdrop-blur px-2 py-1 rounded-md shadow-md mb-2">
+    <div className="sticky top-0 z-10 flex items-center gap-1 border-b border-border/50 bg-background px-2 py-1 mb-2">
       <Button
         variant="ghost"
         size="sm"
