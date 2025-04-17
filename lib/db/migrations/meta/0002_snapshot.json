@@ -302,50 +302,51 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
     },
-    "public.Vote": {
-      "name": "Vote",
+    "public.UserOAuthAccount": {
+      "name": "UserOAuthAccount",
       "schema": "",
       "columns": {
-        "chatId": {
-          "name": "chatId",
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "provider": {
+          "name": "provider",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "providerAccountId": {
+          "name": "providerAccountId",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "userId": {
+          "name": "userId",
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
         },
-        "messageId": {
-          "name": "messageId",
-          "type": "uuid",
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
           "primaryKey": false,
-          "notNull": true
-        },
-        "isUpvoted": {
-          "name": "isUpvoted",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "default": "now()"
         }
       },
       "indexes": {},
       "foreignKeys": {
-        "Vote_chatId_Chat_id_fk": {
-          "name": "Vote_chatId_Chat_id_fk",
-          "tableFrom": "Vote",
-          "tableTo": "Chat",
+        "UserOAuthAccount_userId_User_id_fk": {
+          "name": "UserOAuthAccount_userId_User_id_fk",
+          "tableFrom": "UserOAuthAccount",
+          "tableTo": "User",
           "columnsFrom": [
-            "chatId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "Vote_messageId_Message_id_fk": {
-          "name": "Vote_messageId_Message_id_fk",
-          "tableFrom": "Vote",
-          "tableTo": "Message",
-          "columnsFrom": [
-            "messageId"
+            "userId"
           ],
           "columnsTo": [
             "id"
@@ -354,15 +355,7 @@
           "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {
-        "Vote_chatId_messageId_pk": {
-          "name": "Vote_chatId_messageId_pk",
-          "columns": [
-            "chatId",
-            "messageId"
-          ]
-        }
-      },
+      "compositePrimaryKeys": {},
       "uniqueConstraints": {}
     }
   },

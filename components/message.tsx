@@ -5,8 +5,6 @@ import cx from 'classnames';
 import { AnimatePresence, motion } from 'framer-motion';
 import { memo, useMemo, useState } from 'react';
 
-import type { Vote } from '@/lib/db/schema';
-
 import { DocumentToolCall, DocumentToolResult } from './document';
 import {
   ChevronDownIcon,
@@ -88,7 +86,6 @@ interface ExtendedMessage extends Message {
 const PurePreviewMessage = ({
   chatId,
   message,
-  vote,
   isLoading,
   setMessages,
   reload,
@@ -96,7 +93,6 @@ const PurePreviewMessage = ({
 }: {
   chatId: string;
   message: UIMessage;
-  vote: Vote | undefined;
   isLoading: boolean;
   setMessages: (
     messages: Message[] | ((messages: Message[]) => Message[]),
@@ -377,10 +373,8 @@ const PurePreviewMessage = ({
 
                   {!isReadonly && (
                     <MessageActions
-                      key={`action-${message.id}`}
                       chatId={chatId}
                       message={message}
-                      vote={vote}
                       isLoading={isLoading}
                       reload={reload}
                     />
@@ -421,7 +415,6 @@ export const PreviewMessage = memo(
       )
     )
       return false;
-    if (!equal(prevProps.vote, nextProps.vote)) return false;
 
     return true;
   },
