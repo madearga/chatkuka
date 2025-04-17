@@ -59,6 +59,7 @@ interface ChatModel {
   name: string;
   description: string;
   tier?: ModelTier;
+  provider: 'google' | 'openai' | 'deepseek' | 'groq' | 'fireworks' | 'anthropic';
 }
 
 export const chatModels: Array<ChatModel> = [
@@ -68,6 +69,7 @@ export const chatModels: Array<ChatModel> = [
     name: 'Gemini Flash 2.0',
     description: 'Google Gemini Flash 2.0 model for fast, lightweight tasks',
     tier: MODEL_TIER_MAP['chat-model-small'],
+    provider: 'google',
   },
   // OpenAI
   {
@@ -75,30 +77,35 @@ export const chatModels: Array<ChatModel> = [
     name: 'GPT-4o Mini',
     description: 'Fast and capable model, suitable for various tasks.',
     tier: MODEL_TIER_MAP['openai-gpt4o-mini'],
+    provider: 'openai',
   },
   {
     id: 'chatgpt-4.1-nano',
     name: 'ChatGPT 4.1 Nano',
     description: 'Lightweight version of GPT-4.1 for fast responses.',
     tier: MODEL_TIER_MAP['chatgpt-4.1-nano'],
+    provider: 'openai',
   },
   {
     id: 'chatgpt-4.1-mini',
     name: 'ChatGPT 4.1 Mini',
     description: 'Smaller version of GPT-4.1 with good performance.',
     tier: MODEL_TIER_MAP['chatgpt-4.1-mini'],
+    provider: 'openai',
   },
   {
     id: 'openai-o3',
     name: 'OpenAI o3',
     description: 'OpenAI o3 model with advanced capabilities and efficiency.',
     tier: MODEL_TIER_MAP['openai-o3'],
+    provider: 'openai',
   },
   {
     id: 'openai-o4-mini',
     name: 'OpenAI o4-mini',
     description: 'OpenAI o4-mini model with advanced capabilities.',
     tier: MODEL_TIER_MAP['openai-o4-mini'],
+    provider: 'openai',
   },
 
   // Google Models
@@ -107,6 +114,7 @@ export const chatModels: Array<ChatModel> = [
     name: 'Gemini Pro 2.5',
     description: 'Google Gemini Pro 2.5 model for complex, multi-step tasks',
     tier: MODEL_TIER_MAP['chat-model-large'],
+    provider: 'google',
   },
   {
     id: 'gemini-2.0-flash-thinking',
@@ -114,6 +122,7 @@ export const chatModels: Array<ChatModel> = [
     description:
       'Google Gemini model optimized for fast thinking and reasoning.',
     tier: MODEL_TIER_MAP['gemini-2.0-flash-thinking'],
+    provider: 'google',
   },
   // OpenAI
   {
@@ -121,12 +130,14 @@ export const chatModels: Array<ChatModel> = [
     name: 'ChatGPT-4o',
     description: 'Latest OpenAI GPT-4o model with advanced capabilities.',
     tier: MODEL_TIER_MAP['chatgpt-4o'],
+    provider: 'openai',
   },
   {
     id: 'chatgpt-4.1',
     name: 'ChatGPT 4.1',
     description: 'Latest OpenAI GPT-4.1 model with advanced capabilities.',
     tier: MODEL_TIER_MAP['chatgpt-4.1'],
+    provider: 'openai',
   },
   // DeepSeek
   {
@@ -134,11 +145,13 @@ export const chatModels: Array<ChatModel> = [
     name: 'DeepSeek-R1-Distill-Llama-70B',
     description: 'DeepSeek Llama model with advanced reasoning capabilities',
     tier: MODEL_TIER_MAP['chat-model-reasoning'],
+    provider: 'groq',
   },
   {
     id: 'deepseek-v3',
     name: 'DeepSeek-V3',
     description: 'Advanced DeepSeek model with strong reasoning capabilities.',
     tier: MODEL_TIER_MAP['deepseek-v3'],
+    provider: 'deepseek',
   },
 ];

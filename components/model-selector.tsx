@@ -3,6 +3,7 @@
 import { startTransition, useMemo, useOptimistic, useState } from 'react';
 import { useWindowSize } from 'usehooks-ts';
 import { useSession } from 'next-auth/react';
+import Image from 'next/image';
 
 import { saveChatModelAsCookie } from '@/app/(chat)/actions';
 import { Button } from '@/components/ui/button';
@@ -78,6 +79,16 @@ export function ModelSelector({
             variant="outline"
             className="md:px-2 px-2 h-8 md:h-[34px] text-xs sm:text-sm flex items-center gap-1"
           >
+            {selectedChatModel?.provider && (
+              <div className="relative w-4 h-4 mr-1.5">
+                <Image
+                  src={`/providers/logos/${selectedChatModel.provider}.svg`}
+                  alt={`${selectedChatModel.provider} logo`}
+                  fill
+                  className="object-contain"
+                />
+              </div>
+            )}
             <span className="truncate max-w-[80px] sm:max-w-none">
               {selectedChatModel?.name}
             </span>
@@ -116,7 +127,17 @@ export function ModelSelector({
               >
                 <div className="flex flex-col gap-1 items-start min-w-0">
                   <div className="truncate w-full flex items-center gap-2">
-                    {chatModel.name}
+                    <div className="flex items-center gap-2">
+                      <div className="relative w-4 h-4 flex-shrink-0">
+                        <Image
+                          src={`/providers/logos/${chatModel.provider}.svg`}
+                          alt={`${chatModel.provider} logo`}
+                          fill
+                          className="object-contain"
+                        />
+                      </div>
+                      {chatModel.name}
+                    </div>
                     {chatModel.tier === ModelTier.PAID && (
                       <span
                         className={`text-xs ${isPaidUser ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'} px-1.5 py-0.5 rounded-full flex items-center gap-1`}
