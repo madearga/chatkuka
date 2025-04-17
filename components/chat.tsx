@@ -200,6 +200,7 @@ export function Chat({
         chatId={id}
         input={input}
         setInput={setInput}
+        selectedChatModel={selectedChatModel}
         handleSubmit={(e, chatRequestOptions) => {
           handleSubmit(e, {
             ...chatRequestOptions,

@@ -70,6 +70,7 @@ function PureArtifact({
   reload,
   votes,
   isReadonly,
+  selectedChatModel,
 }: {
   chatId: string;
   input: string;
@@ -95,6 +96,7 @@ function PureArtifact({
     chatRequestOptions?: ChatRequestOptions,
   ) => Promise<string | null | undefined>;
   isReadonly: boolean;
+  selectedChatModel: string;
 }) {
   const { artifact, setArtifact, metadata, setMetadata } = useArtifact();
 
@@ -339,6 +341,7 @@ function PureArtifact({
                     chatId={chatId}
                     input={input}
                     setInput={setInput}
+                    selectedChatModel={selectedChatModel}
                     handleSubmit={handleSubmit}
                     isLoading={isLoading}
                     stop={stop}
