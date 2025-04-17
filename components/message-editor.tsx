@@ -83,11 +83,16 @@ export function MessageEditor({
               if (index !== -1) {
                 // Make a mutable copy of parts or default to empty array
                 const newParts = [...((messages[index] as any).parts || [])];
-                const textPartIndex = newParts.findIndex((p: any) => p.type === 'text');
+                const textPartIndex = newParts.findIndex(
+                  (p: any) => p.type === 'text',
+                );
 
                 if (textPartIndex !== -1) {
                   // Update the existing text part
-                  newParts[textPartIndex] = { type: 'text', text: draftContent };
+                  newParts[textPartIndex] = {
+                    type: 'text',
+                    text: draftContent,
+                  };
                 } else {
                   // If no text part exists (unlikely for user messages), add one
                   newParts.unshift({ type: 'text', text: draftContent });

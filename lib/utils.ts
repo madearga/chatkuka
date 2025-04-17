@@ -7,9 +7,17 @@ import type {
   ToolSet,
 } from 'ai';
 import { type ClassValue, clsx } from 'clsx';
+import {
+  isToday,
+  isYesterday,
+  subWeeks,
+  subMonths,
+  differenceInCalendarDays,
+  format,
+} from 'date-fns';
 import { twMerge } from 'tailwind-merge';
 
-import type { Message as DBMessage, Document } from '@/lib/db/schema';
+import type { Message as DBMessage, Document, Chat } from '@/lib/db/schema';
 import { type DBSchemaMessage } from '@/lib/db/queries';
 
 export function cn(...inputs: ClassValue[]) {
@@ -65,10 +73,10 @@ export function convertToUIMessages(
       role: dbMessage.role as Message['role'],
       parts: dbMessage.parts as any, // Map parts, cast needed if types differ
       // Add deprecated content field, asserting parts type
-      content: ((dbMessage.parts as ExpectedPart[] | undefined)
-        ?.find((p: ExpectedPart) => p.type === 'text')
-        ?.text
-      ) ?? '',
+      content:
+        (dbMessage.parts as ExpectedPart[] | undefined)?.find(
+          (p: ExpectedPart) => p.type === 'text',
+        )?.text ?? '',
       experimental_attachments: dbMessage.attachments as any, // Map attachments
     };
 
@@ -78,57 +86,6 @@ export function convertToUIMessages(
 
     return uiMessage;
   });
-}
-
-type ResponseMessageWithoutId = CoreToolMessage | CoreAssistantMessage;
-type ResponseMessage = ResponseMessageWithoutId & { id: string };
-
-export function sanitizeResponseMessages({
-  messages,
-  reasoning,
-}: {
-  messages: Array<ResponseMessage>;
-  reasoning: string | undefined;
-}) {
-  const toolResultIds: Array<string> = [];
-
-  for (const message of messages) {
-    if (message.role === 'tool') {
-      for (const content of message.content) {
-        if (content.type === 'tool-result') {
-          toolResultIds.push(content.toolCallId);
-        }
-      }
-    }
-  }
-
-  const messagesBySanitizedContent = messages.map((message) => {
-    if (message.role !== 'assistant') return message;
-
-    if (typeof message.content === 'string') return message;
-
-    const sanitizedContent = message.content.filter((content) =>
-      content.type === 'tool-call'
-        ? toolResultIds.includes(content.toolCallId)
-        : content.type === 'text'
-          ? content.text.length > 0
-          : true,
-    );
-
-    if (reasoning) {
-      // @ts-expect-error: reasoning message parts in sdk is wip
-      sanitizedContent.push({ type: 'reasoning', reasoning });
-    }
-
-    return {
-      ...message,
-      content: sanitizedContent,
-    };
-  });
-
-  return messagesBySanitizedContent.filter(
-    (message) => message.content.length > 0,
-  );
 }
 
 export function sanitizeUIMessages(messages: Array<Message>): Array<Message> {
@@ -200,7 +157,24 @@ export function getFileTypeFromUrl(url: string): string {
   if (['txt', 'md', 'markdown'].includes(extension)) return 'text';
 
   // Code types
-  if (['js', 'ts', 'py', 'java', 'c', 'cpp', 'cs', 'php', 'rb', 'go', 'html', 'css', 'json', 'xml'].includes(extension)) {
+  if (
+    [
+      'js',
+      'ts',
+      'py',
+      'java',
+      'c',
+      'cpp',
+      'cs',
+      'php',
+      'rb',
+      'go',
+      'html',
+      'css',
+      'json',
+      'xml',
+    ].includes(extension)
+  ) {
     return 'code';
   }
 
@@ -213,15 +187,105 @@ export function getFileTypeFromUrl(url: string): string {
   return 'unknown';
 }
 
+export type GroupedChats = {
+  today: Chat[];
+  yesterday: Chat[];
+  lastWeek: Chat[];
+  lastMonth: Chat[];
+  older: Chat[];
+};
+
 /**
- * Format a date to a readable string
- * @param date The date to format
- * @returns A formatted date string (e.g., "Jan 1, 2023")
+ * Group chats by date
+ *
+ * @param chats - The chats to group
+ * @returns The grouped chats
  */
-export function formatDate(date: Date): string {
-  return new Intl.DateTimeFormat('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  }).format(date);
+export function groupChatsByDate(chats: Chat[]): GroupedChats {
+  // Initialize empty groups
+  const groups: GroupedChats = {
+    today: [],
+    yesterday: [],
+    lastWeek: [],
+    lastMonth: [],
+    older: [],
+  };
+
+  // If chats is undefined or not an array, return empty groups
+  if (!chats || !Array.isArray(chats)) {
+    console.warn('groupChatsByDate received invalid chats:', chats);
+    return groups;
+  }
+
+  const now = new Date();
+  const oneWeekAgo = subWeeks(now, 1);
+  const oneMonthAgo = subMonths(now, 1);
+
+  return chats.reduce(
+    (acc, chat) => {
+      try {
+        // Ensure createdAt exists and is valid
+        if (!chat.createdAt) {
+          console.warn('Chat missing createdAt:', chat);
+          return acc;
+        }
+
+        // Ensure createdAt is treated as a Date object
+        const chatDate = new Date(chat.createdAt);
+
+        // Check if date is valid
+        if (isNaN(chatDate.getTime())) {
+          console.warn('Invalid chat date:', chat.createdAt);
+          return acc;
+        }
+
+        if (isToday(chatDate)) {
+          acc.today.push(chat);
+        } else if (isYesterday(chatDate)) {
+          acc.yesterday.push(chat);
+        } else if (chatDate > oneWeekAgo) {
+          acc.lastWeek.push(chat);
+        } else if (chatDate > oneMonthAgo) {
+          acc.lastMonth.push(chat);
+        } else {
+          acc.older.push(chat);
+        }
+      } catch (error) {
+        console.error('Error processing chat in groupChatsByDate:', error, chat);
+      }
+
+      return acc;
+    },
+    groups
+  );
+}
+
+/**
+ * Format a date string to a human-readable format
+ *
+ * @param createdAtInput - The date string or Date object to format
+ * @returns The formatted date string
+ */
+export function formatDate(createdAtInput: string | Date): string {
+  const created =
+    typeof createdAtInput === 'string'
+      ? new Date(createdAtInput)
+      : createdAtInput;
+  // Validate the date object before formatting
+  if (isNaN(created.getTime())) {
+    // console.warn("Invalid date passed to formatDate:", createdAtInput); // Keep logging minimal
+    return 'Invalid Date';
+  }
+  try {
+    if (isToday(created)) {
+      return format(created, 'p'); // e.g., 4:30 PM
+    } else if (differenceInCalendarDays(new Date(), created) === 1) {
+      return 'Yesterday';
+    } else {
+      return format(created, 'P'); // e.g., 10/07/2024
+    }
+  } catch (error) {
+    // console.error("Error formatting date:", error, "Input:", createdAtInput); // Keep logging minimal
+    return 'Date Error';
+  }
 }

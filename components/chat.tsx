@@ -2,11 +2,12 @@
 
 import type { Attachment, Message } from 'ai';
 import { useChat } from 'ai/react';
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useLocalStorage } from 'usehooks-ts';
 import useSWR, { useSWRConfig } from 'swr';
 
 import { ChatHeader } from '@/components/chat-header';
+import { SimpleSearch } from '@/components/simple-search';
 import type { Vote } from '@/lib/db/schema';
 import { fetcher, generateUUID } from '@/lib/utils';
 
@@ -34,10 +35,8 @@ export function Chat({
 }) {
   const { mutate } = useSWRConfig();
 
-  const [selectedSystemPrompt, setSelectedSystemPrompt] = useLocalStorage<string>(
-    'selectedSystemPrompt',
-    SYSTEM_PROMPT_DEFAULT
-  );
+  const [selectedSystemPrompt, setSelectedSystemPrompt] =
+    useLocalStorage<string>('selectedSystemPrompt', SYSTEM_PROMPT_DEFAULT);
 
   const {
     messages,
@@ -52,7 +51,11 @@ export function Chat({
     data,
   } = useChat({
     id,
-    body: { id, selectedChatModel: selectedChatModel, systemPrompt: selectedSystemPrompt },
+    body: {
+      id,
+      selectedChatModel: selectedChatModel,
+      systemPrompt: selectedSystemPrompt,
+    },
     initialMessages,
     experimental_throttle: 100,
     sendExtraMessageFields: true,
@@ -72,26 +75,46 @@ export function Chat({
 
   const [attachments, setAttachments] = useState<Array<Attachment>>([]);
   const isArtifactVisible = useArtifactSelector((state) => state.isVisible);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+
+  // Open search modal on CMD + k or CTRL + k
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        setIsSearchOpen((prevState) => !prevState);
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, []); // Empty dependency array ensures this runs once on mount
 
   const handleSystemPromptSelect = useCallback((newSystemPrompt: string) => {
     setSelectedSystemPrompt(newSystemPrompt || SYSTEM_PROMPT_DEFAULT);
   }, []);
 
-  const handleSuggestion = useCallback(async (suggestion: string) => {
-    await append(
-      {
-        role: 'user',
-        content: suggestion,
-      },
-      {
-        body: { systemPrompt: selectedSystemPrompt },
-        data,
-      }
-    );
-    setInput('');
-  }, [append, setInput, selectedSystemPrompt, data]);
+  const handleSuggestion = useCallback(
+    async (suggestion: string) => {
+      await append(
+        {
+          role: 'user',
+          content: suggestion,
+        },
+        {
+          body: { systemPrompt: selectedSystemPrompt },
+          data,
+        },
+      );
+      setInput('');
+    },
+    [append, setInput, selectedSystemPrompt, data],
+  );
 
-  const showPromptSystem = useMemo(() => messages.length === 0 && !isLoading, [messages.length, isLoading]);
+  const showPromptSystem = useMemo(
+    () => messages.length === 0 && !isLoading,
+    [messages.length, isLoading],
+  );
 
   return (
     <>
@@ -101,6 +124,7 @@ export function Chat({
           selectedModelId={selectedChatModel}
           selectedVisibilityType={selectedVisibilityType}
           isReadonly={isReadonly}
+          setIsSearchOpen={setIsSearchOpen}
         />
 
         {/* Main content area: Messages or Initial Prompt System */}
@@ -142,7 +166,10 @@ export function Chat({
               handleSubmit={(e, chatRequestOptions) => {
                 handleSubmit(e, {
                   ...chatRequestOptions,
-                  body: { ...chatRequestOptions?.body, systemPrompt: selectedSystemPrompt },
+                  body: {
+                    ...chatRequestOptions?.body,
+                    systemPrompt: selectedSystemPrompt,
+                  },
                   data,
                 });
               }}
@@ -155,7 +182,10 @@ export function Chat({
               append={(message, chatRequestOptions) => {
                 return append(message, {
                   ...chatRequestOptions,
-                  body: { ...chatRequestOptions?.body, systemPrompt: selectedSystemPrompt },
+                  body: {
+                    ...chatRequestOptions?.body,
+                    systemPrompt: selectedSystemPrompt,
+                  },
                   data,
                 });
               }}
@@ -172,7 +202,10 @@ export function Chat({
         handleSubmit={(e, chatRequestOptions) => {
           handleSubmit(e, {
             ...chatRequestOptions,
-            body: { ...chatRequestOptions?.body, systemPrompt: selectedSystemPrompt },
+            body: {
+              ...chatRequestOptions?.body,
+              systemPrompt: selectedSystemPrompt,
+            },
             data,
           });
         }}
@@ -183,7 +216,10 @@ export function Chat({
         append={(message, chatRequestOptions) => {
           return append(message, {
             ...chatRequestOptions,
-            body: { ...chatRequestOptions?.body, systemPrompt: selectedSystemPrompt },
+            body: {
+              ...chatRequestOptions?.body,
+              systemPrompt: selectedSystemPrompt,
+            },
             data,
           });
         }}
@@ -193,6 +229,11 @@ export function Chat({
         votes={votes}
         isReadonly={isReadonly}
       />
+
+      {/* Add the Search Dialog */}
+      {isSearchOpen ? (
+        <SimpleSearch open={isSearchOpen} onOpenChange={setIsSearchOpen} />
+      ) : null}
     </>
   );
 }

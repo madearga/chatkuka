@@ -51,7 +51,7 @@ export default function Page() {
         </div>
         <div className="flex flex-col gap-6 px-4 sm:px-16">
           <GoogleLoginButton />
-          
+
           <div className="relative flex items-center justify-center">
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-gray-300 dark:border-gray-700"></div>
@@ -61,7 +61,7 @@ export default function Page() {
             </div>
           </div>
         </div>
-        
+
         <AuthForm action={handleSubmit} defaultEmail={email}>
           <SubmitButton isSuccessful={isSuccessful}>Sign in</SubmitButton>
           <p className="text-center text-sm text-gray-600 mt-4 dark:text-zinc-400">

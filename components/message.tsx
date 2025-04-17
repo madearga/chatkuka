@@ -1,7 +1,6 @@
 'use client';
 
-import type { ChatRequestOptions, Message } from 'ai';
-import type { UIMessage } from 'ai';
+import type { ChatRequestOptions, Message, UIMessage } from 'ai';
 import cx from 'classnames';
 import { AnimatePresence, motion } from 'framer-motion';
 import { memo, useMemo, useState } from 'react';
@@ -71,7 +70,7 @@ function getFileIcon(fileType: string): React.ReactNode {
   }
 }
 
- // Extended message type with attachmentUrl
+// Extended message type with attachmentUrl
 interface ExtendedMessage extends Message {
   attachmentUrl?: string | null;
   createdAt?: Date;
@@ -111,7 +110,8 @@ const PurePreviewMessage = ({
   // Get the file name from the URL
   const fileName = useMemo(() => {
     if ((message as any).attachmentUrl) {
-      const fullName = (message as any).attachmentUrl.split('/').pop() || 'file';
+      const fullName =
+        (message as any).attachmentUrl.split('/').pop() || 'file';
       const parts = fullName.split('-');
       return parts.length > 1 ? parts.slice(1).join('-') : fullName;
     }
@@ -155,28 +155,33 @@ const PurePreviewMessage = ({
                     switch (part.type) {
                       case 'text':
                         return (
-                          <div key={index} className="flex flex-row items-start gap-1 sm:gap-2">
-                            {message.role === 'user' && !isReadonly && mode === 'view' && (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-6 w-6 shrink-0 mt-1"
-                                    onClick={() => setMode('edit')}
-                                  >
-                                    <PencilEditIcon />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>Edit</TooltipContent>
-                              </Tooltip>
-                            )}
+                          <div
+                            key={index}
+                            className="flex flex-row items-start gap-1 sm:gap-2"
+                          >
+                            {message.role === 'user' &&
+                              !isReadonly &&
+                              mode === 'view' && (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="size-6 shrink-0 mt-1"
+                                      onClick={() => setMode('edit')}
+                                    >
+                                      <PencilEditIcon />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Edit</TooltipContent>
+                                </Tooltip>
+                              )}
                             <div
                               className={cn(
                                 'flex-grow break-words max-w-full overflow-hidden',
                                 message.role === 'user'
                                   ? 'bg-primary text-white dark:bg-zinc-800 dark:text-white px-2 py-1.5 sm:px-3 sm:py-2 rounded-xl group-data-[role=user]/message:ml-auto'
-                                  : 'bg-muted/50 text-foreground border border-border/50 px-2 py-1.5 sm:px-3 sm:py-2 rounded-xl'
+                                  : 'bg-muted/50 text-foreground border border-border/50 px-2 py-1.5 sm:px-3 sm:py-2 rounded-xl',
                               )}
                             >
                               <ResponseStream
@@ -185,8 +190,10 @@ const PurePreviewMessage = ({
                                 speed={100}
                                 characterChunkSize={2}
                                 className={cn(
-                                  "prose max-w-full text-sm sm:text-base",
-                                  message.role === 'user' ? 'text-white dark:text-white' : 'text-foreground'
+                                  'prose max-w-full text-sm sm:text-base',
+                                  message.role === 'user'
+                                    ? 'text-white dark:text-white'
+                                    : 'text-foreground',
                                 )}
                               />
                             </div>
@@ -194,10 +201,14 @@ const PurePreviewMessage = ({
                         );
                       case 'tool-invocation': {
                         // Log the incoming part
-                        console.log('[PurePreviewMessage] Rendering part...', part);
+                        console.log(
+                          '[PurePreviewMessage] Rendering part...',
+                          part,
+                        );
 
                         const { toolInvocation } = part;
-                        const { toolName, toolCallId, state, args } = toolInvocation;
+                        const { toolName, toolCallId, state, args } =
+                          toolInvocation;
                         const result = (toolInvocation as any).result;
                         if (state === 'call') {
                           return (
@@ -205,7 +216,10 @@ const PurePreviewMessage = ({
                               {toolName === 'getWeather' ? (
                                 <Weather />
                               ) : toolName === 'createDocument' ? (
-                                <DocumentPreview isReadonly={isReadonly} args={args} />
+                                <DocumentPreview
+                                  isReadonly={isReadonly}
+                                  args={args}
+                                />
                               ) : toolName === 'updateDocument' ? (
                                 <DocumentToolCall
                                   type="update"
@@ -229,7 +243,12 @@ const PurePreviewMessage = ({
                         }
                         if (state === 'result' && result !== undefined) {
                           // Log state and result when condition is met
-                          console.log('[PurePreviewMessage] Tool Invocation State:', state, 'Result Object:', result);
+                          console.log(
+                            '[PurePreviewMessage] Tool Invocation State:',
+                            state,
+                            'Result Object:',
+                            result,
+                          );
                           return (
                             <div key={toolCallId}>
                               {toolName === 'getWeather' ? (
@@ -282,32 +301,47 @@ const PurePreviewMessage = ({
                             attachment={{
                               url: part.data,
                               // Only include mimeType if present
-                              ...(part.mimeType ? { mimeType: part.mimeType } : {}),
+                              ...(part.mimeType
+                                ? { mimeType: part.mimeType }
+                                : {}),
                             }}
                           />
                         );
                       case 'source':
                         return (
-                          <div key={index} className="text-xs text-muted-foreground">
-                            <a href={part.source.url} target="_blank" rel="noopener noreferrer">
+                          <div
+                            key={index}
+                            className="text-xs text-muted-foreground"
+                          >
+                            <a
+                              href={part.source.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
                               {part.source.title || part.source.url}
                             </a>
                           </div>
                         );
                       default:
-                        console.warn(`Unhandled message part type: ${(part as any).type}`);
+                        console.warn(
+                          `Unhandled message part type: ${(part as any).type}`,
+                        );
                         return null;
                     }
                   })}
 
                   {/* Display attachment from database (legacy) */}
                   {(message as any).attachmentUrl && (
-                    <div className={cn(
-                      "flex items-start gap-3 p-3 rounded-lg shadow-sm",
-                      message.role === 'user' ? "bg-zinc-800/20 ml-auto dark:bg-zinc-700/20" : "bg-muted/80"
-                    )}>
+                    <div
+                      className={cn(
+                        'flex items-start gap-3 p-3 rounded-lg shadow-sm',
+                        message.role === 'user'
+                          ? 'bg-zinc-800/20 ml-auto dark:bg-zinc-700/20'
+                          : 'bg-muted/80',
+                      )}
+                    >
                       <div className="flex items-center gap-3">
-                        <div className="flex items-center justify-center w-10 h-10 rounded-md bg-zinc-800/20 dark:bg-zinc-700/20 shrink-0">
+                        <div className="flex items-center justify-center size-10 rounded-md bg-zinc-800/20 dark:bg-zinc-700/20 shrink-0">
                           {getFileIcon(fileType)}
                         </div>
                         <div className="flex flex-col overflow-hidden">
@@ -346,7 +380,9 @@ const PurePreviewMessage = ({
           </TooltipTrigger>
           <TooltipContent side="bottom">
             {message.createdAt
-              ? formatDistanceToNow(new Date(message.createdAt), { addSuffix: true })
+              ? formatDistanceToNow(new Date(message.createdAt), {
+                  addSuffix: true,
+                })
               : 'Timestamp unavailable'}
           </TooltipContent>
         </Tooltip>
@@ -362,7 +398,10 @@ export const PreviewMessage = memo(
     if (prevProps.message.reasoning !== nextProps.message.reasoning)
       return false;
     if (prevProps.message.content !== nextProps.message.content) return false;
-    if ((prevProps.message as any).attachmentUrl !== (nextProps.message as any).attachmentUrl)
+    if (
+      (prevProps.message as any).attachmentUrl !==
+      (nextProps.message as any).attachmentUrl
+    )
       return false;
     if (
       !equal(

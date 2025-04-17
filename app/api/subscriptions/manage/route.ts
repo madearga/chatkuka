@@ -16,8 +16,13 @@ export async function GET(request: Request) {
 
     // Explicitly check if user ID exists in the session
     if (!session.user.id) {
-      console.error('Subscription Manage API: User ID missing in session for GET');
-      return NextResponse.json({ error: 'User ID missing in session' }, { status: 400 });
+      console.error(
+        'Subscription Manage API: User ID missing in session for GET',
+      );
+      return NextResponse.json(
+        { error: 'User ID missing in session' },
+        { status: 400 },
+      );
     }
 
     // Get user's subscription details
@@ -48,7 +53,7 @@ export async function GET(request: Request) {
     console.error('Subscription Manage API: Unhandled error:', error);
     return NextResponse.json(
       { error: 'Failed to fetch subscription details' },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -64,8 +69,13 @@ export async function POST(request: Request) {
 
     // Explicitly check if user ID exists in the session
     if (!session.user.id) {
-      console.error('Subscription Manage API: User ID missing in session for POST');
-      return NextResponse.json({ error: 'User ID missing in session' }, { status: 400 });
+      console.error(
+        'Subscription Manage API: User ID missing in session for POST',
+      );
+      return NextResponse.json(
+        { error: 'User ID missing in session' },
+        { status: 400 },
+      );
     }
 
     // Get action from request body
@@ -74,7 +84,7 @@ export async function POST(request: Request) {
     if (action !== 'cancel') {
       return NextResponse.json(
         { error: 'Invalid action. Supported actions: cancel' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -93,7 +103,10 @@ export async function POST(request: Request) {
     }
 
     // Check if subscription is already cancelled or inactive
-    if (userData.subscriptionStatus === 'cancelled' || userData.subscriptionStatus === 'inactive') {
+    if (
+      userData.subscriptionStatus === 'cancelled' ||
+      userData.subscriptionStatus === 'inactive'
+    ) {
       return NextResponse.json({
         message: 'Subscription is already cancelled or inactive',
         status: userData.subscriptionStatus,
@@ -116,7 +129,7 @@ export async function POST(request: Request) {
     console.error('Subscription Manage API: Unhandled error:', error);
     return NextResponse.json(
       { error: 'Failed to manage subscription' },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

@@ -1,51 +1,51 @@
-import { tool, type Tool } from 'ai'
-import { z } from 'zod'
-import { tavily } from '@tavily/core'
+import { tool, type Tool } from 'ai';
+import { z } from 'zod';
+import { tavily } from '@tavily/core';
 
-type TavilyTools = 'search' | 'searchContext' | 'searchQNA' | 'extract'
+type TavilyTools = 'search' | 'searchContext' | 'searchQNA' | 'extract';
 
 interface TavilyImage {
-  url: string
-  description?: string
+  url: string;
+  description?: string;
 }
 
 interface TavilySearchResult {
-  title: string
-  url: string
-  content: string
-  rawContent?: string
-  score: number
-  publishedDate?: string
+  title: string;
+  url: string;
+  content: string;
+  rawContent?: string;
+  score: number;
+  publishedDate?: string;
 }
 
 interface TavilySearchResponse {
-  query: string
-  answer?: string
-  images?: TavilyImage[]
-  results: TavilySearchResult[]
-  responseTime: number
-  error?: string // Added to handle errors
+  query: string;
+  answer?: string;
+  images?: TavilyImage[];
+  results: TavilySearchResult[];
+  responseTime: number;
+  error?: string; // Added to handle errors
 }
 
 interface TavilyExtractResult {
-  url: string
-  rawContent: string
-  images?: string[]
-  error?: string
+  url: string;
+  rawContent: string;
+  images?: string[];
+  error?: string;
 }
 
 interface TavilyExtractResponse {
-  results: TavilyExtractResult[]
-  error?: string
+  results: TavilyExtractResult[];
+  error?: string;
 }
 
 export const tavilyTools = (
   { apiKey }: { apiKey: string },
   config?: {
-    excludeTools?: TavilyTools[]
-  }
+    excludeTools?: TavilyTools[];
+  },
 ): Partial<Record<TavilyTools, Tool>> => {
-  const client = tavily({ apiKey })
+  const client = tavily({ apiKey });
 
   const tools: Partial<Record<TavilyTools, Tool>> = {
     search: tool({
@@ -59,19 +59,19 @@ export const tavilyTools = (
           .enum(['basic', 'advanced'])
           .optional()
           .describe(
-            'Depth of search - basic is faster, advanced is more thorough'
+            'Depth of search - basic is faster, advanced is more thorough',
           ),
         topic: z
           .enum(['general', 'news'])
           .optional()
           .describe(
-            'Category of search - general for broad searches, news for recent events'
+            'Category of search - general for broad searches, news for recent events',
           ),
         days: z
           .number()
           .optional()
           .describe(
-            'Number of days back to search (only works with news topic, defaults to 3)'
+            'Number of days back to search (only works with news topic, defaults to 3)',
           ),
         timeRange: z
           .enum(['day', 'week', 'month', 'year', 'd', 'w', 'm', 'y'])
@@ -89,13 +89,13 @@ export const tavilyTools = (
           .boolean()
           .optional()
           .describe(
-            'Add descriptive text for each image (requires includeImages)'
+            'Add descriptive text for each image (requires includeImages)',
           ),
         includeAnswer: z
           .boolean()
           .optional()
           .describe(
-            'Include AI-generated answer to query - basic is quick, advanced is detailed'
+            'Include AI-generated answer to query - basic is quick, advanced is detailed',
           ),
         includeRawContent: z
           .boolean()
@@ -114,9 +114,9 @@ export const tavilyTools = (
         try {
           return await client.search(query, {
             ...options,
-          })
+          });
         } catch (error) {
-          return { error: String(error) } as TavilySearchResponse
+          return { error: String(error) } as TavilySearchResponse;
         }
       },
     }),
@@ -135,19 +135,19 @@ export const tavilyTools = (
           .enum(['basic', 'advanced'])
           .optional()
           .describe(
-            'Depth of search - basic is faster, advanced is more thorough'
+            'Depth of search - basic is faster, advanced is more thorough',
           ),
         topic: z
           .enum(['general', 'news'])
           .optional()
           .describe(
-            'Category of search - general for broad searches, news for recent events'
+            'Category of search - general for broad searches, news for recent events',
           ),
         days: z
           .number()
           .optional()
           .describe(
-            'Number of days back to search (only works with news topic)'
+            'Number of days back to search (only works with news topic)',
           ),
         maxResults: z
           .number()
@@ -164,9 +164,9 @@ export const tavilyTools = (
       }),
       execute: async ({ query, ...options }) => {
         try {
-          return await client.searchContext(query, options)
+          return await client.searchContext(query, options);
         } catch (error) {
-          return String(error)
+          return String(error);
         }
       },
     }),
@@ -179,19 +179,19 @@ export const tavilyTools = (
           .enum(['basic', 'advanced'])
           .optional()
           .describe(
-            'Depth of search - defaults to advanced for better answers'
+            'Depth of search - defaults to advanced for better answers',
           ),
         topic: z
           .enum(['general', 'news'])
           .optional()
           .describe(
-            'Category of search - general for broad searches, news for recent events'
+            'Category of search - general for broad searches, news for recent events',
           ),
         days: z
           .number()
           .optional()
           .describe(
-            'Number of days back to search (only works with news topic)'
+            'Number of days back to search (only works with news topic)',
           ),
         maxResults: z
           .number()
@@ -208,9 +208,9 @@ export const tavilyTools = (
       }),
       execute: async ({ query, ...options }) => {
         try {
-          return await client.searchQNA(query, options)
+          return await client.searchQNA(query, options);
         } catch (error) {
-          return String(error)
+          return String(error);
         }
       },
     }),
@@ -224,28 +224,28 @@ export const tavilyTools = (
       }),
       execute: async ({ urls }) => {
         try {
-          const response = await client.extract(urls, {})
+          const response = await client.extract(urls, {});
           return {
             results: response.results.map((result) => ({
               url: result.url,
               rawContent: result.rawContent,
             })),
-          } as TavilyExtractResponse
+          } as TavilyExtractResponse;
         } catch (error) {
           return {
             results: [],
             error: String(error),
-          } as TavilyExtractResponse
+          } as TavilyExtractResponse;
         }
       },
     }),
-  }
+  };
 
   for (const toolName in tools) {
     if (config?.excludeTools?.includes(toolName as TavilyTools)) {
-      delete tools[toolName as TavilyTools]
+      delete tools[toolName as TavilyTools];
     }
   }
 
-  return tools
-}
+  return tools;
+};

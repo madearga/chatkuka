@@ -60,78 +60,85 @@ export const imageArtifact = new Artifact({
           const input = document.createElement('input');
           input.type = 'file';
           input.accept = 'image/*';
-          
+
           // Handle file selection
           input.onchange = async (e: Event) => {
             const file = (e.target as HTMLInputElement).files?.[0];
             if (!file) return;
-            
+
             // Check if file is an image
             if (!file.type.startsWith('image/')) {
               toast.error('Please upload an image file');
               return;
             }
-            
+
             try {
               const loadingToast = toast.loading('Uploading image...');
-              
+
               // First convert file to base64 to immediately update UI
               const reader = new FileReader();
               reader.onload = async (e: ProgressEvent<FileReader>) => {
                 const base64String = (e.target?.result as string).split(',')[1];
-                
+
                 // Now handle the upload to server
                 const formData = new FormData();
                 const docId = generateUUID();
                 formData.append('file', file);
                 formData.append('id', docId);
                 formData.append('kind', 'image');
-                
+
                 // Upload the image
                 const response = await fetch('/api/files/upload', {
                   method: 'POST',
                   body: formData,
                 });
-                
+
                 toast.dismiss(loadingToast);
-                
+
                 // Parse response once
                 const responseData = await response.json();
-                
+
                 if (!response.ok) {
-                  throw new Error(responseData.error || 'Failed to upload image');
+                  throw new Error(
+                    responseData.error || 'Failed to upload image',
+                  );
                 }
-                
+
                 // Use already parsed response data
                 const uploadedDocId = responseData.documentId || docId;
-                
+
                 // Display the ID for easy reference
-                toast.success(`Image uploaded successfully. ID: ${uploadedDocId}`);
-                
+                toast.success(
+                  `Image uploaded successfully. ID: ${uploadedDocId}`,
+                );
+
                 // Update the UI immediately with base64 image
                 // Create a new image element for temporary display
                 const img = document.createElement('img');
                 img.src = `data:image/png;base64,${base64String}`;
                 img.alt = 'Uploaded image';
                 img.className = 'w-full h-fit max-w-[800px] p-0 md:p-20';
-                
+
                 // Add the ID for reference below the image
                 const docIdDisplay = document.createElement('div');
                 docIdDisplay.textContent = `Image ID: ${uploadedDocId}`;
                 docIdDisplay.className = 'text-sm text-muted-foreground mt-2';
-                
+
                 // Find the container and replace the current image
-                const imgContainer = document.querySelector('.image-editor-container picture');
+                const imgContainer = document.querySelector(
+                  '.image-editor-container picture',
+                );
                 if (imgContainer) {
                   // Clear current content and add new image
                   imgContainer.innerHTML = '';
                   imgContainer.appendChild(img);
-                  
+
                   // Add the ID display after the picture container
                   const parentContainer = imgContainer.parentElement;
                   if (parentContainer) {
                     // Check if we already have an ID display
-                    const existingIdDisplay = parentContainer.querySelector('.doc-id-display');
+                    const existingIdDisplay =
+                      parentContainer.querySelector('.doc-id-display');
                     if (existingIdDisplay) {
                       existingIdDisplay.textContent = `Image ID: ${uploadedDocId}`;
                     } else {
@@ -140,27 +147,27 @@ export const imageArtifact = new Artifact({
                     }
                   }
                 }
-                
+
                 // Store the document ID in local storage for later use
                 localStorage.setItem('lastUploadedImageId', uploadedDocId);
-                
+
                 // Reload the artifact in background to ensure proper sync
                 setTimeout(() => {
                   handleVersionChange('latest');
                 }, 500);
               };
-              
+
               reader.onerror = () => {
                 toast.error('Failed to read image file');
               };
-              
+
               reader.readAsDataURL(file);
             } catch (error) {
               console.error('Error uploading image:', error);
               toast.error('Failed to upload image');
             }
           };
-          
+
           // Trigger file selection
           input.click();
         } catch (error) {

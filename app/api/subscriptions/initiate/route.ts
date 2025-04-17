@@ -27,7 +27,10 @@ export async function POST(request: Request) {
     // Explicitly check if user ID exists in the session
     if (!session.user.id) {
       console.error('Subscription API: User ID missing in session');
-      return NextResponse.json({ error: 'User ID missing in session' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'User ID missing in session' },
+        { status: 400 },
+      );
     }
 
     // Get user's current subscription status
@@ -46,11 +49,16 @@ export async function POST(request: Request) {
     }
 
     // Check if user already has an active or pending subscription
-    if (userData.subscriptionStatus === 'active' || userData.subscriptionStatus === 'pending_activation') {
-      console.log(`Subscription API: User ${userData.id} already has an active or pending subscription`);
+    if (
+      userData.subscriptionStatus === 'active' ||
+      userData.subscriptionStatus === 'pending_activation'
+    ) {
+      console.log(
+        `Subscription API: User ${userData.id} already has an active or pending subscription`,
+      );
       return NextResponse.json(
         { error: 'User already has an active or pending subscription' },
-        { status: 409 }
+        { status: 409 },
       );
     }
 
@@ -85,7 +93,7 @@ export async function POST(request: Request) {
       console.error('Subscription API: No token received from Midtrans');
       return NextResponse.json(
         { error: 'Failed to generate payment token' },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -122,7 +130,7 @@ export async function POST(request: Request) {
     console.error('Subscription API: Unhandled error:', error);
     return NextResponse.json(
       { error: 'Failed to process subscription request' },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

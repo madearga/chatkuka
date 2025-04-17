@@ -17,10 +17,7 @@ import {
   getUserById,
   type DBSchemaMessage,
 } from '@/lib/db/queries';
-import {
-  generateUUID,
-  getMostRecentUserMessage,
-} from '@/lib/utils';
+import { generateUUID, getMostRecentUserMessage } from '@/lib/utils';
 
 import { generateTitleFromUserMessage } from '../../actions';
 import { createDocument } from '@/lib/ai/tools/create-document';
@@ -77,7 +74,9 @@ export async function POST(request: Request) {
 
     if (!session.user.id) {
       console.error('No user ID in session');
-      return new Response('Unauthorized - No user ID in session', { status: 401 });
+      return new Response('Unauthorized - No user ID in session', {
+        status: 401,
+      });
     }
 
     // Log session info for debugging
@@ -89,7 +88,9 @@ export async function POST(request: Request) {
 
     // Validate model access based on subscription status
     if (!hasModelAccess(user, selectedChatModel)) {
-      console.error(`User ${session.user.email} attempted to use model ${selectedChatModel} without proper subscription`);
+      console.error(
+        `User ${session.user.email} attempted to use model ${selectedChatModel} without proper subscription`,
+      );
       const defaultModel = getDefaultModelForUser(user);
       console.log(`Falling back to default model: ${defaultModel}`);
 
@@ -97,7 +98,10 @@ export async function POST(request: Request) {
       selectedChatModel = defaultModel;
 
       // Add a system message to inform the user about the model downgrade
-      if (messages.length > 0 && messages[messages.length - 1].role === 'user') {
+      if (
+        messages.length > 0 &&
+        messages[messages.length - 1].role === 'user'
+      ) {
         // Add a system message before the AI response
         messages.push({
           id: generateUUID(),
@@ -127,7 +131,9 @@ export async function POST(request: Request) {
     if (!chat) {
       try {
         // Generate title using the original user message (before transformation)
-        const title = await generateTitleFromUserMessage({ message: userMessage });
+        const title = await generateTitleFromUserMessage({
+          message: userMessage,
+        });
         console.log('Creating new chat with title:', title);
         console.log('User ID from session:', session.user.id);
 
@@ -136,9 +142,12 @@ export async function POST(request: Request) {
       } catch (error) {
         console.error('Failed to save chat in database', error);
         // Return detailed error information
-        return new Response(`Failed to create chat - database error: ${error instanceof Error ? error.message : String(error)}`, {
-          status: 500
-        });
+        return new Response(
+          `Failed to create chat - database error: ${error instanceof Error ? error.message : String(error)}`,
+          {
+            status: 500,
+          },
+        );
       }
     }
 
@@ -215,16 +224,34 @@ export async function POST(request: Request) {
         }
 
         // Determine which tools to use
-        type ToolName = 'getWeather' | 'createDocument' | 'updateDocument' | 'requestSuggestions';
-        const activeTools = selectedChatModel === 'chat-model-reasoning'
-          ? ([] as ToolName[])
-          : (['getWeather', 'createDocument', 'updateDocument', 'requestSuggestions'] as ToolName[]);
+        type ToolName =
+          | 'getWeather'
+          | 'createDocument'
+          | 'updateDocument'
+          | 'requestSuggestions';
+        const activeTools =
+          selectedChatModel === 'chat-model-reasoning'
+            ? ([] as ToolName[])
+            : ([
+                'getWeather',
+                'createDocument',
+                'updateDocument',
+                'requestSuggestions',
+              ] as ToolName[]);
 
         // Combine standard tools
         const tools = {
           getWeather,
-          createDocument: createDocument({ session, dataStream, selectedModel: selectedChatModel }),
-          updateDocument: updateDocument({ session, dataStream, selectedModel: selectedChatModel }),
+          createDocument: createDocument({
+            session,
+            dataStream,
+            selectedModel: selectedChatModel,
+          }),
+          updateDocument: updateDocument({
+            session,
+            dataStream,
+            selectedModel: selectedChatModel,
+          }),
           requestSuggestions: requestSuggestions({
             session,
             dataStream,
@@ -232,7 +259,8 @@ export async function POST(request: Request) {
         };
 
         // If search is enabled, perform search before starting the AI response
-        let systemMessage = requestSystemPrompt || systemPrompt({ selectedChatModel });
+        let systemMessage =
+          requestSystemPrompt || systemPrompt({ selectedChatModel });
         let searchResults = null;
 
         if (useSearch && searchToolAvailable && searchQuery && tavilyApiKey) {
@@ -252,9 +280,13 @@ export async function POST(request: Request) {
               type: 'search-results',
               status: 'complete',
               query: searchQuery,
-              results: searchResults.results ? JSON.parse(JSON.stringify(searchResults.results)) : [],
+              results: searchResults.results
+                ? JSON.parse(JSON.stringify(searchResults.results))
+                : [],
               answer: searchResults.answer,
-              images: searchResults.images ? JSON.parse(JSON.stringify(searchResults.images)) : [],
+              images: searchResults.images
+                ? JSON.parse(JSON.stringify(searchResults.images))
+                : [],
               responseTime: searchResults.responseTime,
             } as any);
 
@@ -264,7 +296,10 @@ export async function POST(request: Request) {
               systemMessage += `Summary: ${searchResults.answer}\n\n`;
             }
 
-            if (Array.isArray(searchResults.results) && searchResults.results.length > 0) {
+            if (
+              Array.isArray(searchResults.results) &&
+              searchResults.results.length > 0
+            ) {
               systemMessage += `Sources:\n`;
               searchResults.results.forEach((result: any, index: number) => {
                 systemMessage += `Source ${index + 1}: ${result.title}\n`;
@@ -280,7 +315,6 @@ export async function POST(request: Request) {
             }
 
             systemMessage += `Please use these search results to provide a comprehensive response to the user's query.`;
-
           } catch (error) {
             console.error('Search error:', error);
 
@@ -299,7 +333,9 @@ export async function POST(request: Request) {
         }
 
         // Set temperature to 1 for o3 and o4-mini models which don't support temperature=0
-        const needsDefaultTemp = selectedChatModel === 'openai-o3' || selectedChatModel === 'openai-o4-mini';
+        const needsDefaultTemp =
+          selectedChatModel === 'openai-o3' ||
+          selectedChatModel === 'openai-o4-mini';
 
         const result = streamText({
           model: myProvider.languageModel(selectedChatModel),
@@ -310,7 +346,10 @@ export async function POST(request: Request) {
           temperature: needsDefaultTemp ? 1 : 0, // Set temperature to 1 for models that require it
           onFinish: async (response) => {
             // Log the entire response object for debugging purposes
-            console.log('[onFinish] Full Response Object:', JSON.stringify(response, null, 2));
+            console.log(
+              '[onFinish] Full Response Object:',
+              JSON.stringify(response, null, 2),
+            );
 
             // Extract the final text content
             const finalText = response.text;
@@ -326,14 +365,23 @@ export async function POST(request: Request) {
             // We need to handle cases where tools might be called in later steps too, but for now,
             // let's focus on the common case shown in the logs.
             let relevantToolResults: any[] = [];
-            if (response.steps && response.steps.length > 0 && response.steps[0].toolResults) {
+            if (
+              response.steps &&
+              response.steps.length > 0 &&
+              response.steps[0].toolResults
+            ) {
               relevantToolResults = response.steps[0].toolResults;
             }
 
             // Add tool results to the parts array in the required format
-            relevantToolResults.forEach(toolResult => {
+            relevantToolResults.forEach((toolResult) => {
               // Check if it's the tool result format we expect
-              if (toolResult.type === 'tool-result' && toolResult.toolCallId && toolResult.toolName && toolResult.result) {
+              if (
+                toolResult.type === 'tool-result' &&
+                toolResult.toolCallId &&
+                toolResult.toolName &&
+                toolResult.result
+              ) {
                 parts.push({
                   type: 'tool-invocation',
                   toolInvocation: {
@@ -342,16 +390,21 @@ export async function POST(request: Request) {
                     state: 'result', // Mark as result
                     result: toolResult.result, // Include the actual result object
                     // args: toolResult.args, // Optionally include args if needed
-                  }
+                  },
                 });
               } else {
-                console.warn('[onFinish] Encountered unexpected toolResult format:', toolResult);
+                console.warn(
+                  '[onFinish] Encountered unexpected toolResult format:',
+                  toolResult,
+                );
               }
             });
 
             // If parts array is empty (no text, no valid tool results), log and exit.
             if (parts.length === 0) {
-              console.error('[onFinish] No valid parts (text or tool results) found to save.');
+              console.error(
+                '[onFinish] No valid parts (text or tool results) found to save.',
+              );
               return;
             }
 
@@ -368,14 +421,21 @@ export async function POST(request: Request) {
               };
 
               // Log the structure before saving
-              console.log('[onFinish] Message to Save:', JSON.stringify(assistantMessageToSave, null, 2));
+              console.log(
+                '[onFinish] Message to Save:',
+                JSON.stringify(assistantMessageToSave, null, 2),
+              );
 
               // Save the constructed message
               await saveMessages({ messages: [assistantMessageToSave] });
-              console.log('[onFinish] Successfully saved final assistant message.');
-
+              console.log(
+                '[onFinish] Successfully saved final assistant message.',
+              );
             } catch (error) {
-              console.error('[onFinish] Failed to save final assistant message:', error);
+              console.error(
+                '[onFinish] Failed to save final assistant message:',
+                error,
+              );
             }
           },
           onError: (error) => {

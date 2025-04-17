@@ -77,7 +77,7 @@ declare module 'midtrans-client' {
         isProduction: boolean;
         serverKey: string;
         clientKey?: string;
-      }
+      },
     ): Promise<any>;
 
     static statusb2b(
@@ -86,7 +86,7 @@ declare module 'midtrans-client' {
         isProduction: boolean;
         serverKey: string;
         clientKey?: string;
-      }
+      },
     ): Promise<any>;
 
     static approve(
@@ -95,7 +95,7 @@ declare module 'midtrans-client' {
         isProduction: boolean;
         serverKey: string;
         clientKey?: string;
-      }
+      },
     ): Promise<any>;
 
     static deny(
@@ -104,7 +104,7 @@ declare module 'midtrans-client' {
         isProduction: boolean;
         serverKey: string;
         clientKey?: string;
-      }
+      },
     ): Promise<any>;
 
     static cancel(
@@ -113,7 +113,7 @@ declare module 'midtrans-client' {
         isProduction: boolean;
         serverKey: string;
         clientKey?: string;
-      }
+      },
     ): Promise<any>;
 
     static expire(
@@ -122,7 +122,7 @@ declare module 'midtrans-client' {
         isProduction: boolean;
         serverKey: string;
         clientKey?: string;
-      }
+      },
     ): Promise<any>;
 
     static refund(
@@ -132,7 +132,7 @@ declare module 'midtrans-client' {
         serverKey: string;
         clientKey?: string;
       },
-      parameter?: any
+      parameter?: any,
     ): Promise<any>;
 
     static refundDirect(
@@ -142,7 +142,7 @@ declare module 'midtrans-client' {
         serverKey: string;
         clientKey?: string;
       },
-      parameter?: any
+      parameter?: any,
     ): Promise<any>;
   }
 
@@ -151,4 +151,4 @@ declare module 'midtrans-client' {
     CoreApi,
     Transaction,
   };
-} 
+}

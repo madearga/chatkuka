@@ -27,7 +27,8 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
     if (session?.user?.id === chat.userId) {
       isOwner = true; // Jika ada sesi dan dia pemiliknya
     }
-  } else { // chat.visibility === 'private'
+  } else {
+    // chat.visibility === 'private'
     if (session?.user?.id === chat.userId) {
       canView = true; // Hanya pemilik yang bisa lihat chat private
       isOwner = true;

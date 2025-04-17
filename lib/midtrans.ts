@@ -2,22 +2,31 @@ import midtransClient, { Snap } from 'midtrans-client';
 import crypto from 'crypto';
 
 // Check for environment variables
-const MIDTRANS_SERVER_KEY = process.env.MIDTRANS_SERVER_KEY || 'dummy-server-key';
-const MIDTRANS_CLIENT_KEY = process.env.MIDTRANS_CLIENT_KEY || 'dummy-client-key';
-const MIDTRANS_SIGNATURE_KEY = process.env.MIDTRANS_SIGNATURE_KEY || 'dummy-signature-key';
+const MIDTRANS_SERVER_KEY =
+  process.env.MIDTRANS_SERVER_KEY || 'dummy-server-key';
+const MIDTRANS_CLIENT_KEY =
+  process.env.MIDTRANS_CLIENT_KEY || 'dummy-client-key';
+const MIDTRANS_SIGNATURE_KEY =
+  process.env.MIDTRANS_SIGNATURE_KEY || 'dummy-signature-key';
 const IS_PRODUCTION = process.env.MIDTRANS_ENV === 'production';
 
 // Show warnings instead of throwing errors
 if (!process.env.MIDTRANS_SERVER_KEY) {
-  console.warn('Warning: MIDTRANS_SERVER_KEY is not configured in environment variables. Using dummy value.');
+  console.warn(
+    'Warning: MIDTRANS_SERVER_KEY is not configured in environment variables. Using dummy value.',
+  );
 }
 
 if (!process.env.MIDTRANS_CLIENT_KEY) {
-  console.warn('Warning: MIDTRANS_CLIENT_KEY is not configured in environment variables. Using dummy value.');
+  console.warn(
+    'Warning: MIDTRANS_CLIENT_KEY is not configured in environment variables. Using dummy value.',
+  );
 }
 
 if (!process.env.MIDTRANS_SIGNATURE_KEY) {
-  console.warn('Warning: MIDTRANS_SIGNATURE_KEY is not configured in environment variables. Using dummy value.');
+  console.warn(
+    'Warning: MIDTRANS_SIGNATURE_KEY is not configured in environment variables. Using dummy value.',
+  );
 }
 
 // Initialize Midtrans Snap client with explicit type
@@ -97,7 +106,9 @@ export async function createSnapTransaction({
   try {
     // Check if we're using dummy keys and return mock response
     if (MIDTRANS_SERVER_KEY === 'dummy-server-key') {
-      console.warn('Using dummy Midtrans keys. Returning mock transaction response.');
+      console.warn(
+        'Using dummy Midtrans keys. Returning mock transaction response.',
+      );
       return {
         token: 'dummy-token-' + orderId,
         redirectUrl: 'https://example.com/payment/' + orderId,
@@ -115,7 +126,7 @@ export async function createSnapTransaction({
         email: customer.email,
         customer_id: customer.id,
       },
-      item_details: items.map(item => ({
+      item_details: items.map((item) => ({
         id: item.id,
         name: item.name,
         price: item.price,
@@ -134,7 +145,10 @@ export async function createSnapTransaction({
       });
     }
 
-    console.log('Creating Midtrans transaction with params:', JSON.stringify(transactionParams, null, 2));
+    console.log(
+      'Creating Midtrans transaction with params:',
+      JSON.stringify(transactionParams, null, 2),
+    );
 
     // Create transaction
     const transaction = await snap.createTransaction(transactionParams);
@@ -156,7 +170,8 @@ export async function createSnapTransaction({
       console.warn('Returning mock token for development testing');
       return {
         token: 'dev-mock-token-' + orderId,
-        redirectUrl: 'https://app.sandbox.midtrans.com/snap/v2/vtweb/' + orderId,
+        redirectUrl:
+          'https://app.sandbox.midtrans.com/snap/v2/vtweb/' + orderId,
       };
     }
 
@@ -196,19 +211,22 @@ export async function verifyWebhookSignature({
   try {
     // Check against the actual server key's dummy value
     if (serverKey === 'dummy-server-key') {
-      console.warn('Using dummy MIDTRANS_SERVER_KEY. Skipping signature verification.');
+      console.warn(
+        'Using dummy MIDTRANS_SERVER_KEY. Skipping signature verification.',
+      );
       return true;
     }
 
     // Ensure grossAmount is a string with .00 format
-    const grossAmountStr = typeof grossAmount === 'number' 
-      ? grossAmount.toFixed(2) 
-      : String(grossAmount); // Ensure it's a string, handle if Midtrans sends number unexpectedly
-      
+    const grossAmountStr =
+      typeof grossAmount === 'number'
+        ? grossAmount.toFixed(2)
+        : String(grossAmount); // Ensure it's a string, handle if Midtrans sends number unexpectedly
+
     // Check if grossAmountStr already ends with .00, add if not (just in case)
-    const formattedGrossAmount = grossAmountStr.endsWith('.00') 
-      ? grossAmountStr 
-      : grossAmountStr.includes('.') 
+    const formattedGrossAmount = grossAmountStr.endsWith('.00')
+      ? grossAmountStr
+      : grossAmountStr.includes('.')
         ? parseFloat(grossAmountStr).toFixed(2) // If it has decimal but not .00
         : grossAmountStr + '.00'; // If it has no decimal at all
 
@@ -216,9 +234,18 @@ export async function verifyWebhookSignature({
     const signatureComponent = `${orderId}${statusCode}${formattedGrossAmount}${serverKey}`;
 
     // Add logging for debugging
-    console.log('[verifyWebhookSignature] Signature component:', signatureComponent);
-    console.log('[verifyWebhookSignature] Server Key used (should be MIDTRANS_SERVER_KEY):', serverKey);
-    console.log('[verifyWebhookSignature] Received Signature (from body):', receivedSignature);
+    console.log(
+      '[verifyWebhookSignature] Signature component:',
+      signatureComponent,
+    );
+    console.log(
+      '[verifyWebhookSignature] Server Key used (should be MIDTRANS_SERVER_KEY):',
+      serverKey,
+    );
+    console.log(
+      '[verifyWebhookSignature] Received Signature (from body):',
+      receivedSignature,
+    );
 
     // Create SHA-512 hash
     const calculatedSignature = crypto
@@ -226,14 +253,20 @@ export async function verifyWebhookSignature({
       .update(signatureComponent)
       .digest('hex');
 
-    console.log('[verifyWebhookSignature] Calculated Signature:', calculatedSignature);
+    console.log(
+      '[verifyWebhookSignature] Calculated Signature:',
+      calculatedSignature,
+    );
 
     // Compare the calculated signature with the received one
     const isValid = calculatedSignature === receivedSignature;
     console.log('[verifyWebhookSignature] Signature valid?:', isValid);
     return isValid;
   } catch (error) {
-    console.error('[verifyWebhookSignature] Error verifying webhook signature:', error);
+    console.error(
+      '[verifyWebhookSignature] Error verifying webhook signature:',
+      error,
+    );
     return false;
   }
 }

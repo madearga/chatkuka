@@ -111,7 +111,7 @@ export class OAuthClient<T> {
   async fetchUser(
     code: string,
     state: string,
-    cookieStore: ReturnType<typeof cookies>
+    cookieStore: ReturnType<typeof cookies>,
   ): Promise<{
     id: string;
     email: string;
@@ -136,7 +136,9 @@ export class OAuthClient<T> {
 }
 
 // Get OAuth client based on provider
-export async function getOAuthClient(provider: OAuthProvider): Promise<OAuthClient<any>> {
+export async function getOAuthClient(
+  provider: OAuthProvider,
+): Promise<OAuthClient<any>> {
   switch (provider) {
     case 'google':
       // Dynamically import the google module to avoid circular dependency

@@ -31,12 +31,10 @@ import {
   ArrowUp,
   Loader,
   X as CloseIcon,
-} from 'lucide-react';
-import { ALLOWED_FILE_EXTENSIONS } from '@/lib/constants';
-import {
   ArrowUpIcon,
   PaperclipIcon,
 } from 'lucide-react';
+import { ALLOWED_FILE_EXTENSIONS } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import equal from 'fast-deep-equal';
@@ -96,7 +94,7 @@ export function PureMultimodalInput({
   const { isMobile, openMobile } = useSidebar();
   const [isSearchEnabled, setIsSearchEnabled] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [lastInputValue, setLastInputValue] = useState("");
+  const [lastInputValue, setLastInputValue] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [showFilePicker, setShowFilePicker] = useState(false);
   const [isHydrated, setIsHydrated] = useState(false);
@@ -176,10 +174,10 @@ export function PureMultimodalInput({
             includeImageDescriptions: true,
             topic: 'general',
             timeRange: null,
-            days: 3
-          }
-        }
-      })
+            days: 3,
+          },
+        },
+      }),
     });
 
     // Show toast if search is enabled
@@ -208,40 +206,47 @@ export function PureMultimodalInput({
     isSearchEnabled,
   ]);
 
-  const uploadFile = useCallback(async (file: File) => {
-    const formData = new FormData();
+  const uploadFile = useCallback(
+    async (file: File) => {
+      const formData = new FormData();
 
-    // Add the required fields for the upload
-    formData.append('file', file);
-    formData.append('chatId', chatId); // Add chatId for message attachment
+      // Add the required fields for the upload
+      formData.append('file', file);
+      formData.append('chatId', chatId); // Add chatId for message attachment
 
-    try {
-      const response = await fetch('/api/files/upload', {
-        method: 'POST',
-        body: formData,
-      });
+      try {
+        const response = await fetch('/api/files/upload', {
+          method: 'POST',
+          body: formData,
+        });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `Upload failed with status: ${response.status}`);
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(
+            errorData.error || `Upload failed with status: ${response.status}`,
+          );
+        }
+
+        // Parse the response JSON
+        const responseData = await response.json();
+        const { url, pathname, contentType } = responseData;
+
+        // Return the attachment information
+        return {
+          url,
+          name: pathname,
+          contentType: contentType,
+        };
+      } catch (error) {
+        console.error('Upload error:', error);
+        toast.error(
+          `Failed to upload ${file.name}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        );
+        return undefined;
       }
-
-      // Parse the response JSON
-      const responseData = await response.json();
-      const { url, pathname, contentType } = responseData;
-
-      // Return the attachment information
-      return {
-        url,
-        name: pathname,
-        contentType: contentType,
-      };
-    } catch (error) {
-      console.error('Upload error:', error);
-      toast.error(`Failed to upload ${file.name}: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      return undefined;
-    }
-  }, [chatId]);
+    },
+    [chatId],
+  );
 
   const handleFileChange = useCallback(
     async (event: ChangeEvent<HTMLInputElement>) => {
@@ -272,7 +277,7 @@ export function PureMultimodalInput({
           toast.success(
             uploadedAttachments.length === 1
               ? `File uploaded successfully: ${uploadedAttachments[0].name?.split('/').pop()}`
-              : `Uploaded ${uploadedAttachments.length} files successfully`
+              : `Uploaded ${uploadedAttachments.length} files successfully`,
           );
         }
       } catch (error) {
@@ -317,9 +322,9 @@ export function PureMultimodalInput({
             includeImageDescriptions: true,
             topic: 'general',
             timeRange: null,
-            days: 3
-          }
-        }
+            days: 3,
+          },
+        },
       });
 
       // Reset state setelah submit
@@ -398,7 +403,8 @@ export function PureMultimodalInput({
   return (
     <div
       className={`flex gap-2 flex-col w-full overflow-y-auto ${className || ''}`}
-      data-mobile-sidebar-open={isMobile && openMobile ? "true" : "false"}>
+      data-mobile-sidebar-open={isMobile && openMobile ? 'true' : 'false'}
+    >
       <div className="flex flex-col w-full gap-2 relative">
         <div
           className={cn(
@@ -417,11 +423,11 @@ export function PureMultimodalInput({
             name="message"
             value={input}
             className={cn(
-              "min-h-[24px] w-full resize-none border-0 bg-transparent",
-              "py-1.5 sm:py-3 px-2 sm:px-4 pr-14 sm:pr-20 max-h-[300px] overflow-y-auto",
-              "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-offset-0 focus-visible:ring-ring",
-              "text-sm sm:text-base placeholder:text-muted-foreground placeholder:opacity-70 dark:text-white",
-              input.length === 0 && 'min-h-[48px]'
+              'min-h-[24px] w-full resize-none border-0 bg-transparent',
+              'py-1.5 sm:py-3 px-2 sm:px-4 pr-14 sm:pr-20 max-h-[300px] overflow-y-auto',
+              'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-offset-0 focus-visible:ring-ring',
+              'text-sm sm:text-base placeholder:text-muted-foreground placeholder:opacity-70 dark:text-white',
+              input.length === 0 && 'min-h-[48px]',
             )}
             spellCheck={false}
             autoComplete="off"
@@ -443,7 +449,7 @@ export function PureMultimodalInput({
               type="button"
               variant="ghost"
               size="icon"
-              className="absolute right-[36px] sm:right-[60px] bottom-[8px] sm:bottom-[10px] h-5 w-5 sm:h-6 sm:w-6 p-0.5 sm:p-1 text-muted-foreground hover:text-foreground z-10"
+              className="absolute right-[36px] sm:right-[60px] bottom-[8px] sm:bottom-[10px] size-5 sm:size-6 p-0.5 sm:p-1 text-muted-foreground hover:text-foreground z-10"
               onClick={(e) => {
                 e.preventDefault();
                 setInput('');
@@ -461,17 +467,24 @@ export function PureMultimodalInput({
             {/* Search web button - now toggles search mode instead of component */}
             <button
               type="button"
-              aria-label={isSearchEnabled ? "Disable web search" : "Enable web search"}
+              aria-label={
+                isSearchEnabled ? 'Disable web search' : 'Enable web search'
+              }
               onClick={() => setIsSearchEnabled(!isSearchEnabled)}
-              title={isSearchEnabled ? "Disable web search" : "Enable web search"}
+              title={
+                isSearchEnabled ? 'Disable web search' : 'Enable web search'
+              }
               className={cn(
-                "p-1.5 rounded-full",
+                'p-1.5 rounded-full',
                 isSearchEnabled
-                  ? "bg-blue-500/15 text-blue-500"
-                  : "bg-black/5 dark:bg-white/5 text-black/40 dark:text-white/40 hover:text-black dark:hover:text-white"
+                  ? 'bg-blue-500/15 text-blue-500'
+                  : 'bg-black/5 dark:bg-white/5 text-black/40 dark:text-white/40 hover:text-black dark:hover:text-white',
               )}
             >
-              <Globe className={isSearchEnabled ? "text-blue-500" : ""} size={18} />
+              <Globe
+                className={isSearchEnabled ? 'text-blue-500' : ''}
+                size={18}
+              />
             </button>
 
             {/* Upload button */}
@@ -507,18 +520,20 @@ export function PureMultimodalInput({
             ) : (
               <button
                 type="button"
-                aria-label={isSearchEnabled ? "Search web" : "Send message"}
+                aria-label={isSearchEnabled ? 'Search web' : 'Send message'}
                 className={cn(
-                  "p-1 sm:p-1.5 rounded-full",
+                  'p-1 sm:p-1.5 rounded-full',
                   input.trim()
                     ? 'bg-primary text-primary-foreground hover:bg-primary/90'
-                    : 'bg-black/5 dark:bg-white/5 text-black/40 dark:text-white/40'
+                    : 'bg-black/5 dark:bg-white/5 text-black/40 dark:text-white/40',
                 )}
                 onClick={(event) => {
                   event.preventDefault();
                   submitForm();
                 }}
-                disabled={input.length === 0 || uploadQueue.length > 0 || isSubmitting}
+                disabled={
+                  input.length === 0 || uploadQueue.length > 0 || isSubmitting
+                }
               >
                 <ArrowUp size={16} className="sm:size-[18px]" />
               </button>
@@ -552,7 +567,7 @@ export function PureMultimodalInput({
                 key={attachment.url}
                 className="bg-muted text-xs rounded-md p-2 flex items-center gap-2"
               >
-                <div className="flex items-center justify-center w-5 h-5 rounded bg-primary/10 text-[10px] font-semibold">
+                <div className="flex items-center justify-center size-5 rounded bg-primary/10 text-[10px] font-semibold">
                   {extension}
                 </div>
                 <span className="truncate max-w-[150px]">{filename}</span>
@@ -560,7 +575,9 @@ export function PureMultimodalInput({
                   type="button"
                   className="ml-2 text-muted-foreground hover:text-foreground"
                   onClick={() => {
-                    setAttachments(current => current.filter(a => a.url !== attachment.url));
+                    setAttachments((current) =>
+                      current.filter((a) => a.url !== attachment.url),
+                    );
                   }}
                 >
                   <X size={14} />
@@ -615,7 +632,7 @@ function PureAttachmentsButton({
         }
       }}
     >
-      <Paperclip className="h-[18px] w-[18px]" />
+      <Paperclip className="size-[18px]" />
     </Button>
   );
 }
@@ -638,7 +655,7 @@ function PureStopButton({
         setMessages((messages) => sanitizeUIMessages(messages));
       }}
     >
-      <X className="h-[18px] w-[18px]" />
+      <X className="size-[18px]" />
     </Button>
   );
 }
@@ -665,7 +682,7 @@ function PureSendButton({
       }}
       disabled={input.length === 0 || uploadQueue.length > 0 || isSubmitting}
     >
-      <SendIcon className="h-[18px] w-[18px]" />
+      <SendIcon className="size-[18px]" />
     </Button>
   );
 }
@@ -688,7 +705,7 @@ function UploadProgress({ files }: { files: Array<string> }) {
           className="text-xs bg-muted p-2 rounded-md flex items-center"
         >
           <span className="truncate max-w-[200px]">{filename}</span>
-          <span className="ml-auto flex-shrink-0">
+          <span className="ml-auto shrink-0">
             <Loader size={12} className="animate-spin" />
           </span>
         </div>
@@ -725,10 +742,10 @@ function FilePickerContent({
         type="button"
         variant="ghost"
         size="icon"
-        className="h-9 w-9 rounded-full text-muted-foreground hover:text-foreground"
+        className="size-9 rounded-full text-muted-foreground hover:text-foreground"
         onClick={onClose}
       >
-        <CloseIcon className="h-[18px] w-[18px]" />
+        <CloseIcon className="size-[18px]" />
       </Button>
     </div>
   );

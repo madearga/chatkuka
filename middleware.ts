@@ -10,16 +10,22 @@ interface User {
   name?: string | null;
   email?: string | null;
   image?: string | null;
-  subscriptionStatus?: 'active' | 'inactive' | 'pending_activation' | 'past_due' | 'none' | null; // Make sure this matches
+  subscriptionStatus?:
+    | 'active'
+    | 'inactive'
+    | 'pending_activation'
+    | 'past_due'
+    | 'none'
+    | null; // Make sure this matches
 }
 
 // Helper function to check if a path is considered public (doesn't require login)
 // Adjust this list based on your actual public pages/api routes
 const isPublicPath = (path: string): boolean => {
-  return path === '/login' ||
-         path === '/register' ||
-         path.startsWith('/api/auth/'); // NextAuth API routes are public
-         // Add other public paths like '/' or '/about' if applicable
+  return (
+    path === '/login' || path === '/register' || path.startsWith('/api/auth/')
+  ); // NextAuth API routes are public
+  // Add other public paths like '/' or '/about' if applicable
 };
 
 // Use the auth function from NextAuth as a wrapper for the middleware logic
@@ -30,7 +36,10 @@ export default NextAuth(authConfig).auth(async (req) => {
   const path = nextUrl.pathname;
 
   // Regex untuk mendeteksi path chat spesifik (/chat/[uuid])
-  const isChatPath = /^\/chat\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(path);
+  const isChatPath =
+    /^\/chat\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(
+      path,
+    );
 
   // 1. Bypass Midtrans webhook BEFORE any auth/premium checks
   if (path === '/api/payment/notification') {
@@ -56,7 +65,8 @@ export default NextAuth(authConfig).auth(async (req) => {
 
   // 3. Premium Subscription Check: Only run if the user is logged in
   if (isLoggedIn) {
-    const isPremiumPath = path.startsWith('/premium') || path.startsWith('/api/premium');
+    const isPremiumPath =
+      path.startsWith('/premium') || path.startsWith('/api/premium');
     if (isPremiumPath) {
       // Cast the user from the session to include your custom fields
       const user = session.user as User | undefined;

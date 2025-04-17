@@ -12,7 +12,9 @@ interface SubscriptionData {
 }
 
 export function SubscriptionStatus() {
-  const [subscription, setSubscription] = useState<SubscriptionData | null>(null);
+  const [subscription, setSubscription] = useState<SubscriptionData | null>(
+    null,
+  );
   const [isLoading, setIsLoading] = useState(true);
   const [isInitiating, setIsInitiating] = useState(false);
   const [snapScriptLoaded, setSnapScriptLoaded] = useState(false);
@@ -22,15 +24,22 @@ export function SubscriptionStatus() {
     const loadSnapScript = () => {
       try {
         const script = document.createElement('script');
-        script.src = process.env.NEXT_PUBLIC_MIDTRANS_SNAP_URL ?? 'https://app.sandbox.midtrans.com/snap/snap.js';
-        script.setAttribute('data-client-key', process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY ?? '');
+        script.src =
+          process.env.NEXT_PUBLIC_MIDTRANS_SNAP_URL ??
+          'https://app.sandbox.midtrans.com/snap/snap.js';
+        script.setAttribute(
+          'data-client-key',
+          process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY ?? '',
+        );
         script.onload = () => {
           console.log('Midtrans script loaded successfully');
           setSnapScriptLoaded(true);
         };
         script.onerror = (error) => {
           console.error('Failed to load Midtrans script:', error);
-          toast.error('Failed to load payment gateway. Please try again later.');
+          toast.error(
+            'Failed to load payment gateway. Please try again later.',
+          );
         };
         document.body.appendChild(script);
       } catch (error) {
@@ -56,7 +65,10 @@ export function SubscriptionStatus() {
           const data = await response.json();
           setSubscription(data);
         } else {
-          console.error('Failed to fetch subscription status', await response.text());
+          console.error(
+            'Failed to fetch subscription status',
+            await response.text(),
+          );
           toast.error('Failed to load subscription status');
         }
       } catch (error) {
@@ -120,14 +132,18 @@ export function SubscriptionStatus() {
         embedId: 'snap-container',
         onSuccess: (result) => {
           console.log('Payment success:', result);
-          toast.success('Payment successful! Your subscription will be activated shortly.');
+          toast.success(
+            'Payment successful! Your subscription will be activated shortly.',
+          );
           setTimeout(() => {
             window.location.reload();
           }, 3000);
         },
         onPending: (result) => {
           console.log('Payment pending:', result);
-          toast.info('Payment is pending. Your subscription will be activated once payment is confirmed.');
+          toast.info(
+            'Payment is pending. Your subscription will be activated once payment is confirmed.',
+          );
           setIsInitiating(false);
         },
         onError: (error) => {
@@ -142,7 +158,11 @@ export function SubscriptionStatus() {
       });
     } catch (error) {
       console.error('Error in handleSubscribe:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to initiate subscription');
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : 'Failed to initiate subscription',
+      );
       setIsInitiating(false);
     }
   };
@@ -164,7 +184,7 @@ export function SubscriptionStatus() {
 
       const data = await response.json();
       toast.success('Subscription cancelled successfully');
-      
+
       // Update local state
       if (subscription) {
         setSubscription({
@@ -175,7 +195,11 @@ export function SubscriptionStatus() {
       }
     } catch (error) {
       console.error('Error cancelling subscription:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to cancel subscription');
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : 'Failed to cancel subscription',
+      );
     }
   };
 
@@ -193,7 +217,7 @@ export function SubscriptionStatus() {
   return (
     <div className="p-4 border rounded-lg">
       <h2 className="text-xl font-bold mb-4">Subscription Status</h2>
-      
+
       {subscription?.isActive ? (
         <div>
           <div className="bg-green-100 text-green-800 p-2 rounded mb-2">
@@ -202,10 +226,11 @@ export function SubscriptionStatus() {
           <p className="mb-1">Status: {subscription.status}</p>
           {subscription.currentPeriodEnd && (
             <p className="mb-4">
-              Renews on: {new Date(subscription.currentPeriodEnd).toLocaleDateString()}
+              Renews on:{' '}
+              {new Date(subscription.currentPeriodEnd).toLocaleDateString()}
             </p>
           )}
-          <Button 
+          <Button
             onClick={handleCancelSubscription}
             variant="outline"
             className="mt-2"
@@ -219,22 +244,22 @@ export function SubscriptionStatus() {
             You are on the free plan
           </div>
           <p className="mb-4">Upgrade to Pro for full access to all features</p>
-          
+
           {isInitiating && (
             <div
               id="snap-container"
               className="w-full min-h-[400px] mb-4 rounded-lg border border-border"
             ></div>
           )}
-          
-          <Button 
+
+          <Button
             onClick={handleSubscribe}
             disabled={!snapScriptLoaded || isInitiating}
             className="mt-2"
           >
             {isInitiating ? 'Processing...' : 'Upgrade to Pro'}
           </Button>
-          
+
           {!snapScriptLoaded && (
             <p className="text-sm text-muted-foreground mt-2">
               Loading payment gateway...
@@ -250,13 +275,16 @@ export function SubscriptionStatus() {
 declare global {
   interface Window {
     snap?: {
-      embed: (token: string, options: {
-        embedId: string;
-        onSuccess: (result: any) => void;
-        onPending: (result: any) => void;
-        onError: (error: any) => void;
-        onClose: () => void;
-      }) => void;
+      embed: (
+        token: string,
+        options: {
+          embedId: string;
+          onSuccess: (result: any) => void;
+          onPending: (result: any) => void;
+          onError: (error: any) => void;
+          onClose: () => void;
+        },
+      ) => void;
     };
   }
 }

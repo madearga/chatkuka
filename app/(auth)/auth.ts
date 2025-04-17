@@ -1,5 +1,10 @@
 import { compare } from 'bcrypt-ts';
-import NextAuth, { type User, type Session, type Account, type Profile } from 'next-auth';
+import NextAuth, {
+  type User,
+  type Session,
+  type Account,
+  type Profile,
+} from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
 import GoogleProvider from 'next-auth/providers/google';
 
@@ -22,7 +27,7 @@ export const {
   adapter: DrizzleAdapter(),
   session: {
     // Use JWT strategy instead of database sessions
-    strategy: "jwt",
+    strategy: 'jwt',
     // 30 days
     maxAge: 30 * 24 * 60 * 60,
   },
@@ -74,7 +79,8 @@ export const {
             token.email = profile.email || user.email;
           }
           // Set initial status from the user object provided during sign-in/linking
-          token.subscriptionStatus = (user as any).subscriptionStatus || 'inactive';
+          token.subscriptionStatus =
+            (user as any).subscriptionStatus || 'inactive';
         }
 
         // Always try to refresh user data from DB if token.id exists
@@ -107,24 +113,26 @@ export const {
         return token;
       }
     },
-    async session({
-      session,
-      token,
-    }) {
+    async session({ session, token }) {
       try {
         // console.log('Session Callback - Session:', session);
         // console.log('Session Callback - Token:', token);
 
-        if (session.user && token.id) { // Ensure token.id exists
+        if (session.user && token.id) {
+          // Ensure token.id exists
           session.user.id = token.id as string;
           if (token.name) session.user.name = token.name as string;
           if (token.email) session.user.email = token.email as string;
 
           // Use the (now hopefully up-to-date) status from the token
-          (session.user as any).subscriptionStatus = token.subscriptionStatus || 'inactive';
+          (session.user as any).subscriptionStatus =
+            token.subscriptionStatus || 'inactive';
         } else {
           // Handle cases where token might be incomplete
-          console.warn('Session Callback: Token ID missing or session.user missing.', { token, session });
+          console.warn(
+            'Session Callback: Token ID missing or session.user missing.',
+            { token, session },
+          );
         }
 
         // console.log('Session Callback - Returning Session:', session);
@@ -144,7 +152,11 @@ export const {
       console.log('User signed out:', message);
     },
     async linkAccount({ user, account, profile }) {
-      console.log('Account linked:', { userId: user.id, provider: account.provider, providerAccountId: account.providerAccountId });
+      console.log('Account linked:', {
+        userId: user.id,
+        provider: account.provider,
+        providerAccountId: account.providerAccountId,
+      });
     },
   },
 });

@@ -14,6 +14,6 @@ export const useChat = () => {
         chat.setInput(message);
         chat.handleSubmit(new Event('submit') as any);
       }
-    }
+    },
   };
 };

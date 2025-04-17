@@ -1,11 +1,15 @@
 // @/components/chat-input/personas.tsx
-"use client";
+'use client';
 
-import { memo } from "react";
-import { motion } from "framer-motion";
-import { PERSONAS, TRANSITION_SPRING, TRANSITION_VARIANTS } from "@/lib/ai/config";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { memo } from 'react';
+import { motion } from 'framer-motion';
+import {
+  PERSONAS,
+  TRANSITION_SPRING,
+  TRANSITION_VARIANTS,
+} from '@/lib/ai/config';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 type ButtonPersonaProps = {
   label: string;
@@ -30,12 +34,11 @@ const ButtonPersona = memo(function ButtonPersona({
       variant="outline"
       size="sm"
       onClick={() =>
-        isActive ? onSelectSystemPrompt("") : onSelectSystemPrompt(prompt)
+        isActive ? onSelectSystemPrompt('') : onSelectSystemPrompt(prompt)
       }
       className={cn(
-        "rounded-full h-auto py-1.5 px-3 flex items-center gap-1.5 text-xs sm:text-sm",
-        isActive &&
-          "bg-primary text-primary-foreground hover:bg-primary/90"
+        'rounded-full h-auto py-1.5 px-3 flex items-center gap-1.5 text-xs sm:text-sm',
+        isActive && 'bg-primary text-primary-foreground hover:bg-primary/90',
       )}
       type="button"
     >

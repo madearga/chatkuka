@@ -1,13 +1,17 @@
 import { cookies } from 'next/headers';
 import { db } from '@/lib/db/db';
-import { OAuthProvider, UserOAuthAccountTable, user as UserTable } from '@/lib/db/schema';
+import {
+  OAuthProvider,
+  UserOAuthAccountTable,
+  user as UserTable,
+} from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 
 // Connect user to OAuth account
 export async function connectUserToAccount(
   { id, email, name }: { id: string; email: string; name: string },
-  provider: OAuthProvider
+  provider: OAuthProvider,
 ) {
   console.log(`Connecting OAuth account: ${provider} - ${id} - ${email}`);
 
@@ -30,7 +34,12 @@ export async function connectUserToAccount(
           name: name,
           subscriptionStatus: 'inactive',
         })
-        .returning({ id: UserTable.id, role: UserTable.role, email: UserTable.email, name: UserTable.name });
+        .returning({
+          id: UserTable.id,
+          role: UserTable.role,
+          email: UserTable.email,
+          name: UserTable.name,
+        });
       user = newUser;
       console.log('New user created:', user);
     }
@@ -63,7 +72,7 @@ export async function connectUserToAccount(
 // Create user session
 export async function createUserSession(
   user: { id: string; role: string },
-  cookieStore: ReturnType<typeof cookies>
+  cookieStore: ReturnType<typeof cookies>,
 ) {
   // Set session cookie
   const cookieList = await cookieStore;

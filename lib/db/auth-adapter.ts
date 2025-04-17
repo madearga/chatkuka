@@ -43,10 +43,7 @@ export function DrizzleAdapter(): Adapter {
     async getUser(id) {
       console.log('DrizzleAdapter.getUser', id);
       try {
-        const [foundUser] = await db
-          .select()
-          .from(user)
-          .where(eq(user.id, id));
+        const [foundUser] = await db.select().from(user).where(eq(user.id, id));
 
         if (!foundUser) return null;
 
@@ -87,7 +84,11 @@ export function DrizzleAdapter(): Adapter {
 
     // Get a user by their account
     async getUserByAccount({ provider, providerAccountId }) {
-      console.log('DrizzleAdapter.getUserByAccount', provider, providerAccountId);
+      console.log(
+        'DrizzleAdapter.getUserByAccount',
+        provider,
+        providerAccountId,
+      );
       try {
         const [result] = await db
           .select({
@@ -98,8 +99,8 @@ export function DrizzleAdapter(): Adapter {
           .where(
             and(
               eq(UserOAuthAccountTable.provider, provider as any),
-              eq(UserOAuthAccountTable.providerAccountId, providerAccountId)
-            )
+              eq(UserOAuthAccountTable.providerAccountId, providerAccountId),
+            ),
           );
 
         if (!result) return null;
@@ -153,8 +154,11 @@ export function DrizzleAdapter(): Adapter {
           .where(
             and(
               eq(UserOAuthAccountTable.provider, account.provider as any),
-              eq(UserOAuthAccountTable.providerAccountId, account.providerAccountId)
-            )
+              eq(
+                UserOAuthAccountTable.providerAccountId,
+                account.providerAccountId,
+              ),
+            ),
           );
 
         if (existingAccount.length > 0) {
@@ -188,7 +192,9 @@ export function DrizzleAdapter(): Adapter {
     },
 
     async getSessionAndUser(sessionToken) {
-      console.log('DrizzleAdapter.getSessionAndUser - Using JWT sessions instead');
+      console.log(
+        'DrizzleAdapter.getSessionAndUser - Using JWT sessions instead',
+      );
       // Return null to force NextAuth to use JWT sessions
       return null;
     },
@@ -232,8 +238,8 @@ export function DrizzleAdapter(): Adapter {
           .where(
             and(
               eq(UserOAuthAccountTable.provider, provider as any),
-              eq(UserOAuthAccountTable.providerAccountId, providerAccountId)
-            )
+              eq(UserOAuthAccountTable.providerAccountId, providerAccountId),
+            ),
           );
       } catch (error) {
         console.error('Error unlinking account:', error);

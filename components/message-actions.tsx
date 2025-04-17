@@ -35,13 +35,17 @@ export function PureMessageActions({
   const { mutate } = useSWRConfig();
   const [_, copyToClipboard] = useCopyToClipboard();
 
-  if (message.toolInvocations && message.toolInvocations.length > 0) return null;
+  if (message.toolInvocations && message.toolInvocations.length > 0)
+    return null;
   if (typeof message.content !== 'string') return null;
 
   const handleCopy = async () => {
     // Prefer copying all text parts from message.parts if available
     const textToCopy = (message as any).parts
-      ?.filter((part: any): part is { type: 'text'; text: string } => part.type === 'text')
+      ?.filter(
+        (part: any): part is { type: 'text'; text: string } =>
+          part.type === 'text',
+      )
       .map((part: any) => part.text)
       .join('\n\n')
       .trim();

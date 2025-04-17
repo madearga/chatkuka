@@ -359,7 +359,10 @@ export const LoaderIcon = ({ size = 16 }: { size?: number }) => {
   );
 };
 
-export const UploadIcon = ({ size = 16, className }: { size?: number, className?: string }) => {
+export const UploadIcon = ({
+  size = 16,
+  className,
+}: { size?: number; className?: string }) => {
   return (
     <svg
       data-testid="geist-icon"
@@ -874,7 +877,10 @@ export const CheckCircleFillIcon = ({ size = 16 }: { size?: number }) => {
   );
 };
 
-export const GlobeIcon = ({ size = 16, className }: { size?: number; className?: string }) => {
+export const GlobeIcon = ({
+  size = 16,
+  className,
+}: { size?: number; className?: string }) => {
   return (
     <svg
       height={size}

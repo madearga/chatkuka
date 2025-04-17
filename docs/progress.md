@@ -27,7 +27,7 @@ export const viewport = {
   viewportFit: 'cover',
 };
 ```
-**Why?** 
+**Why?**
 - Controls how the app scales on mobile devices
 - Allows users to zoom (up to 5x) for accessibility
 - Prevents layout issues on devices with notches/cutouts
@@ -89,7 +89,7 @@ export const viewport = {
   input, select, textarea {
     font-size: 16px !important;
   }
-  
+
   html, body {
     overflow-x: hidden;
     width: 100%;
@@ -252,7 +252,7 @@ export function ImageEditor({
 }: ImageEditorProps) {
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
+
   return (
     <div className="relative w-full flex flex-col items-center">
       <picture>
@@ -286,7 +286,7 @@ export function ImageEditor({
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [lastUploadedId, setLastUploadedId] = useState<string>('');
-  
+
   // Added localStorage integration
   useEffect(() => {
     const savedId = localStorage.getItem('lastUploadedImageId');
@@ -294,7 +294,7 @@ export function ImageEditor({
       setLastUploadedId(savedId);
     }
   }, []);
-  
+
   // Added clipboard functionality
   const copyIdToClipboard = (id: string) => {
     navigator.clipboard.writeText(id);
@@ -302,7 +302,7 @@ export function ImageEditor({
   };
 
   const effectiveDocId = documentId || lastUploadedId;
-  
+
   return (
     <div className="relative w-full flex flex-col items-center">
       <picture>
@@ -319,7 +319,7 @@ export function ImageEditor({
           {effectiveDocId && (
             <div className="flex items-center gap-2 mt-2 text-sm text-muted-foreground doc-id-display">
               <span>Image ID: {effectiveDocId}</span>
-              <button 
+              <button
                 onClick={() => copyIdToClipboard(effectiveDocId)}
                 className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded"
                 title="Copy ID to clipboard"
@@ -352,29 +352,29 @@ onClick: async ({ handleVersionChange }) => {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
-    
+
     input.onchange = async (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (!file) return;
-      
+
       const formData = new FormData();
       formData.append('file', file);
       formData.append('id', nanoid());
       formData.append('kind', 'image');
-      
+
       const response = await fetch('/api/files/upload', {
         method: 'POST',
         body: formData,
       });
-      
+
       if (!response.ok) {
         throw new Error('Failed to upload image');
       }
-      
+
       handleVersionChange('latest');
       toast.success('Image uploaded successfully');
     };
-    
+
     input.click();
   } catch (error) {
     console.error('Error uploading image:', error);
@@ -390,56 +390,56 @@ onClick: async ({ handleVersionChange }) => {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
-    
+
     input.onchange = async (e: Event) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (!file) return;
-      
+
       try {
         const loadingToast = toast.loading('Uploading image...');
-        
+
         // First convert file to base64 for immediate preview
         const reader = new FileReader();
         reader.onload = async (e: ProgressEvent<FileReader>) => {
           const base64String = (e.target?.result as string).split(',')[1];
-          
+
           // Handle upload to server
           const formData = new FormData();
           const docId = nanoid();
           formData.append('file', file);
           formData.append('id', docId);
           formData.append('kind', 'image');
-          
+
           const response = await fetch('/api/files/upload', {
             method: 'POST',
             body: formData,
           });
-          
+
           toast.dismiss(loadingToast);
-          
+
           if (!response.ok) {
             throw new Error('Failed to upload image');
           }
-          
+
           const data = await response.json();
           const uploadedDocId = data.documentId || docId;
-          
+
           // Update UI immediately
           const img = document.createElement('img');
           img.src = `data:image/png;base64,${base64String}`;
           img.alt = 'Uploaded image';
           img.className = 'w-full h-fit max-w-[800px] p-0 md:p-20';
-          
+
           // Show ID below image
           const docIdDisplay = document.createElement('div');
           docIdDisplay.textContent = `Image ID: ${uploadedDocId}`;
           docIdDisplay.className = 'text-sm text-muted-foreground mt-2';
-          
+
           const imgContainer = document.querySelector('.image-editor-container picture');
           if (imgContainer) {
             imgContainer.innerHTML = '';
             imgContainer.appendChild(img);
-            
+
             const parentContainer = imgContainer.parentElement;
             if (parentContainer) {
               const existingIdDisplay = parentContainer.querySelector('.doc-id-display');
@@ -451,28 +451,28 @@ onClick: async ({ handleVersionChange }) => {
               }
             }
           }
-          
+
           // Store ID for persistence
           localStorage.setItem('lastUploadedImageId', uploadedDocId);
-          
+
           toast.success(`Image uploaded successfully. ID: ${uploadedDocId}`);
-          
+
           setTimeout(() => {
             handleVersionChange('latest');
           }, 500);
         };
-        
+
         reader.onerror = () => {
           toast.error('Failed to read image file');
         };
-        
+
         reader.readAsDataURL(file);
       } catch (error) {
         console.error('Error uploading image:', error);
         toast.error('Failed to upload image');
       }
     };
-    
+
     input.click();
   } catch (error) {
     console.error('Error initiating upload:', error);
@@ -509,7 +509,7 @@ onUpdateDocument: async ({ description, dataStream, document }) => {
   let draftContent = '';
   try {
     const currentContent = document.content;
-    
+
     // Enhanced validation with specific messages
     if (!description) {
       throw new Error("Editing prompt cannot be empty");
@@ -517,13 +517,13 @@ onUpdateDocument: async ({ description, dataStream, document }) => {
     if (!currentContent) {
       throw new Error("No existing image to edit");
     }
-    
+
     // Added user feedback
     dataStream.writeData({
       type: 'info',
       message: `Editing image with ID: ${document.id}`,
     });
-    
+
     // ... rest of the code
   } catch (error) {
     console.error("Error editing image:", error instanceof Error ? error.message : String(error));
@@ -601,3 +601,447 @@ If you have any questions about these changes or need help implementing similar 
 
 ---
 Last updated: 2024-03-21
+
+## Search Functionality Enhancement (April 17, 2025)
+
+### Overview
+We've fixed critical issues with the search functionality that were causing JavaScript code to be sent as part of search queries. The improvements focus on robust error handling, type safety, and better user experience across all devices.
+
+### Problem Identification
+The search feature was experiencing issues where:
+1. JavaScript functions were being sent as part of query parameters
+2. Search results weren't properly handling edge cases
+3. Type errors were preventing successful builds
+4. Case-insensitive search wasn't working correctly
+
+### Core Changes
+
+#### 1. Custom Debounce Hook Implementation (`lib/hooks/use-debounce-value.ts`)
+**Before:**
+```typescript
+// Previously using useDebounceValue from usehooks-ts which had issues
+import { useDebounceValue } from 'usehooks-ts';
+```
+
+**After:**
+```typescript
+'use client';
+
+import { useState, useEffect } from 'react';
+
+export function useDebounceValue<T>(value: T, delay: number): T {
+  // Initialize with the provided value
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+
+  useEffect(() => {
+    // Skip debounce for undefined or null values
+    if (value === undefined || value === null) {
+      setDebouncedValue(value);
+      return;
+    }
+
+    // For functions, just return the value directly without debouncing
+    if (typeof value === 'function') {
+      console.warn('useDebounceValue received a function, returning without debouncing');
+      setDebouncedValue(value);
+      return;
+    }
+
+    // Set up the timeout for debouncing
+    const timer = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    // Clean up the timeout
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+}
+```
+
+#### 2. Improved `groupChatsByDate` Function (`lib/utils.ts`)
+**Before:**
+```typescript
+export function groupChatsByDate(chats: Chat[]): GroupedChats {
+  const now = new Date();
+  const oneWeekAgo = subWeeks(now, 1);
+  const oneMonthAgo = subMonths(now, 1);
+
+  return chats.reduce(
+    (groups, chat) => {
+      // Ensure createdAt is treated as a Date object
+      const chatDate = new Date(chat.createdAt);
+
+      if (isToday(chatDate)) {
+        groups.today.push(chat);
+      } else if (isYesterday(chatDate)) {
+        groups.yesterday.push(chat);
+      } else if (chatDate > oneWeekAgo) {
+        groups.lastWeek.push(chat);
+      } else if (chatDate > oneMonthAgo) {
+        groups.lastMonth.push(chat);
+      } else {
+        groups.older.push(chat);
+      }
+
+      return groups;
+    },
+    {
+      today: [],
+      yesterday: [],
+      lastWeek: [],
+      lastMonth: [],
+      older: [],
+    } as GroupedChats,
+  );
+}
+```
+
+**After:**
+```typescript
+export function groupChatsByDate(chats: Chat[]): GroupedChats {
+  // Initialize empty groups
+  const groups: GroupedChats = {
+    today: [],
+    yesterday: [],
+    lastWeek: [],
+    lastMonth: [],
+    older: [],
+  };
+
+  // If chats is undefined or not an array, return empty groups
+  if (!chats || !Array.isArray(chats)) {
+    console.warn('groupChatsByDate received invalid chats:', chats);
+    return groups;
+  }
+
+  const now = new Date();
+  const oneWeekAgo = subWeeks(now, 1);
+  const oneMonthAgo = subMonths(now, 1);
+
+  return chats.reduce(
+    (acc, chat) => {
+      try {
+        // Ensure createdAt exists and is valid
+        if (!chat.createdAt) {
+          console.warn('Chat missing createdAt:', chat);
+          return acc;
+        }
+
+        // Ensure createdAt is treated as a Date object
+        const chatDate = new Date(chat.createdAt);
+
+        // Check if date is valid
+        if (isNaN(chatDate.getTime())) {
+          console.warn('Invalid chat date:', chat.createdAt);
+          return acc;
+        }
+
+        if (isToday(chatDate)) {
+          acc.today.push(chat);
+        } else if (isYesterday(chatDate)) {
+          acc.yesterday.push(chat);
+        } else if (chatDate > oneWeekAgo) {
+          acc.lastWeek.push(chat);
+        } else if (chatDate > oneMonthAgo) {
+          acc.lastMonth.push(chat);
+        } else {
+          acc.older.push(chat);
+        }
+      } catch (error) {
+        console.error('Error processing chat in groupChatsByDate:', error, chat);
+      }
+
+      return acc;
+    },
+    groups
+  );
+}
+```
+
+#### 3. Enhanced Search Results Transformation (`app/(chat)/api/search/route.ts`)
+**Before:**
+```typescript
+function transformSearchResults(searchResults: any[], query: string) {
+  return searchResults.map((result) => {
+    let preview = result.preview;
+    let contextPreview = '';
+
+    try {
+      // Processing logic...
+    } catch (e: any) {
+      preview = 'No preview available';
+    }
+
+    return {
+      id: result.id,
+      title: result.title || 'Untitled',
+      preview: preview || 'No preview available',
+      createdAt: new Date(result.createdAt),
+      role: result.role,
+      userId: result.userId,
+      visibility: result.visibility,
+    };
+  });
+}
+```
+
+**After:**
+```typescript
+import type { Chat } from '@/lib/db/schema';
+
+function transformSearchResults(searchResults: any[], query: string): Chat[] {
+  // Check if searchResults is valid
+  if (!searchResults || !Array.isArray(searchResults)) {
+    console.warn('transformSearchResults received invalid searchResults:', searchResults);
+    return [];
+  }
+
+  // Define a type for the search result
+  type SearchResult = {
+    id?: string;
+    title?: string;
+    preview?: string;
+    createdAt?: string | Date;
+    role?: string;
+    userId?: string;
+    visibility?: string;
+    [key: string]: any; // Allow other properties
+  };
+
+  // First filter out invalid results, then map to Chat objects
+  return searchResults
+    .filter((result): result is SearchResult => {
+      if (!result || typeof result !== 'object') {
+        console.warn('Invalid search result item:', result);
+        return false;
+      }
+      return true;
+    })
+    .map((result) => {
+      // Processing logic...
+
+      // Ensure all required fields are present and match Chat type
+      return {
+        id: result.id || generateUUID(),
+        title: result.title || 'Untitled',
+        createdAt: result.createdAt ? new Date(result.createdAt) : new Date(),
+        userId: result.userId || '',
+        visibility: (result.visibility || 'private') as 'public' | 'private',
+        // Add preview for display purposes (not part of Chat type)
+        preview: preview || 'No preview available',
+        // Add role for display purposes (not part of Chat type)
+        role: result.role || 'user',
+      } as Chat;
+    });
+}
+```
+
+#### 4. New SimpleSearch Component (`components/simple-search.tsx`)
+Created a new, more robust search component to replace the problematic ChatSearch:
+
+```typescript
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { SearchIcon, XIcon } from 'lucide-react';
+import { useDebounceValue } from '@/lib/hooks/use-debounce-value';
+import useSWR from 'swr';
+import { fetcher, type GroupedChats } from '@/lib/utils';
+import type { Chat } from '@/lib/db/schema';
+
+// Extended Chat type with preview property
+type ChatWithPreview = Chat & {
+  preview?: string;
+  role?: string;
+};
+
+// Extended GroupedChats type with ChatWithPreview
+type GroupedChatsWithPreview = {
+  today: ChatWithPreview[];
+  yesterday: ChatWithPreview[];
+  lastWeek: ChatWithPreview[];
+  lastMonth: ChatWithPreview[];
+  older: ChatWithPreview[];
+};
+
+export function SimpleSearch({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+  const [searchQuery, setSearchQuery] = useState('');
+  const debouncedSearchQuery = useDebounceValue(searchQuery, 300);
+
+  // Fetch search results when query is present
+  const { data: searchResults, isLoading } = useSWR<GroupedChatsWithPreview>(
+    debouncedSearchQuery ? `/api/search?q=${encodeURIComponent(debouncedSearchQuery)}` : null,
+    fetcher
+  );
+
+  // Reset search when dialog closes
+  useEffect(() => {
+    if (!open) {
+      setSearchQuery('');
+    }
+  }, [open]);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="p-4 gap-4 max-w-screen-sm overflow-hidden">
+        <div className="flex items-center border-b pb-2">
+          <SearchIcon className="mr-2 size-4 shrink-0 opacity-50" />
+          <Input
+            placeholder="Search chats..."
+            value={searchQuery}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+            }}
+            className="border-none shadow-none focus-visible:ring-0"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="size-6 rounded-full flex items-center justify-center text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+            >
+              <XIcon className="size-4" />
+            </button>
+          )}
+        </div>
+
+        <div className="max-h-[400px] overflow-y-auto">
+          {isLoading && <div className="py-6 text-center">Loading...</div>}
+
+          {!isLoading && debouncedSearchQuery && (!searchResults || Object.values(searchResults).every((group: any) => group.length === 0)) && (
+            <div className="py-6 text-center">
+              No chats found for &quot;{debouncedSearchQuery}&quot;
+            </div>
+          )}
+
+          {!isLoading && searchResults && (
+            <div>
+              {Object.entries(searchResults).map(([date, chats]) => (
+                chats.length > 0 && (
+                  <div key={date} className="mb-4">
+                    <h3 className="text-sm font-medium mb-2">{date}</h3>
+                    <div className="space-y-2">
+                      {chats.map((chat) => (
+                        <div
+                          key={chat.id}
+                          className="p-2 rounded-md hover:bg-accent cursor-pointer"
+                          onClick={() => {
+                            onOpenChange(false);
+                            window.location.href = `/chat/${chat.id}`;
+                          }}
+                        >
+                          <div className="font-medium">{chat.title}</div>
+                          {chat.preview && <div className="text-sm text-muted-foreground">{chat.preview}</div>}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )
+              ))}
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+```
+
+#### 5. Updated Chat Component to Use SimpleSearch (`components/chat.tsx`)
+**Before:**
+```typescript
+import { ChatSearch } from '@/components/chat-search';
+
+// ...
+
+{/* Add the Search Dialog */}
+{isSearchOpen ? (
+  <ChatSearch open={isSearchOpen} onOpenChange={setIsSearchOpen} />
+) : null}
+```
+
+**After:**
+```typescript
+import { SimpleSearch } from '@/components/simple-search';
+
+// ...
+
+{/* Add the Search Dialog */}
+{isSearchOpen ? (
+  <SimpleSearch open={isSearchOpen} onOpenChange={setIsSearchOpen} />
+) : null}
+```
+
+### SQL Query Improvements
+
+Enhanced SQL query in `lib/db/queries.ts` to ensure case-insensitive search:
+
+```typescript
+sql`LOWER(${chat.title}) LIKE ${sanitizedQuery}`,
+sql`LOWER((${message.parts}->'0'->>'text')) LIKE ${sanitizedQuery}`,
+```
+
+### Key Benefits
+
+1. **Robust Error Handling**
+   - Comprehensive validation of input and output data
+   - Graceful handling of edge cases
+   - Detailed logging for debugging
+
+2. **Type Safety**
+   - Proper TypeScript typing throughout the codebase
+   - Custom types for extended objects
+   - Type guards to ensure data integrity
+
+3. **Improved User Experience**
+   - Case-insensitive search
+   - Better error messages
+   - More responsive UI
+
+4. **Code Quality**
+   - Cleaner, more maintainable code
+   - Better separation of concerns
+   - Improved performance
+
+### Testing Guidelines
+
+1. **Search Functionality**
+   - Test with various search terms
+   - Verify case-insensitive matching
+   - Test with special characters
+
+2. **Edge Cases**
+   - Empty search queries
+   - Very long search terms
+   - Non-ASCII characters
+
+3. **Performance**
+   - Test with large chat histories
+   - Verify debounce behavior
+   - Check response times
+
+### Known Issues & TODOs
+
+1. [ ] Implement search highlighting
+2. [ ] Add search filters (by date, chat type)
+3. [ ] Improve search relevance ranking
+4. [ ] Add keyboard navigation in search results
+5. [ ] Implement search history
+
+### AI Agent Integration Notes
+
+For AI agents working with this codebase:
+
+1. The search functionality now uses a custom `useDebounceValue` hook in `lib/hooks/use-debounce-value.ts`
+2. Search results include additional properties (`preview` and `role`) that are not part of the base `Chat` type
+3. The `SimpleSearch` component has replaced `ChatSearch` for better reliability
+4. SQL queries use `LOWER()` for case-insensitive matching
+5. All search-related functions include robust error handling and type validation
+
+---
+Last updated: 2025-04-17

@@ -12,17 +12,18 @@ export const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 export const ALLOWED_FILE_TYPES = {
   // Document types
   'application/pdf': '.pdf',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '.docx',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
+    '.docx',
   'application/msword': '.doc',
-  
+
   // Spreadsheet types
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': '.xlsx',
   'application/vnd.ms-excel': '.xls',
   'text/csv': '.csv',
-  
+
   // Text types
   'text/plain': '.txt',
-  
+
   // Image types (already supported)
   'image/jpeg': '.jpg',
   'image/png': '.png',
@@ -31,7 +32,8 @@ export const ALLOWED_FILE_TYPES = {
 };
 
 // Allowed file extensions string for file input element
-export const ALLOWED_FILE_EXTENSIONS = Object.values(ALLOWED_FILE_TYPES).join(',');
+export const ALLOWED_FILE_EXTENSIONS =
+  Object.values(ALLOWED_FILE_TYPES).join(',');
 
 // Allowed MIME types array for validation
-export const ALLOWED_MIME_TYPES = Object.keys(ALLOWED_FILE_TYPES); 
+export const ALLOWED_MIME_TYPES = Object.keys(ALLOWED_FILE_TYPES);

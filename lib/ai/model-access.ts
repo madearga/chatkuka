@@ -33,7 +33,10 @@ export const MODEL_TIER_MAP: Record<string, ModelTier> = {
 };
 
 // Check if a user has access to a specific model
-export function hasModelAccess(user: User | null | undefined, modelId: string): boolean {
+export function hasModelAccess(
+  user: User | null | undefined,
+  modelId: string,
+): boolean {
   // If model doesn't exist in the map, default to requiring paid tier
   const requiredTier = MODEL_TIER_MAP[modelId] || ModelTier.PAID;
 
@@ -47,7 +50,9 @@ export function hasModelAccess(user: User | null | undefined, modelId: string): 
 }
 
 // Get available models for a user based on their subscription status
-export function getAvailableModelsForUser(user: User | null | undefined): string[] {
+export function getAvailableModelsForUser(
+  user: User | null | undefined,
+): string[] {
   const isPaidUser = user?.subscriptionStatus === 'active';
 
   if (isPaidUser) {

@@ -34,7 +34,11 @@ export function DocumentPreview({
   args,
 }: DocumentPreviewProps) {
   // Log the received props
-  console.log('[DocumentPreview] Received props:', { isReadonly, result, args });
+  console.log('[DocumentPreview] Received props:', {
+    isReadonly,
+    result,
+    args,
+  });
 
   const { artifact, setArtifact } = useArtifact();
 
@@ -42,10 +46,7 @@ export function DocumentPreview({
     Array<Document>
   >(result ? `/api/document?id=${result.id}` : null, fetcher);
 
-  const previewDocument = useMemo(
-    () => documents?.[0],
-    [documents]
-  );
+  const previewDocument = useMemo(() => documents?.[0], [documents]);
   const hitboxRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {

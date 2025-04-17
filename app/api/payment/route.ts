@@ -3,7 +3,11 @@ import { z } from 'zod';
 
 import { auth } from '@/app/(auth)/auth';
 import { createPayment, updatePaymentStatus } from '@/lib/db/queries';
-import { createSnapTransaction, generateOrderId, verifyWebhookSignature } from '@/lib/midtrans';
+import {
+  createSnapTransaction,
+  generateOrderId,
+  verifyWebhookSignature,
+} from '@/lib/midtrans';
 import { db } from '@/lib/db/db';
 import { user } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
@@ -31,11 +35,15 @@ async function handleSuccessfulSubscriptionPayment({
       .set({
         subscriptionStatus: 'active',
         currentPeriodEnd: newPeriodEnd,
-        ...(isInitial && savedTokenId ? { midtransPaymentTokenId: savedTokenId } : {}),
+        ...(isInitial && savedTokenId
+          ? { midtransPaymentTokenId: savedTokenId }
+          : {}),
       })
       .where(eq(user.id, userId));
 
-    console.log(`Successfully processed ${isInitial ? 'initial' : 'renewal'} subscription payment for user ${userId}`);
+    console.log(
+      `Successfully processed ${isInitial ? 'initial' : 'renewal'} subscription payment for user ${userId}`,
+    );
   } catch (error) {
     console.error(`Failed to process successful subscription payment:`, error);
     throw error;
@@ -65,7 +73,9 @@ async function handleFailedSubscriptionPayment({
       })
       .where(eq(user.id, userId));
 
-    console.log(`Processed failed ${isInitial ? 'initial' : 'renewal'} subscription payment for user ${userId}`);
+    console.log(
+      `Processed failed ${isInitial ? 'initial' : 'renewal'} subscription payment for user ${userId}`,
+    );
   } catch (error) {
     console.error(`Failed to process failed subscription payment:`, error);
     throw error;
@@ -75,12 +85,14 @@ async function handleFailedSubscriptionPayment({
 // Validate payment request body
 const paymentSchema = z.object({
   amount: z.number().min(1),
-  items: z.array(z.object({
-    id: z.string(),
-    name: z.string(),
-    price: z.number(),
-    quantity: z.number().min(1),
-  })),
+  items: z.array(
+    z.object({
+      id: z.string(),
+      name: z.string(),
+      price: z.number(),
+      quantity: z.number().min(1),
+    }),
+  ),
 });
 
 export async function POST(request: Request) {
@@ -98,7 +110,10 @@ export async function POST(request: Request) {
       body = await request.json();
     } catch (e) {
       console.error('Payment API: Invalid JSON in request body', e);
-      return NextResponse.json({ error: 'Invalid JSON in request body' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Invalid JSON in request body' },
+        { status: 400 },
+      );
     }
 
     // Validate with Zod schema
@@ -110,7 +125,7 @@ export async function POST(request: Request) {
         console.error('Payment API: Invalid request data', e.errors);
         return NextResponse.json(
           { error: 'Invalid request data', details: e.errors },
-          { status: 400 }
+          { status: 400 },
         );
       }
       throw e;
@@ -136,7 +151,7 @@ export async function POST(request: Request) {
       console.error('Payment API: No token received from Midtrans');
       return NextResponse.json(
         { error: 'Failed to generate payment token' },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -163,7 +178,7 @@ export async function POST(request: Request) {
     console.error('Payment API: Unhandled error:', error);
     return NextResponse.json(
       { error: 'Failed to process payment' },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

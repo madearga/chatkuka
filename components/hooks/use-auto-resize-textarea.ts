@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import { useRef, useEffect, useCallback } from "react";
+import { useRef, useEffect, useCallback } from 'react';
 
 interface UseAutoResizeTextareaProps {
   minHeight?: number;
@@ -13,25 +13,28 @@ export function useAutoResizeTextarea({
 }: UseAutoResizeTextareaProps = {}) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const adjustHeight = useCallback((reset = false) => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
+  const adjustHeight = useCallback(
+    (reset = false) => {
+      const textarea = textareaRef.current;
+      if (!textarea) return;
 
-    if (reset) {
+      if (reset) {
+        textarea.style.height = `${minHeight}px`;
+        return;
+      }
+
       textarea.style.height = `${minHeight}px`;
-      return;
-    }
+      const scrollHeight = textarea.scrollHeight;
 
-    textarea.style.height = `${minHeight}px`;
-    const scrollHeight = textarea.scrollHeight;
-    
-    const newHeight = Math.min(Math.max(scrollHeight, minHeight), maxHeight);
-    textarea.style.height = `${newHeight}px`;
-  }, [minHeight, maxHeight]);
+      const newHeight = Math.min(Math.max(scrollHeight, minHeight), maxHeight);
+      textarea.style.height = `${newHeight}px`;
+    },
+    [minHeight, maxHeight],
+  );
 
   useEffect(() => {
     adjustHeight();
   }, [adjustHeight]);
 
   return { textareaRef, adjustHeight };
-} 
+}

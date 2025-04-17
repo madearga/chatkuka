@@ -48,7 +48,7 @@ interface TavilySearchResponse {
  */
 export async function searchTavily(
   query: string,
-  options?: TavilySearchOptions
+  options?: TavilySearchOptions,
 ): Promise<TavilySearchResponse> {
   try {
     const tavilyApiKey = process.env.TAVILY_API_KEY;
@@ -65,14 +65,23 @@ export async function searchTavily(
     const requestBody: Record<string, unknown> = { query };
 
     if (options) {
-      if (options.searchDepth) requestBody['search_depth'] = options.searchDepth;
-      if (options.includeAnswer !== undefined) requestBody['include_answer'] = options.includeAnswer;
-      if (options.maxResults !== undefined) requestBody['max_results'] = options.maxResults;
-      if (options.includeDomains) requestBody['include_domains'] = options.includeDomains;
-      if (options.excludeDomains) requestBody['exclude_domains'] = options.excludeDomains;
-      if (options.includeImages !== undefined) requestBody['include_images'] = options.includeImages;
-      if (options.includeRawContent !== undefined) requestBody['include_raw_content'] = options.includeRawContent;
-      if (options.includeImageDescriptions !== undefined) requestBody['include_image_descriptions'] = options.includeImageDescriptions;
+      if (options.searchDepth)
+        requestBody['search_depth'] = options.searchDepth;
+      if (options.includeAnswer !== undefined)
+        requestBody['include_answer'] = options.includeAnswer;
+      if (options.maxResults !== undefined)
+        requestBody['max_results'] = options.maxResults;
+      if (options.includeDomains)
+        requestBody['include_domains'] = options.includeDomains;
+      if (options.excludeDomains)
+        requestBody['exclude_domains'] = options.excludeDomains;
+      if (options.includeImages !== undefined)
+        requestBody['include_images'] = options.includeImages;
+      if (options.includeRawContent !== undefined)
+        requestBody['include_raw_content'] = options.includeRawContent;
+      if (options.includeImageDescriptions !== undefined)
+        requestBody['include_image_descriptions'] =
+          options.includeImageDescriptions;
       if (options.topic) requestBody['topic'] = options.topic;
       if (options.timeRange) requestBody['time_range'] = options.timeRange;
       if (options.days !== undefined) requestBody['days'] = options.days;
@@ -88,10 +97,12 @@ export async function searchTavily(
       try {
         const errorData = await response.json();
         throw new Error(
-          `Tavily API error (${response.status}): ${errorData.message || 'Unknown error'}`
+          `Tavily API error (${response.status}): ${errorData.message || 'Unknown error'}`,
         );
       } catch {
-        throw new Error(`Tavily API request failed with status: ${response.status}`);
+        throw new Error(
+          `Tavily API request failed with status: ${response.status}`,
+        );
       }
     }
 

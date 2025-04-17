@@ -41,8 +41,8 @@ export async function GET(request: Request) {
           eq(user.subscriptionStatus, 'active'),
           isNotNull(user.currentPeriodEnd),
           lte(user.currentPeriodEnd, new Date()),
-          isNotNull(user.midtransPaymentTokenId)
-        )
+          isNotNull(user.midtransPaymentTokenId),
+        ),
       );
 
     console.log(`Found ${usersToRenew.length} users to renew`);
@@ -98,19 +98,21 @@ export async function GET(request: Request) {
 
           // Update the payment record with transaction details from the charge
           if (chargeResponse.transaction_id) {
-             await updatePaymentStatus({
-               orderId, // Use the same orderId
-               status: chargeResponse.transaction_status === 'capture' || chargeResponse.transaction_status === 'settlement'
-                         ? 'success'
-                         : chargeResponse.transaction_status === 'pending'
-                           ? 'pending'
-                           : 'failed', // Determine status based on charge response
-               transactionId: chargeResponse.transaction_id,
-               paymentType: 'credit_card', // Or chargeResponse.payment_type if available
-             });
+            await updatePaymentStatus({
+              orderId, // Use the same orderId
+              status:
+                chargeResponse.transaction_status === 'capture' ||
+                chargeResponse.transaction_status === 'settlement'
+                  ? 'success'
+                  : chargeResponse.transaction_status === 'pending'
+                    ? 'pending'
+                    : 'failed', // Determine status based on charge response
+              transactionId: chargeResponse.transaction_id,
+              paymentType: 'credit_card', // Or chargeResponse.payment_type if available
+            });
           } else {
-             // Handle cases where charge might succeed but transaction_id is missing (unlikely)
-             await updatePaymentStatus({ orderId, status: 'failed' });
+            // Handle cases where charge might succeed but transaction_id is missing (unlikely)
+            await updatePaymentStatus({ orderId, status: 'failed' });
           }
 
           return {
@@ -120,7 +122,10 @@ export async function GET(request: Request) {
             transactionStatus: chargeResponse.transaction_status,
           };
         } catch (error) {
-          console.error(`Failed to renew subscription for user ${userData.id}:`, error);
+          console.error(
+            `Failed to renew subscription for user ${userData.id}:`,
+            error,
+          );
 
           // If renewal fails, mark the subscription as past_due
           await db
@@ -136,7 +141,7 @@ export async function GET(request: Request) {
             error: error instanceof Error ? error.message : 'Unknown error',
           };
         }
-      })
+      }),
     );
 
     return NextResponse.json({
@@ -147,7 +152,7 @@ export async function GET(request: Request) {
     console.error('Failed to process subscription renewals:', error);
     return NextResponse.json(
       { error: 'Failed to process subscription renewals' },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

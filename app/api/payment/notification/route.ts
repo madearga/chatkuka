@@ -31,11 +31,15 @@ async function handleSuccessfulSubscriptionPayment({
         subscriptionStatus: 'active',
         currentPeriodEnd: newPeriodEnd,
         // Use savedTokenId if available, otherwise use tokenId if it was passed (though it's not in the original PUT logic params directly)
-        ...(isInitial && savedTokenId ? { midtransPaymentTokenId: savedTokenId } : {}),
+        ...(isInitial && savedTokenId
+          ? { midtransPaymentTokenId: savedTokenId }
+          : {}),
       })
       .where(eq(user.id, userId));
 
-    console.log(`Successfully processed ${isInitial ? 'initial' : 'renewal'} subscription payment for user ${userId}`);
+    console.log(
+      `Successfully processed ${isInitial ? 'initial' : 'renewal'} subscription payment for user ${userId}`,
+    );
   } catch (error) {
     console.error(`Failed to process successful subscription payment:`, error);
     // It's often better to still return a success (200 OK) to Midtrans even if DB update fails,
@@ -67,29 +71,33 @@ async function handleFailedSubscriptionPayment({
       })
       .where(eq(user.id, userId));
 
-    console.log(`Processed failed ${isInitial ? 'initial' : 'renewal'} subscription payment for user ${userId}`);
+    console.log(
+      `Processed failed ${isInitial ? 'initial' : 'renewal'} subscription payment for user ${userId}`,
+    );
   } catch (error) {
     console.error(`Failed to process failed subscription payment:`, error);
-     // It's often better to still return a success (200 OK) to Midtrans even if DB update fails,
+    // It's often better to still return a success (200 OK) to Midtrans even if DB update fails,
     // to prevent Midtrans from retrying indefinitely. Log the error for investigation.
     // throw error;
   }
 }
 
-
 // Handle Midtrans webhook notifications via POST
 export async function POST(request: Request) {
-  console.log("Received POST request on /api/payment/notification");
+  console.log('Received POST request on /api/payment/notification');
   try {
     // Get the raw request body
     const rawBody = await request.text();
     let notification;
     try {
-       notification = JSON.parse(rawBody);
-       console.log("Webhook: Parsed notification body:", notification);
+      notification = JSON.parse(rawBody);
+      console.log('Webhook: Parsed notification body:', notification);
     } catch (parseError) {
-        console.error('Webhook Error: Failed to parse request body as JSON', parseError);
-        return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+      console.error(
+        'Webhook Error: Failed to parse request body as JSON',
+        parseError,
+      );
+      return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
     }
 
     // Extract notification data
@@ -103,70 +111,104 @@ export async function POST(request: Request) {
     const fraudStatus = notification.fraud_status;
     const statusCode = notification.status_code; // Get status code for verification
 
-    // --- Get the signature_key FROM THE JSON BODY --- 
+    // --- Get the signature_key FROM THE JSON BODY ---
     const signatureFromBody = notification.signature_key;
     if (!signatureFromBody) {
-      console.error(`Webhook Error: Missing 'signature_key' in notification body for Order ID: ${orderId}`);
+      console.error(
+        `Webhook Error: Missing 'signature_key' in notification body for Order ID: ${orderId}`,
+      );
       // Decide how to handle: return 400 Bad Request or potentially process without verification (unsafe)
-      return NextResponse.json({ error: "Missing signature_key in body" }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Missing signature_key in body' },
+        { status: 400 },
+      );
     }
-    console.log(`Webhook: Found signature_key in body for Order ID: ${orderId}`);
+    console.log(
+      `Webhook: Found signature_key in body for Order ID: ${orderId}`,
+    );
 
     // --- Data Validation ---
     if (!orderId || !transactionStatus || !grossAmount || !statusCode) {
-       console.error('Webhook Error: Missing essential notification data (order_id, transaction_status, gross_amount, status_code)');
-       return NextResponse.json({ error: 'Missing essential notification data' }, { status: 400 });
+      console.error(
+        'Webhook Error: Missing essential notification data (order_id, transaction_status, gross_amount, status_code)',
+      );
+      return NextResponse.json(
+        { error: 'Missing essential notification data' },
+        { status: 400 },
+      );
     }
-    console.log(`Webhook: Processing notification for Order ID: ${orderId}, Status: ${transactionStatus}`);
+    console.log(
+      `Webhook: Processing notification for Order ID: ${orderId}, Status: ${transactionStatus}`,
+    );
 
     // Verify the signature using the key from the body
-    console.log("Webhook: Verifying signature...");
+    console.log('Webhook: Verifying signature...');
     const isValidSignature = await verifyWebhookSignature({
       orderId,
       statusCode: statusCode, // Use the status_code from the body
       grossAmount: grossAmount,
-      receivedSignature: signatureFromBody // Use the signature from the body
+      receivedSignature: signatureFromBody, // Use the signature from the body
     });
 
     if (!isValidSignature) {
-      console.error(`Webhook Error: Invalid signature for Order ID: ${orderId}`);
+      console.error(
+        `Webhook Error: Invalid signature for Order ID: ${orderId}`,
+      );
       // Return 403 Forbidden for invalid signature
       return NextResponse.json({ error: 'Invalid signature' }, { status: 403 });
     }
-    console.log(`Webhook: Signature verified successfully for Order ID: ${orderId}`);
+    console.log(
+      `Webhook: Signature verified successfully for Order ID: ${orderId}`,
+    );
 
     // --- Handle Fraud Status (Important!) ---
     // Only process 'settlement' or 'capture' if fraud status is 'accept'.
     // Handle 'challenge' based on your business policy (e.g., review manually, treat as pending).
     if (fraudStatus === 'deny') {
-        console.log(`Webhook: Fraud status is 'deny' for Order ID: ${orderId}. Treating as failed.`);
-        // Optionally update your DB to reflect fraud denial
-        // You might want a specific status like 'fraud_denied'
-        await updatePaymentStatus({
-             orderId,
-             status: 'failed', // Or a specific fraud status
-             paymentType,
-             transactionId,
-        });
-        // Return 200 OK to Midtrans to stop retries.
-        return NextResponse.json({ success: true, message: "Fraud denied, processed." });
+      console.log(
+        `Webhook: Fraud status is 'deny' for Order ID: ${orderId}. Treating as failed.`,
+      );
+      // Optionally update your DB to reflect fraud denial
+      // You might want a specific status like 'fraud_denied'
+      await updatePaymentStatus({
+        orderId,
+        status: 'failed', // Or a specific fraud status
+        paymentType,
+        transactionId,
+      });
+      // Return 200 OK to Midtrans to stop retries.
+      return NextResponse.json({
+        success: true,
+        message: 'Fraud denied, processed.',
+      });
     }
 
-     if (fraudStatus === 'challenge') {
-        console.log(`Webhook: Fraud status is 'challenge' for Order ID: ${orderId}. Requires review. Treating as pending for now.`);
-         // Keep status as pending or update to a specific 'challenge' status
-         // Return 200 OK to Midtrans to stop retries.
-         return NextResponse.json({ success: true, message: "Fraud challenge, review required." });
-     }
+    if (fraudStatus === 'challenge') {
+      console.log(
+        `Webhook: Fraud status is 'challenge' for Order ID: ${orderId}. Requires review. Treating as pending for now.`,
+      );
+      // Keep status as pending or update to a specific 'challenge' status
+      // Return 200 OK to Midtrans to stop retries.
+      return NextResponse.json({
+        success: true,
+        message: 'Fraud challenge, review required.',
+      });
+    }
 
-     // Proceed only if fraudStatus is 'accept'
-     if (fraudStatus !== 'accept') {
-         console.log(`Webhook: Unknown or unhandled fraud status '${fraudStatus}' for Order ID: ${orderId}. Ignoring.`);
-         return NextResponse.json({ success: true, message: "Unhandled fraud status." });
-     }
+    // Proceed only if fraudStatus is 'accept'
+    if (fraudStatus !== 'accept') {
+      console.log(
+        `Webhook: Unknown or unhandled fraud status '${fraudStatus}' for Order ID: ${orderId}. Ignoring.`,
+      );
+      return NextResponse.json({
+        success: true,
+        message: 'Unhandled fraud status.',
+      });
+    }
 
-     console.log(`Webhook: Fraud status 'accept' for Order ID: ${orderId}. Proceeding...`); // Add log
-
+    console.log(
+      `Webhook: Fraud status 'accept' for Order ID: ${orderId}. Proceeding...`,
+    ); // Add log
 
     // Determine payment status based on transaction_status (only if fraudStatus is 'accept')
     let status: 'pending' | 'success' | 'failed' | 'expired';
@@ -184,18 +226,23 @@ export async function POST(request: Request) {
       case 'expire': // Payment link/request expired
         status = 'expired';
         break;
-       case 'pending': // Transaction is pending payment
-         status = 'pending';
-         break;
+      case 'pending': // Transaction is pending payment
+        status = 'pending';
+        break;
       default:
-         console.log(`Webhook: Unhandled transaction_status '${transactionStatus}' for Order ID: ${orderId}. Treating as pending.`);
+        console.log(
+          `Webhook: Unhandled transaction_status '${transactionStatus}' for Order ID: ${orderId}. Treating as pending.`,
+        );
         status = 'pending'; // Default to pending for unknown statuses
     }
-     console.log(`Webhook: Determined internal status: '${status}' for Order ID: ${orderId}`); // Add log
-
+    console.log(
+      `Webhook: Determined internal status: '${status}' for Order ID: ${orderId}`,
+    ); // Add log
 
     // Update payment status in database
-     console.log(`Webhook: Updating payment status in DB for Order ID: ${orderId} to '${status}'...`); // Add log
+    console.log(
+      `Webhook: Updating payment status in DB for Order ID: ${orderId} to '${status}'...`,
+    ); // Add log
     const updatedPayment = await updatePaymentStatus({
       orderId,
       status,
@@ -204,50 +251,58 @@ export async function POST(request: Request) {
     });
     console.log(`Webhook: DB payment status updated for Order ID: ${orderId}`); // Add log
 
-
     // --- Subscription Logic ---
     // Check if this is a subscription-related payment AFTER main status update
     const isSubscriptionInitial = orderId.startsWith('SUB_INIT_');
     const isSubscriptionRenewal = orderId.startsWith('SUB_RENEW_');
 
-    if ((isSubscriptionInitial || isSubscriptionRenewal)) {
-        console.log(`Webhook: Order ID ${orderId} is related to a subscription.`); // Add log
-        if (status === 'success') {
-             console.log(`Webhook: Handling SUCCESSFUL subscription payment for Order ID: ${orderId}`); // Add log
-            // Handle successful subscription payment
-            await handleSuccessfulSubscriptionPayment({
-                orderId,
-                userId: updatedPayment.userId, // Ensure updatePaymentStatus returns the userId
-                isInitial: isSubscriptionInitial,
-                // Pass the correct token ID based on whether it's initial or renewal
-                savedTokenId: savedTokenId || tokenId, // Use saved_token_id if available (recurring), else token_id (potential first save)
-            });
-        } else if (status === 'failed' || status === 'expired') { // Also handle expired as failed subscription
-             console.log(`Webhook: Handling FAILED/EXPIRED subscription payment for Order ID: ${orderId}`); // Add log
-            // Handle failed/expired subscription payment
-            await handleFailedSubscriptionPayment({
-                orderId,
-                userId: updatedPayment.userId, // Ensure updatePaymentStatus returns the userId
-                isInitial: isSubscriptionInitial,
-            });
-        } else {
-             console.log(`Webhook: Subscription Order ID ${orderId} has status '${status}', no user update needed yet.`); // Add log
-        }
+    if (isSubscriptionInitial || isSubscriptionRenewal) {
+      console.log(`Webhook: Order ID ${orderId} is related to a subscription.`); // Add log
+      if (status === 'success') {
+        console.log(
+          `Webhook: Handling SUCCESSFUL subscription payment for Order ID: ${orderId}`,
+        ); // Add log
+        // Handle successful subscription payment
+        await handleSuccessfulSubscriptionPayment({
+          orderId,
+          userId: updatedPayment.userId, // Ensure updatePaymentStatus returns the userId
+          isInitial: isSubscriptionInitial,
+          // Pass the correct token ID based on whether it's initial or renewal
+          savedTokenId: savedTokenId || tokenId, // Use saved_token_id if available (recurring), else token_id (potential first save)
+        });
+      } else if (status === 'failed' || status === 'expired') {
+        // Also handle expired as failed subscription
+        console.log(
+          `Webhook: Handling FAILED/EXPIRED subscription payment for Order ID: ${orderId}`,
+        ); // Add log
+        // Handle failed/expired subscription payment
+        await handleFailedSubscriptionPayment({
+          orderId,
+          userId: updatedPayment.userId, // Ensure updatePaymentStatus returns the userId
+          isInitial: isSubscriptionInitial,
+        });
+      } else {
+        console.log(
+          `Webhook: Subscription Order ID ${orderId} has status '${status}', no user update needed yet.`,
+        ); // Add log
+      }
     } else {
-         console.log(`Webhook: Order ID ${orderId} is NOT related to a subscription.`); // Add log
+      console.log(
+        `Webhook: Order ID ${orderId} is NOT related to a subscription.`,
+      ); // Add log
     }
 
-
     // Always return a success response to Midtrans if processing reached this point without critical errors
-    console.log(`Webhook: Successfully processed notification for Order ID: ${orderId}. Sending 200 OK to Midtrans.`); // Add log
+    console.log(
+      `Webhook: Successfully processed notification for Order ID: ${orderId}. Sending 200 OK to Midtrans.`,
+    ); // Add log
     return NextResponse.json({ success: true });
-
   } catch (error) {
     console.error('Webhook processing failed unexpectedly:', error);
     // Return 500 for unexpected server errors, Midtrans might retry
     return NextResponse.json(
       { error: 'Failed to process webhook due to server error' },
-      { status: 500 }
+      { status: 500 },
     );
   }
-} 
+}

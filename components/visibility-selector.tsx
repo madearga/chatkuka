@@ -79,7 +79,10 @@ export function VisibilitySelector({
         </Button>
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent align="end" className="min-w-[200px] sm:min-w-[300px]">
+      <DropdownMenuContent
+        align="end"
+        className="min-w-[200px] sm:min-w-[300px]"
+      >
         {visibilities.map((visibility) => (
           <DropdownMenuItem
             key={visibility.id}
@@ -101,7 +104,7 @@ export function VisibilitySelector({
                 )}
               </div>
             </div>
-            <div className="text-foreground dark:text-foreground opacity-0 group-data-[active=true]/item:opacity-100 flex-shrink-0">
+            <div className="text-foreground dark:text-foreground opacity-0 group-data-[active=true]/item:opacity-100 shrink-0">
               <CheckCircleFillIcon />
             </div>
           </DropdownMenuItem>

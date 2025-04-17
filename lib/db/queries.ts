@@ -1,7 +1,18 @@
 import 'server-only';
 
 import { genSaltSync, hashSync } from 'bcrypt-ts';
-import { and, asc, desc, eq, gt, gte, inArray } from 'drizzle-orm';
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  gt,
+  gte,
+  inArray,
+  ilike,
+  or,
+  sql,
+} from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 
@@ -88,7 +99,7 @@ export async function createUser(email: string, password: string) {
     return await db.insert(user).values({
       email,
       password: hash,
-      subscriptionStatus: 'inactive'
+      subscriptionStatus: 'inactive',
     });
   } catch (error) {
     console.error('Failed to create user in database');
@@ -153,7 +164,9 @@ export async function getChatById({ id }: { id: string }) {
   }
 }
 
-export async function saveMessages({ messages }: { messages: Array<DBSchemaMessage> }) {
+export async function saveMessages({
+  messages,
+}: { messages: Array<DBSchemaMessage> }) {
   try {
     // Periksa apakah array pesan kosong
     if (!messages || messages.length === 0) {
@@ -169,7 +182,9 @@ export async function saveMessages({ messages }: { messages: Array<DBSchemaMessa
   }
 }
 
-export async function getMessagesByChatId({ id }: { id: string }): Promise<DBSchemaMessage[]> {
+export async function getMessagesByChatId({
+  id,
+}: { id: string }): Promise<DBSchemaMessage[]> {
   try {
     return await db
       .select({
@@ -347,7 +362,9 @@ export async function getSuggestionsByDocumentId({
   }
 }
 
-export async function getMessageById({ id }: { id: string }): Promise<DBSchemaMessage | undefined> {
+export async function getMessageById({
+  id,
+}: { id: string }): Promise<DBSchemaMessage | undefined> {
   try {
     const [selectedMessage] = await db
       .select({
@@ -433,14 +450,17 @@ export async function createPayment({
   snapToken?: string;
 }): Promise<Payment> {
   try {
-    const [newPayment] = await db.insert(payment).values({
-      orderId,
-      amount,
-      userId,
-      snapToken: snapToken ?? null,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    }).returning();
+    const [newPayment] = await db
+      .insert(payment)
+      .values({
+        orderId,
+        amount,
+        userId,
+        snapToken: snapToken ?? null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .returning();
     return newPayment;
   } catch (error) {
     console.error('Failed to create payment in database', error);
@@ -460,7 +480,8 @@ export async function updatePaymentStatus({
   transactionId?: string;
 }) {
   try {
-    const [updatedPayment] = await db.update(payment)
+    const [updatedPayment] = await db
+      .update(payment)
       .set({
         status,
         paymentType,
@@ -476,14 +497,75 @@ export async function updatePaymentStatus({
   }
 }
 
-export async function getPaymentByOrderId(orderId: string): Promise<Payment | undefined> {
+export async function getPaymentByOrderId(
+  orderId: string,
+): Promise<Payment | undefined> {
   try {
-    const [paymentData] = await db.select()
+    const [paymentData] = await db
+      .select()
       .from(payment)
       .where(eq(payment.orderId, orderId));
     return paymentData;
   } catch (error) {
     console.error('Failed to get payment from database', error);
     throw error;
+  }
+}
+
+export async function searchChatsByUserId({
+  userId,
+  query,
+}: {
+  userId: string;
+  query: string;
+}) {
+  try {
+    // Ignore any leading or trailing whitespace and make case-insensitive
+    const sanitizedQuery = `%${query.trim().toLowerCase()}%`;
+
+    // <critical>
+    //   The following query uses `message.content::text ILIKE ...`.
+    //   The database schema likely uses a JSONB column named `parts` instead of `content` now.
+    //   This query *might fail* or return incorrect results on the current schema.
+    //   For this automated task, implement the query *exactly* as written below.
+    //   However, *manual review and adjustment* might be needed later to correctly query the text within the `parts` JSON structure (e.g., using JSON operators like `->>`).
+    // </critical>
+    const searchResults = await db
+      .select({
+        id: chat.id,
+        title: chat.title,
+        createdAt: chat.createdAt,
+        userId: chat.userId,
+        visibility: chat.visibility, // Include visibility
+        // For the preview, take the newest matching message content
+        preview: sql<string>`(
+              array_agg(${message.parts}::text order by ${message.createdAt} desc)
+            )[1]`, // Try targeting 'parts' first as per the latest schema
+        role: sql<string>`(
+          array_agg(${message.role} order by ${message.createdAt} desc)
+        )[1]`,
+      })
+      .from(chat)
+      .leftJoin(message, eq(chat.id, message.chatId))
+      .where(
+        and(
+          eq(chat.userId, userId),
+          or(
+            sql`LOWER(${chat.title}) LIKE ${sanitizedQuery}`,
+            // Attempt to query the text part within the JSONB structure
+            // This assumes a structure like [{"type": "text", "text": "..."}]
+            // Adjust path '0.text' if your structure differs. Requires appropriate indexing on parts->'0'->>'text' for performance.
+            sql`LOWER((${message.parts}->'0'->>'text')) LIKE ${sanitizedQuery}`,
+          ),
+        ),
+      )
+      .groupBy(chat.id, chat.title, chat.createdAt, chat.visibility) // Add visibility to GROUP BY
+      .orderBy(desc(chat.createdAt));
+
+    console.log(`DB Search: Found ${searchResults.length} results for query "${query}". Sanitized query: "${sanitizedQuery}"`);
+    return searchResults;
+  } catch (error) {
+    console.error(`DB Search: Error searching chats for user ${userId}, query "${query}":`, error);
+    throw error; // Re-throw the error to be handled by the API route
   }
 }

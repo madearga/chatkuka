@@ -20,7 +20,11 @@ interface UpgradeDialogProps {
   modelName: string;
 }
 
-export function UpgradeDialog({ isOpen, onClose, modelName }: UpgradeDialogProps) {
+export function UpgradeDialog({
+  isOpen,
+  onClose,
+  modelName,
+}: UpgradeDialogProps) {
   const router = useRouter();
 
   const handleUpgrade = () => {
@@ -37,18 +41,21 @@ export function UpgradeDialog({ isOpen, onClose, modelName }: UpgradeDialogProps
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-            <Sparkles className="h-6 w-6 text-primary" />
+          <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-primary/10">
+            <Sparkles className="size-6 text-primary" />
           </div>
-          <DialogTitle className="text-center text-xl pt-4">Upgrade to Pro</DialogTitle>
+          <DialogTitle className="text-center text-xl pt-4">
+            Upgrade to Pro
+          </DialogTitle>
           <DialogDescription className="text-center pt-2">
-            <span className="font-medium">{modelName}</span> is available exclusively for Pro subscribers.
+            <span className="font-medium">{modelName}</span> is available
+            exclusively for Pro subscribers.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3 py-4">
           <div className="flex items-center">
-            <div className="flex-shrink-0 h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-              <Sparkles className="h-4 w-4 text-primary" />
+            <div className="shrink-0 size-8 rounded-full bg-primary/10 flex items-center justify-center">
+              <Sparkles className="size-4 text-primary" />
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium">Access to advanced models</p>
@@ -58,11 +65,13 @@ export function UpgradeDialog({ isOpen, onClose, modelName }: UpgradeDialogProps
             </div>
           </div>
           <div className="flex items-center">
-            <div className="flex-shrink-0 h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-              <Sparkles className="h-4 w-4 text-primary" />
+            <div className="shrink-0 size-8 rounded-full bg-primary/10 flex items-center justify-center">
+              <Sparkles className="size-4 text-primary" />
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium">Advanced reasoning capabilities</p>
+              <p className="text-sm font-medium">
+                Advanced reasoning capabilities
+              </p>
               <p className="text-sm text-muted-foreground">
                 Solve complex problems with step-by-step reasoning
               </p>
@@ -70,7 +79,11 @@ export function UpgradeDialog({ isOpen, onClose, modelName }: UpgradeDialogProps
           </div>
         </div>
         <DialogFooter className="flex flex-col sm:flex-row sm:justify-between gap-2">
-          <Button variant="outline" onClick={onClose} className="sm:w-auto w-full">
+          <Button
+            variant="outline"
+            onClick={onClose}
+            className="sm:w-auto w-full"
+          >
             Not now
           </Button>
           <Button onClick={handleUpgrade} className="sm:w-auto w-full">

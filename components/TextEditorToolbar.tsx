@@ -3,7 +3,11 @@
 import React, { FC } from 'react';
 import type { EditorView } from 'prosemirror-view';
 import { toggleMark, wrapIn, setBlockType, lift } from 'prosemirror-commands';
-import { wrapInList, liftListItem, sinkListItem } from 'prosemirror-schema-list';
+import {
+  wrapInList,
+  liftListItem,
+  sinkListItem,
+} from 'prosemirror-schema-list';
 import { Button } from '@/components/ui/button';
 import {
   Tooltip,
@@ -59,9 +63,9 @@ export const TextEditorToolbar: FC<TextEditorToolbarProps> = ({
         disabled={isDisabled}
         aria-label="Bold"
         onClick={() => runCommand(toggleMark(documentSchema.marks.strong))}
-        className="h-7 w-7 p-1"
+        className="size-7 p-1"
       >
-        <Bold className="w-4 h-4" />
+        <Bold className="size-4" />
       </Button>
 
       <Button
@@ -70,9 +74,9 @@ export const TextEditorToolbar: FC<TextEditorToolbarProps> = ({
         disabled={isDisabled}
         aria-label="Italic"
         onClick={() => runCommand(toggleMark(documentSchema.marks.em))}
-        className="h-7 w-7 p-1"
+        className="size-7 p-1"
       >
-        <Italic className="w-4 h-4" />
+        <Italic className="size-4" />
       </Button>
 
       <Button
@@ -80,10 +84,12 @@ export const TextEditorToolbar: FC<TextEditorToolbarProps> = ({
         size="sm"
         disabled={isDisabled}
         aria-label="Strikethrough"
-        onClick={() => runCommand(toggleMark(documentSchema.marks.strikethrough))}
-        className="h-7 w-7 p-1"
+        onClick={() =>
+          runCommand(toggleMark(documentSchema.marks.strikethrough))
+        }
+        className="size-7 p-1"
       >
-        <Strikethrough className="w-4 h-4" />
+        <Strikethrough className="size-4" />
       </Button>
 
       <Button
@@ -92,9 +98,9 @@ export const TextEditorToolbar: FC<TextEditorToolbarProps> = ({
         disabled={isDisabled}
         aria-label="Code"
         onClick={() => runCommand(toggleMark(documentSchema.marks.code))}
-        className="h-7 w-7 p-1"
+        className="size-7 p-1"
       >
-        <Code className="w-4 h-4" />
+        <Code className="size-4" />
       </Button>
 
       <Button
@@ -103,9 +109,9 @@ export const TextEditorToolbar: FC<TextEditorToolbarProps> = ({
         disabled={isDisabled}
         aria-label="Ordered List"
         onClick={() => runCommand(toggleOrderedList)}
-        className="h-7 w-7 p-1"
+        className="size-7 p-1"
       >
-        <ListOrdered className="w-4 h-4" />
+        <ListOrdered className="size-4" />
       </Button>
 
       <Button
@@ -114,9 +120,9 @@ export const TextEditorToolbar: FC<TextEditorToolbarProps> = ({
         disabled={isDisabled}
         aria-label="Bullet List"
         onClick={() => runCommand(toggleBulletList)}
-        className="h-7 w-7 p-1"
+        className="size-7 p-1"
       >
-        <List className="w-4 h-4" />
+        <List className="size-4" />
       </Button>
 
       <Button
@@ -125,9 +131,9 @@ export const TextEditorToolbar: FC<TextEditorToolbarProps> = ({
         disabled={isDisabled}
         aria-label="Blockquote"
         onClick={() => runCommand(toggleBlockquote)}
-        className="h-7 w-7 p-1"
+        className="size-7 p-1"
       >
-        <Quote className="w-4 h-4" />
+        <Quote className="size-4" />
       </Button>
 
       <Button
@@ -136,9 +142,9 @@ export const TextEditorToolbar: FC<TextEditorToolbarProps> = ({
         disabled={isDisabled}
         aria-label="Link"
         onClick={() => console.log('Link clicked')}
-        className="h-7 w-7 p-1"
+        className="size-7 p-1"
       >
-        <Link2 className="w-4 h-4" />
+        <Link2 className="size-4" />
       </Button>
     </div>
   );

@@ -97,23 +97,23 @@ const components: Partial<Components> = {
     // Check if children contains source references
     const childrenArray = React.Children.toArray(children);
     const hasSourceReference = childrenArray.some(
-      child => typeof child === 'string' && child.includes('[Source')
+      (child) => typeof child === 'string' && child.includes('[Source'),
     );
 
     if (hasSourceReference) {
       // Process the paragraph text to replace source references with components
       const processedChildren = childrenArray.map((child, index) => {
         if (typeof child === 'string' && child.includes('[Source')) {
-          return <React.Fragment key={index}>{processSourceReferences(child)}</React.Fragment>;
+          return (
+            <React.Fragment key={index}>
+              {processSourceReferences(child)}
+            </React.Fragment>
+          );
         }
         return child;
       });
 
-      return (
-        <p {...props}>
-          {processedChildren}
-        </p>
-      );
+      return <p {...props}>{processedChildren}</p>;
     }
 
     return <p {...props}>{children}</p>;
@@ -154,7 +154,7 @@ const NonMemoizedMarkdown = ({
   }, [markdownText]);
 
   return (
-    <div className={cn("w-full", className)}>
+    <div className={cn('w-full', className)}>
       <ReactMarkdown remarkPlugins={remarkPlugins} components={components}>
         {processedMarkdown}
       </ReactMarkdown>
@@ -163,11 +163,8 @@ const NonMemoizedMarkdown = ({
 };
 
 // Update memo comparison to check for either children or content
-export const Markdown = memo(
-  NonMemoizedMarkdown,
-  (prevProps, nextProps) => {
-    const prevText = prevProps.children || prevProps.content || '';
-    const nextText = nextProps.children || nextProps.content || '';
-    return prevText === nextText && prevProps.className === nextProps.className;
-  }
-);
+export const Markdown = memo(NonMemoizedMarkdown, (prevProps, nextProps) => {
+  const prevText = prevProps.children || prevProps.content || '';
+  const nextText = nextProps.children || nextProps.content || '';
+  return prevText === nextText && prevProps.className === nextProps.className;
+});

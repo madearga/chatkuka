@@ -36,19 +36,26 @@ export async function POST(request: Request) {
     const id = formData.get('id') as string;
     const kind = formData.get('kind') as ArtifactKind;
     const chatId = formData.get('chatId') as string; // Add chat ID for message attachment
-    
+
     // Check for required fields
     if (!file) {
-      return NextResponse.json({ 
-        error: 'Missing required field: file' 
-      }, { status: 400 });
+      return NextResponse.json(
+        {
+          error: 'Missing required field: file',
+        },
+        { status: 400 },
+      );
     }
 
     // Only require id and kind if we're saving as a document
     if ((!id || !kind) && !chatId) {
-      return NextResponse.json({ 
-        error: 'Missing required fields: either (id and kind) or chatId must be provided' 
-      }, { status: 400 });
+      return NextResponse.json(
+        {
+          error:
+            'Missing required fields: either (id and kind) or chatId must be provided',
+        },
+        { status: 400 },
+      );
     }
 
     const validatedFile = FileSchema.safeParse({ file });
@@ -63,10 +70,10 @@ export async function POST(request: Request) {
 
     // Convert file to base64 for storage
     const fileBuffer = await file.arrayBuffer();
-    
+
     // Get filename from formData
     const filename = (formData.get('file') as File).name;
-    
+
     try {
       // Upload to Vercel Blob
       const blobId = id || `chat-${chatId}-${Date.now()}`;
@@ -77,7 +84,7 @@ export async function POST(request: Request) {
       // If it's a document artifact, save to document storage
       if (id && kind) {
         const base64Content = Buffer.from(fileBuffer).toString('base64');
-        
+
         // Save the file as a document
         await saveDocument({
           id,
@@ -88,13 +95,13 @@ export async function POST(request: Request) {
         });
       }
 
-      return NextResponse.json({ 
-        success: true, 
+      return NextResponse.json({
+        success: true,
         documentId: id,
         url: blobResponse.url,
         pathname: filename,
         contentType: file.type,
-        message: 'File uploaded successfully' 
+        message: 'File uploaded successfully',
       });
     } catch (error) {
       console.error('Upload error:', error);

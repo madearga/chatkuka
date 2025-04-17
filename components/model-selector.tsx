@@ -14,7 +14,11 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { chatModels } from '@/lib/ai/models';
 import { cn } from '@/lib/utils';
-import { getAvailableModelsForUser, ModelTier, MODEL_TIER_MAP } from '@/lib/ai/model-access';
+import {
+  getAvailableModelsForUser,
+  ModelTier,
+  MODEL_TIER_MAP,
+} from '@/lib/ai/model-access';
 
 import { CheckCircleFillIcon, ChevronDownIcon } from './icons';
 import { UpgradeDialog } from './upgrade-dialog';
@@ -70,14 +74,20 @@ export function ModelSelector({
             className,
           )}
         >
-          <Button variant="outline" className="md:px-2 px-2 h-8 md:h-[34px] text-xs sm:text-sm flex items-center gap-1">
+          <Button
+            variant="outline"
+            className="md:px-2 px-2 h-8 md:h-[34px] text-xs sm:text-sm flex items-center gap-1"
+          >
             <span className="truncate max-w-[80px] sm:max-w-none">
               {selectedChatModel?.name}
             </span>
             <ChevronDownIcon size={14} />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="min-w-[200px] sm:min-w-[300px]">
+        <DropdownMenuContent
+          align="start"
+          className="min-w-[200px] sm:min-w-[300px]"
+        >
           {chatModels.map((chatModel) => {
             const { id, tier } = chatModel;
             const isPaidModel = tier === ModelTier.PAID;
@@ -108,8 +118,12 @@ export function ModelSelector({
                   <div className="truncate w-full flex items-center gap-2">
                     {chatModel.name}
                     {chatModel.tier === ModelTier.PAID && (
-                      <span className={`text-xs ${isPaidUser ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'} px-1.5 py-0.5 rounded-full flex items-center gap-1`}>
-                        {!isPaidUser && <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>}
+                      <span
+                        className={`text-xs ${isPaidUser ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'} px-1.5 py-0.5 rounded-full flex items-center gap-1`}
+                      >
+                        {!isPaidUser && (
+                          <span className="size-1.5 rounded-full bg-primary animate-pulse"></span>
+                        )}
                         Pro
                       </span>
                     )}
@@ -121,7 +135,7 @@ export function ModelSelector({
                   </div>
                 </div>
 
-                <div className="text-foreground dark:text-foreground opacity-0 group-data-[active=true]/item:opacity-100 flex-shrink-0">
+                <div className="text-foreground dark:text-foreground opacity-0 group-data-[active=true]/item:opacity-100 shrink-0">
                   <CheckCircleFillIcon />
                 </div>
               </DropdownMenuItem>

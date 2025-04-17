@@ -9,13 +9,16 @@ import { Button } from '@/components/ui/button';
 declare global {
   interface Window {
     snap?: {
-      embed: (token: string, options: {
-        embedId: string;
-        onSuccess: (result: any) => void;
-        onPending: (result: any) => void;
-        onError: (error: any) => void;
-        onClose: () => void;
-      }) => void;
+      embed: (
+        token: string,
+        options: {
+          embedId: string;
+          onSuccess: (result: any) => void;
+          onPending: (result: any) => void;
+          onError: (error: any) => void;
+          onClose: () => void;
+        },
+      ) => void;
     };
   }
 }
@@ -48,15 +51,22 @@ export function PaymentForm({
     const loadSnapScript = () => {
       try {
         const script = document.createElement('script');
-        script.src = process.env.NEXT_PUBLIC_MIDTRANS_SNAP_URL ?? 'https://app.sandbox.midtrans.com/snap/snap.js';
-        script.setAttribute('data-client-key', process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY ?? '');
+        script.src =
+          process.env.NEXT_PUBLIC_MIDTRANS_SNAP_URL ??
+          'https://app.sandbox.midtrans.com/snap/snap.js';
+        script.setAttribute(
+          'data-client-key',
+          process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY ?? '',
+        );
         script.onload = () => {
           console.log('Midtrans script loaded successfully');
           setSnapScriptLoaded(true);
         };
         script.onerror = (error) => {
           console.error('Failed to load Midtrans script:', error);
-          toast.error('Failed to load payment gateway. Please try again later.');
+          toast.error(
+            'Failed to load payment gateway. Please try again later.',
+          );
         };
         document.body.appendChild(script);
       } catch (error) {
@@ -149,7 +159,9 @@ export function PaymentForm({
       });
     } catch (error) {
       console.error('Error in handlePayment:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to initiate payment');
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to initiate payment',
+      );
       onError?.(error);
       setIsLoading(false);
     }

@@ -1,11 +1,15 @@
 // @/components/chat-input/suggestions.tsx
-"use client";
+'use client';
 
-import React, { memo, useCallback, useEffect, useMemo, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { SUGGESTIONS, TRANSITION_SPRING, TRANSITION_VARIANTS } from "@/lib/ai/config";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import React, { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  SUGGESTIONS,
+  TRANSITION_SPRING,
+  TRANSITION_VARIANTS,
+} from '@/lib/ai/config';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 type SuggestionsProps = {
   onSuggestion: (suggestion: string) => void;
@@ -19,7 +23,7 @@ export const Suggestions = memo(function Suggestions({
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
 
   const activeCategoryData = SUGGESTIONS.find(
-    (group) => group.label === activeCategory
+    (group) => group.label === activeCategory,
   );
 
   const showCategorySuggestions =
@@ -36,30 +40,33 @@ export const Suggestions = memo(function Suggestions({
       setActiveCategory(null);
       onSuggestion(suggestion);
     },
-    [onSuggestion]
+    [onSuggestion],
   );
 
   const handleCategoryClick = useCallback(
     (suggestion: { label: string; prompt: string; items?: string[] }) => {
       if (suggestion.items && suggestion.items.length > 0) {
-         setActiveCategory(suggestion.label);
+        setActiveCategory(suggestion.label);
       } else {
         onSuggestion(suggestion.prompt);
       }
     },
-    [onSuggestion]
+    [onSuggestion],
   );
 
   const SuggestionButton = ({ children, highlight, ...props }: any) => {
-    const isHighlightMode = highlight !== undefined && highlight.trim() !== "";
-    const content = typeof children === "string" ? children : "";
+    const isHighlightMode = highlight !== undefined && highlight.trim() !== '';
+    const content = typeof children === 'string' ? children : '';
 
     if (!isHighlightMode || !content) {
       return (
         <Button
           variant="outline"
           size="sm"
-          className={cn("rounded-full h-auto py-1.5 px-3 flex items-center gap-1.5 text-xs sm:text-sm", props.className)}
+          className={cn(
+            'rounded-full h-auto py-1.5 px-3 flex items-center gap-1.5 text-xs sm:text-sm',
+            props.className,
+          )}
           {...props}
         >
           {children}
@@ -77,29 +84,51 @@ export const Suggestions = memo(function Suggestions({
         variant="ghost"
         size="sm"
         className={cn(
-          "w-full justify-start rounded-xl py-2 h-auto text-left text-sm",
-          "hover:bg-accent",
-          props.className
+          'w-full justify-start rounded-xl py-2 h-auto text-left text-sm',
+          'hover:bg-accent',
+          props.className,
         )}
         {...props}
       >
         {shouldHighlight ? (
           (() => {
             const index = contentLower.indexOf(highlightLower);
-            if (index === -1) return <span className="text-muted-foreground whitespace-pre-wrap">{content}</span>;
-            const actualHighlightedText = content.substring(index, index + highlightLower.length);
+            if (index === -1)
+              return (
+                <span className="text-muted-foreground whitespace-pre-wrap">
+                  {content}
+                </span>
+              );
+            const actualHighlightedText = content.substring(
+              index,
+              index + highlightLower.length,
+            );
             const before = content.substring(0, index);
-            const after = content.substring(index + actualHighlightedText.length);
+            const after = content.substring(
+              index + actualHighlightedText.length,
+            );
             return (
               <>
-                {before && <span className="text-muted-foreground whitespace-pre-wrap">{before}</span>}
-                <span className="text-primary font-medium whitespace-pre-wrap">{actualHighlightedText}</span>
-                {after && <span className="text-muted-foreground whitespace-pre-wrap">{after}</span>}
+                {before && (
+                  <span className="text-muted-foreground whitespace-pre-wrap">
+                    {before}
+                  </span>
+                )}
+                <span className="text-primary font-medium whitespace-pre-wrap">
+                  {actualHighlightedText}
+                </span>
+                {after && (
+                  <span className="text-muted-foreground whitespace-pre-wrap">
+                    {after}
+                  </span>
+                )}
               </>
             );
           })()
         ) : (
-          <span className="text-muted-foreground whitespace-pre-wrap">{content}</span>
+          <span className="text-muted-foreground whitespace-pre-wrap">
+            {content}
+          </span>
         )}
       </Button>
     );
@@ -137,7 +166,7 @@ export const Suggestions = memo(function Suggestions({
         ))}
       </motion.div>
     ),
-    [handleCategoryClick]
+    [handleCategoryClick],
   );
 
   const suggestionsList = useMemo(
@@ -173,7 +202,7 @@ export const Suggestions = memo(function Suggestions({
         ))}
       </motion.div>
     ),
-    [activeCategoryData, handleSuggestionClick]
+    [activeCategoryData, handleSuggestionClick],
   );
 
   return (

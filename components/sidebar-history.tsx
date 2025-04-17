@@ -1,6 +1,6 @@
 'use client';
 
-import { isToday, isYesterday, subMonths, subWeeks } from 'date-fns';
+import { isToday, isYesterday } from 'date-fns';
 import Link from 'next/link';
 import { useParams, usePathname, useRouter } from 'next/navigation';
 import type { User } from 'next-auth';
@@ -54,16 +54,8 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import type { Chat } from '@/lib/db/schema';
-import { fetcher } from '@/lib/utils';
+import { fetcher, groupChatsByDate, type GroupedChats } from '@/lib/utils';
 import { useChatVisibility } from '@/hooks/use-chat-visibility';
-
-type GroupedChats = {
-  today: Chat[];
-  yesterday: Chat[];
-  lastWeek: Chat[];
-  lastMonth: Chat[];
-  older: Chat[];
-};
 
 const PureChatItem = ({
   chat,
@@ -83,13 +75,30 @@ const PureChatItem = ({
 
   return (
     <SidebarMenuItem className="flex items-center">
-      <SidebarMenuButton asChild isActive={isActive} className={cn('flex-grow px-2 py-1.5 h-8 text-sm hover:bg-sidebar-accent', isActive ? 'active-gold' : '')}>
-        <Link href={`/chat/${chat.id}`} onClick={() => setOpenMobile(false)} className="flex items-center gap-2">
+      <SidebarMenuButton
+        asChild
+        isActive={isActive}
+        className={cn(
+          'flex-grow px-2 py-1.5 h-8 text-sm hover:bg-sidebar-accent',
+          isActive ? 'active-gold' : '',
+        )}
+      >
+        <Link
+          href={`/chat/${chat.id}`}
+          onClick={() => setOpenMobile(false)}
+          className="flex items-center gap-2"
+        >
           {visibilityType === 'public' && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <span onClick={(e) => e.stopPropagation()} aria-label="Public chat">
-                  <GlobeIcon size={12} className="text-muted-foreground flex-shrink-0" />
+                <span
+                  onClick={(e) => e.stopPropagation()}
+                  aria-label="Public chat"
+                >
+                  <GlobeIcon
+                    size={12}
+                    className="text-muted-foreground shrink-0"
+                  />
                 </span>
               </TooltipTrigger>
               <TooltipContent side="right" align="center">
@@ -104,7 +113,7 @@ const PureChatItem = ({
       <DropdownMenu modal={true}>
         <DropdownMenuTrigger asChild>
           <SidebarMenuAction
-            className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground mr-0.5 relative !right-auto !top-auto h-6 w-6"
+            className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground mr-0.5 relative !right-auto !top-auto size-6"
             showOnHover={!isActive}
           >
             <MoreHorizontalIcon size={14} />
@@ -156,11 +165,12 @@ const PureChatItem = ({
             onSelect={() => {
               if (visibilityType === 'public') {
                 const url = `${window.location.origin}/chat/${chat.id}`;
-                navigator.clipboard.writeText(url)
+                navigator.clipboard
+                  .writeText(url)
                   .then(() => {
                     toast.success('Public link copied!');
                   })
-                  .catch(err => {
+                  .catch((err) => {
                     toast.error('Failed to copy link.');
                     console.error('Failed to copy link: ', err);
                   });
@@ -289,39 +299,6 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
       </SidebarGroup>
     );
   }
-
-  const groupChatsByDate = (chats: Chat[]): GroupedChats => {
-    const now = new Date();
-    const oneWeekAgo = subWeeks(now, 1);
-    const oneMonthAgo = subMonths(now, 1);
-
-    return chats.reduce(
-      (groups, chat) => {
-        const chatDate = new Date(chat.createdAt);
-
-        if (isToday(chatDate)) {
-          groups.today.push(chat);
-        } else if (isYesterday(chatDate)) {
-          groups.yesterday.push(chat);
-        } else if (chatDate > oneWeekAgo) {
-          groups.lastWeek.push(chat);
-        } else if (chatDate > oneMonthAgo) {
-          groups.lastMonth.push(chat);
-        } else {
-          groups.older.push(chat);
-        }
-
-        return groups;
-      },
-      {
-        today: [],
-        yesterday: [],
-        lastWeek: [],
-        lastMonth: [],
-        older: [],
-      } as GroupedChats,
-    );
-  };
 
   return (
     <>

@@ -16,8 +16,6 @@ const requestyOpenAI = createOpenAI({
   compatibility: 'strict',
 });
 
-
-
 export const DEFAULT_CHAT_MODEL: string = 'chat-model-small';
 
 export const myProvider = customProvider({
@@ -45,7 +43,9 @@ export const myProvider = customProvider({
     'deepseek-v3': requestyOpenAI('together/deepseek-ai/DeepSeek-V3'),
 
     // Gemini Models
-    'gemini-2.0-flash-thinking': requestyOpenAI('google/gemini-2.0-flash-thinking-exp-01-21'),
+    'gemini-2.0-flash-thinking': requestyOpenAI(
+      'google/gemini-2.0-flash-thinking-exp-01-21',
+    ),
   },
   imageModels: {
     'small-model': fal.image('fal-ai/flux/schnell'),
@@ -111,7 +111,8 @@ export const chatModels: Array<ChatModel> = [
   {
     id: 'gemini-2.0-flash-thinking',
     name: 'Gemini 2.0 Flash Thinking',
-    description: 'Google Gemini model optimized for fast thinking and reasoning.',
+    description:
+      'Google Gemini model optimized for fast thinking and reasoning.',
     tier: MODEL_TIER_MAP['gemini-2.0-flash-thinking'],
   },
   // OpenAI

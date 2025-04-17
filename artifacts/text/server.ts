@@ -20,7 +20,8 @@ export const textDocumentHandler = createDocumentHandler<'text'>({
 
     try {
       // Set temperature to 1 for o3 and o4-mini models which don't support temperature=0
-      const needsDefaultTemp = modelToUse === 'openai-o3' || modelToUse === 'openai-o4-mini';
+      const needsDefaultTemp =
+        modelToUse === 'openai-o3' || modelToUse === 'openai-o4-mini';
 
       const { fullStream } = streamText({
         model: myProvider.languageModel(modelToUse),
@@ -44,7 +45,6 @@ export const textDocumentHandler = createDocumentHandler<'text'>({
           });
         }
       }
-
     } catch (error) {
       console.error(`Error generating text with model ${modelToUse}:`, error);
 
@@ -94,7 +94,12 @@ export const textDocumentHandler = createDocumentHandler<'text'>({
 
     return draftContent;
   },
-  onUpdateDocument: async ({ document, description, dataStream, selectedModel }) => {
+  onUpdateDocument: async ({
+    document,
+    description,
+    dataStream,
+    selectedModel,
+  }) => {
     let draftContent = '';
 
     // Use the selected chat model if available, otherwise fall back to artifact-model
@@ -109,7 +114,8 @@ export const textDocumentHandler = createDocumentHandler<'text'>({
 
     try {
       // Set temperature to 1 for o3 and o4-mini models which don't support temperature=0
-      const needsDefaultTemp = modelToUse === 'openai-o3' || modelToUse === 'openai-o4-mini';
+      const needsDefaultTemp =
+        modelToUse === 'openai-o3' || modelToUse === 'openai-o4-mini';
 
       const { fullStream } = streamText({
         model: myProvider.languageModel(modelToUse),
@@ -139,7 +145,6 @@ export const textDocumentHandler = createDocumentHandler<'text'>({
           });
         }
       }
-
     } catch (error) {
       console.error(`Error updating text with model ${modelToUse}:`, error);
 

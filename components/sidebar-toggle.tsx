@@ -25,7 +25,7 @@ export function SidebarToggle({
             toggleSidebar();
           }}
           variant="outline"
-          className={cn("md:px-2", "h-8 sm:h-9", className)}
+          className={cn('md:px-2', 'h-8 sm:h-9', className)}
         >
           <SidebarLeftIcon size={16} />
         </Button>

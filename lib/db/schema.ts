@@ -15,13 +15,17 @@ export const user = pgTable('User', {
   id: uuid('id').primaryKey().notNull().defaultRandom(),
   email: varchar('email', { length: 64 }).notNull(),
   password: varchar('password', { length: 64 }),
-  role: varchar('role', { enum: ['user', 'admin'] }).notNull().default('user'),
+  role: varchar('role', { enum: ['user', 'admin'] })
+    .notNull()
+    .default('user'),
   name: varchar('name', { length: 100 }),
   // Subscription fields
   isPaid: boolean('isPaid'),
   createdAt: timestamp('createdAt'),
   updatedAt: timestamp('updatedAt'),
-  subscriptionStatus: varchar('subscriptionStatus', { enum: ['inactive', 'active', 'pending_activation', 'past_due', 'cancelled'] }).default('inactive'),
+  subscriptionStatus: varchar('subscriptionStatus', {
+    enum: ['inactive', 'active', 'pending_activation', 'past_due', 'cancelled'],
+  }).default('inactive'),
   subscriptionId: varchar('subscriptionId'),
   currentPeriodEnd: timestamp('currentPeriodEnd'),
   // New Midtrans subscription fields
@@ -33,7 +37,7 @@ export type User = InferSelectModel<typeof user>;
 
 // Define OAuth providers enum
 export const oAuthProviders = ['google'] as const;
-export type OAuthProvider = typeof oAuthProviders[number];
+export type OAuthProvider = (typeof oAuthProviders)[number];
 
 // Create UserOAuthAccount table
 export const UserOAuthAccountTable = pgTable('UserOAuthAccount', {
@@ -148,7 +152,11 @@ export const payment = pgTable('Payment', {
   id: uuid('id').primaryKey().notNull().defaultRandom(),
   orderId: varchar('orderId', { length: 64 }).notNull(),
   amount: varchar('amount', { length: 20 }).notNull(),
-  status: varchar('status', { enum: ['pending', 'success', 'failed', 'expired'] }).notNull().default('pending'),
+  status: varchar('status', {
+    enum: ['pending', 'success', 'failed', 'expired'],
+  })
+    .notNull()
+    .default('pending'),
   snapToken: text('snapToken'),
   paymentType: varchar('paymentType', { length: 50 }),
   transactionId: varchar('transactionId', { length: 100 }),
