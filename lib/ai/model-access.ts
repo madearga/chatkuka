@@ -11,6 +11,7 @@ export enum ModelTier {
 export const MODEL_TIER_MAP: Record<string, ModelTier> = {
   // Google Models
   'chat-model-small': ModelTier.FREE, // Gemini Flash 2.0
+  'gemini-2.5-flash-preview': ModelTier.FREE, // Gemini 2.5 Flash Preview
 
   // OpenAI
   'openai-gpt4o-mini': ModelTier.FREE, // OpenAI GPT-4o Mini

@@ -46,6 +46,7 @@ export const myProvider = customProvider({
     'gemini-2.0-flash-thinking': requestyOpenAI(
       'google/gemini-2.0-flash-thinking-exp-01-21',
     ),
+    'gemini-2.5-flash-preview': google('gemini-2.5-flash-preview-04-17'),
   },
   imageModels: {
     'small-model': fal.image('fal-ai/flux/schnell'),
@@ -69,6 +70,13 @@ export const chatModels: Array<ChatModel> = [
     name: 'Gemini Flash 2.0',
     description: 'Google Gemini Flash 2.0 model for fast, lightweight tasks',
     tier: MODEL_TIER_MAP['chat-model-small'],
+    provider: 'google',
+  },
+  {
+    id: 'gemini-2.5-flash-preview',
+    name: 'Gemini 2.5 Flash Preview',
+    description: 'Google Gemini 2.5 Flash Preview model with improved performance',
+    tier: MODEL_TIER_MAP['gemini-2.5-flash-preview'],
     provider: 'google',
   },
   // OpenAI
