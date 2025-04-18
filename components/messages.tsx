@@ -41,6 +41,7 @@ function PureMessages({
         'flex-1 overflow-y-auto',
         'px-2 sm:px-4 pt-4',
         'mobile-scroll',
+        'max-md:pb-24',
       )}
       style={{ scrollbarGutter: 'stable both-edges' }}
     >

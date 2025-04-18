@@ -393,7 +393,7 @@ export function PureMultimodalInput({
 
   return (
     <div
-      className={`flex gap-2 flex-col w-full overflow-y-auto ${className || ''}`}
+      className={`flex gap-2 flex-col w-full ${className || ''} max-md:fixed max-md:bottom-0 max-md:left-0 max-md:right-0 max-md:z-20 max-md:bg-background max-md:p-2 max-md:border-t max-md:dark:border-zinc-700`}
       data-mobile-sidebar-open={isMobile && openMobile ? 'true' : 'false'}
     >
       <div className="flex flex-col w-full gap-2 relative">
@@ -402,7 +402,7 @@ export function PureMultimodalInput({
             'relative w-full p-0 overflow-hidden rounded-xl border flex flex-col',
             'bg-black/5 dark:bg-white/5',
             'focus-within:ring-1 focus-within:ring-ring focus-within:border-input',
-            'dark:border-zinc-700',
+            'dark:border-zinc-700/50',
             'shadow-sm',
             'flex flex-col',
             className,
@@ -456,7 +456,7 @@ export function PureMultimodalInput({
           )}
 
           {/* New bottom row for ModelSelector and action buttons */}
-          <div className="flex items-center justify-between px-2 sm:px-3 py-1.5 border-t dark:border-zinc-700 bg-transparent">
+          <div className="flex items-center justify-between px-2 sm:px-3 py-1.5 border-t dark:border-zinc-700 bg-transparent rounded-b-xl">
             {/* ModelSelector */}
             <ModelSelector
               selectedModelId={selectedChatModel}

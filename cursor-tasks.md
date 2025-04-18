@@ -1,141 +1,94 @@
-Story 1: Modify Backend API for Tool-Based Search & Correct Result Structuring ✓
-
-Goal: Update API route untuk menyediakan tool, memastikan onFinish menyimpan hasil tool dan teks AI secara terstruktur dalam parts, dan tidak mengirim hasil search via writeData.
-
-Target File: app/(chat)/api/chat/route.ts
-
-Tasks:
-
-    1.1 - 1.6: (Sama seperti revisi sebelumnya) ✓
-
-        1.1: Remove Explicit Search Call & associated writeData. ✓
-
-        1.2: Remove let searchResults = null;. ✓
-
-        1.3: Import tavilySearchTool. ✓
-
-        1.4: Define availableTools conditionally based on useSearch. ✓
-
-        1.5: Update System Prompt Logic (instruct AI how to use tool). ✓
-
-        1.6: Adjust toolChoice ('auto' if tools present). ✓
-
-    1.7: REVISI KRITIS: Refine onFinish for Correct parts Structure: ✓
-
-        1.7.1 (Inspect response): (Sangat Penting) Tambahkan console.log(JSON.stringify(response, null, 2)) di awal onFinish untuk melihat struktur aktual dari response.response.messages dan response.steps ketika tool tavilySearchTool dipanggil. Perhatikan bagaimana tool_calls, tool_results, dan text terdistribusi. ✓
-
-        1.7.2 (Iterate response.response.messages): Loop melalui setiap pesan dalam response.response.messages. ✓
-
-        1.7.3 (Build parts per Message): Untuk setiap pesan asisten dalam loop: ✓
-
-            Inisialisasi array partsForDb = []. ✓
-
-            Cek Tool Calls: Jika pesan AI SDK (msg) memiliki tool_calls (misalnya, msg.tool_calls jika struktur SDK seperti itu, atau Anda perlu mencarinya di response.steps), iterasi melalui tool_calls ini. Untuk setiap tool_call dengan toolName === 'tavilySearchTool': ✓
-
-                Cari toolResult yang cocok berdasarkan toolCallId di dalam response.steps. ✓
-
-                Jika toolResult ditemukan, tambahkan objek terstruktur ke partsForDb: ✓
-
-
-            partsForDb.push({
-              type: 'tool-invocation', // Tipe HARUS dikenali oleh frontend
-              toolInvocation: {
-                toolCallId: toolResult.toolCallId,
-                toolName: 'tavilySearchTool', // Nama konsisten
-                state: 'result',
-                args: toolResult.args, // Sertakan argumen jika tersedia/diperlukan
-                result: toolResult.result // Payload JSON dari Tavily
-              }
-            });
-
-
-
-            IGNORE_WHEN_COPYING_START
-
-Use code with caution. TypeScript
-IGNORE_WHEN_COPYING_END
-
-    Jika tool_call ada tapi toolResult belum ditemukan (mungkin terjadi jika onFinish dipanggil sebelum semua step selesai?), Anda bisa menambahkan state 'call' atau menunggu hasil lengkap. Fokus pada state 'result'. ✓
-
-Cek Teks: Jika pesan AI SDK (msg) memiliki konten teks (misalnya, msg.content jika string, atau part.text jika array content), tambahkan ini ke partsForDb: ✓
-
-
-if (typeof msg.content === 'string' && msg.content.trim().length > 0) {
-   partsForDb.push({ type: 'text', text: msg.content });
- } else if (Array.isArray(msg.content)) {
-    const textPart = msg.content.find(p => p.type === 'text');
-    if (textPart && textPart.text.trim().length > 0) {
-        partsForDb.push({ type: 'text', text: textPart.text });
-    }
- }
-
-
-
-IGNORE_WHEN_COPYING_START
-
-            Use code with caution. TypeScript
-            IGNORE_WHEN_COPYING_END
-
-            Cek Tools Lain: Tambahkan logika serupa untuk tool lain (createDocument dll.) jika hasilnya perlu disimpan/ditampilkan. ✓
-
-            Simpan Pesan: Jika partsForDb tidak kosong, buat objek DBSchemaMessage untuk pesan ini dan tambahkan ke array assistantMessagesToSave. ✓
-
-        1.7.4 (Save All Messages): Setelah loop response.response.messages selesai, panggil saveMessages({ messages: assistantMessagesToSave }); jika array tidak kosong. ✓
-
-    1.8: Remove Old Imports/Variables: (Sama seperti sebelumnya) ✓
-
-    1.9: Verification (Conceptual): Backend menyimpan pesan asisten dengan array parts yang berisi objek tool-invocation (dengan result di dalamnya) dan/atau objek text, sesuai dengan output AI. ✓
-
-Story 2: Update Frontend Input Component ✓
-
-(Tidak ada perubahan dari checklist sebelumnya untuk story ini)
-
-    2.1 - 2.5: Pastikan useSearch dikirim dengan benar ke backend. ✓
-
-Story 3: Update Frontend Message Rendering for Integrated Display (Gaya Morphic) ✓
-
-Goal: Render SearchResults dan SearchProgress sebagai bagian dari pesan asisten, menggunakan data terstruktur dari parts.
-
-Target File: components/message.tsx (specifically PurePreviewMessage)
-
-Tasks:
-
-    3.1: Import Components: (Sama seperti sebelumnya) SearchResults, SearchProgress, CollapsibleMessage, Section, ToolArgsSection, ToolBadge, ikon. ✓
-
-    3.2: Locate parts Loop: (Sama seperti sebelumnya) ✓
-
-    3.3: Handle tool-invocation Part Type: (Sama seperti sebelumnya) ✓
-
-    3.4: Destructure toolInvocation: (Sama seperti sebelumnya) ✓
-
-    3.5: Detect Tavily Tool: (Sama seperti sebelumnya) if (toolInvocation.toolName === 'tavilySearchTool') { ... }. ✓
-
-    3.6: Render Progress (Inside Collapsible): ✓
-
-        Jika toolInvocation.state === 'call', render <CollapsibleMessage ... header={<ToolArgsSection tool="search">{args?.query}</ToolArgsSection>}> <SearchProgress status="searching" query={...} /> </CollapsibleMessage>. ✓
-
-    3.7: Render Results (Inside Collapsible): ✓
-
-        Jika toolInvocation.state === 'result' && toolInvocation.result, render <CollapsibleMessage ... header={<ToolArgsSection tool="search">{args?.query}</ToolArgsSection>}>. ✓
-
-        Di dalam CollapsibleMessage, cek result.error. Jika ada, tampilkan error. ✓
-
-        Jika tidak, render <SearchResults result={toolInvocation.result} /> (atau bungkus dalam <Section title="Sources">). ✓
-
-    3.8: Handle Other Tools: (Sama seperti sebelumnya) Pastikan tools lain dirender tanpa CollapsibleMessage (kecuali memang diinginkan). ✓
-
-    3.9: Handle text Part: (Sama seperti sebelumnya) Render <Markdown>{part.text}</Markdown> seperti biasa. Ini akan muncul setelah tool-invocation jika urutannya demikian dalam parts. ✓
-
-    3.10: Position MessageActions: (Sama seperti sebelumnya) Pastikan di luar loop parts. ✓
-
-    3.11: Verification (Visual): Jalankan app, aktifkan search. ✓
-
-        Verify: SearchResults (atau pembungkusnya seperti SearchSection di Morphic) muncul sebagai bagian dari pesan asisten, BUKAN sebagai JSON mentah. ✓
-
-        Verify: Tampilan SearchResults (gambar, sumber) mirip dengan Morphic. Mungkin perlu penyesuaian CSS pada components/search-results.tsx. ✓
-
-        Verify: Teks jawaban AI muncul setelah blok hasil pencarian. ✓
-
-        Verify: CollapsibleMessage (jika digunakan) berfungsi. ✓
-
-        Verify: Kutipan sumber [Source X] dalam teks jawaban me-link dengan benar ke sumber di blok SearchResults. ✓
+Okay, here is a highly detailed Markdown checklist designed for an AI Coding Agent to implement the mobile responsiveness fix for the chat input bar, ensuring no existing functionality is harmed.
+
+**Project Plan: Fix Mobile Chat Input Positioning & Layout**
+
+**Goal:** Ensure the chat input bar remains fixed at the bottom of the mobile viewport during scrolling, preventing the "jeda putih" visual bug, without affecting desktop layout or existing component logic.
+
+```markdown
+# Checklist: Mobile Chat Input Responsiveness Fix
+
+<critical>
+  - **Primary Constraint:** DO NOT modify the internal logic, state management, event handlers, or prop handling within the `MultimodalInput` or `Messages` components. Changes MUST be limited to CSS classes (Tailwind) for layout and positioning adjustments, primarily targeting mobile viewports.
+  - **Target:** Address the visual "jeda putih" on mobile scrolling by fixing the input bar to the viewport bottom.
+</critical>
+
+## Story 1: Apply Fixed Positioning to Chat Input on Mobile
+
+**Goal:** Modify `MultimodalInput` so its main container is fixed to the bottom of the screen *only* on mobile viewports.
+
+*   **Task 1.1: Locate Target Component**
+    *   `✓` Open the file `components/multimodal-input.tsx`.
+*   **Task 1.2: Identify Outermost Wrapper**
+    *   `✓` Find the top-level `div` element returned by the `PureMultimodalInput` component. This is the element that currently has `className="flex gap-2 flex-col w-full overflow-y-auto..."`.
+*   **Task 1.3: Add Conditional Fixed Positioning Classes**
+    *   `✓` To the `className` prop of the outermost `div` identified in Task 1.2, add the following Tailwind classes specifically prefixed for mobile (`max-md:`):
+        *   `✓` `max-md:fixed` (Applies `position: fixed`)
+        *   `✓` `max-md:bottom-0` (Aligns to the bottom)
+        *   `✓` `max-md:left-0` (Stretches to the left edge)
+        *   `✓` `max-md:right-0` (Stretches to the right edge)
+        *   `✓` `max-md:z-20` (Ensures it's layered above most content)
+*   **Task 1.4: Apply Mobile Background and Padding**
+    *   `✓` To the same outermost `div` (from Task 1.2), add classes for mobile background and padding:
+        *   `✓` `max-md:bg-background` (Ensures it has a solid background matching the theme when fixed)
+        *   `✓` `max-md:p-2` (Adds some internal spacing on mobile)
+*   **Task 1.5: Add Mobile Top Border**
+    *   `✓` To the same outermost `div` (from Task 1.2), add classes for a top border *only* on mobile:
+        *   `✓` `max-md:border-t` (Applies `border-top-width: 1px`)
+        *   `✓` `max-md:dark:border-zinc-700` (Sets the border color in dark mode, adjust if needed)
+        *   `✓` Ensure the light mode border uses the default `border-border` implicitly or add `max-md:border-border`.
+*   **Task 1.6: Remove `overflow-y-auto` from Outermost Wrapper**
+    *   `✓` From the outermost `div` (from Task 1.2), **remove** the class `overflow-y-auto`. Fixed elements should not typically be scroll containers themselves in this context.
+*   **Task 1.7: Adjust Inner Container Border (Optional Refinement)**
+    *   `✓` Locate the *inner* `div` that contains the `Textarea` and the action buttons row (currently has `dark:border-zinc-700`).
+    *   `✓` *Optionally*, slightly adjust its dark mode border opacity for visual harmony: change `dark:border-zinc-700` to `dark:border-zinc-700/50`. This is minor.
+*   **Task 1.8: Ensure Bottom Rounding on Inner Action Row Container**
+    *   `✓` Locate the `div` that directly wraps the `ModelSelector` and the action buttons (`Paperclip`, `Globe`, `Send/Stop`). This `div` should have `rounded-b-xl` to maintain the visual appearance, especially since the *outermost* fixed container might not visually convey rounding perfectly. If it doesn't have `rounded-b-xl`, add it.
+*   **Task 1.9: Verify No Logic Changes**
+    *   `✓` Double-check that *only* CSS classes (primarily `className` props using `cn` or direct strings) were added or modified in `components/multimodal-input.tsx`.
+    *   `✓` Confirm that no React state hooks (`useState`, `useRef`, etc.), event handlers (`onClick`, `onChange`, `onKeyDown`), or component logic were altered.
+
+## Story 2: Adjust Message List Layout for Fixed Input
+
+**Goal:** Add padding to the bottom of the `Messages` component container so the last message isn't obscured by the newly fixed input bar on mobile.
+
+*   **Task 2.1: Locate Target Component**
+    *   `✓` Open the file `components/messages.tsx`.
+*   **Task 2.2: Identify Scrollable Message Container**
+    *   `✓` Find the main `div` element returned by the `PureMessages` component. This is the element that has `ref={messagesContainerRef}` and classes like `flex-1 overflow-y-auto`.
+*   **Task 2.3: Add Conditional Bottom Padding**
+    *   `✓` To the `className` prop of the `div` identified in Task 2.2, add a Tailwind class for bottom padding *only* on mobile (`max-md:`).
+        *   `✓` Add `max-md:pb-24`. (The value `pb-24` corresponds to `6rem` or `96px`. This is an estimate and might need slight visual adjustment later, but start with this).
+*   **Task 2.4: Verify No Logic Changes**
+    *   `✓` Double-check that *only* a CSS class for padding (`max-md:pb-24`) was added to the container element in `components/messages.tsx`.
+    *   `✓` Confirm that message rendering logic, `useScrollToBottom` hook usage, and prop handling remain unchanged.
+
+## Story 3: Verification and Testing
+
+**Goal:** Ensure the fix works correctly on mobile without negatively impacting the desktop layout or any existing functionality.
+
+*   **Task 3.1: Test Mobile Viewport (<= `md` breakpoint)**
+    *   ` ` Using browser developer tools, simulate a mobile device viewport (e.g., width < 768px).
+    *   ` ` Load a chat with several messages.
+    *   ` ` Scroll the message list up and down vigorously. **Verify:** The input bar remains fixed at the very bottom of the viewport without any flickering or "jeda putih".
+    *   ` ` Scroll to the very last message. **Verify:** The entire last message is visible and not obscured by the fixed input bar (due to the padding added in Story 2).
+    *   ` ` Tap into the `Textarea`. **Verify:** The virtual keyboard appears correctly (if simulator allows) and the input bar adjusts its position smoothly if necessary (browser default behavior).
+    *   ` ` Type a message and send it. **Verify:** Sending messages still works as expected.
+    *   ` ` Test file attachment button (`PaperclipIcon`). **Verify:** Clicking it opens the file dialog.
+    *   ` ` Test web search toggle button (`GlobeIcon`). **Verify:** Toggling the search state works visually and functionally (if applicable backend logic exists).
+    *   ` ` Test model selector dropdown. **Verify:** Dropdown opens and selection works.
+*   **Task 3.2: Test Desktop Viewport (> `md` breakpoint)**
+    *   ` ` Resize the browser window or disable mobile simulation to view the desktop layout.
+    *   ` ` Load a chat.
+    *   ` ` Scroll the message list. **Verify:** The input bar scrolls with the page content and is *not* fixed to the bottom.
+    *   ` ` **Verify:** There is no excessive padding at the bottom of the message list.
+    *   ` ` **Verify:** All input bar functionalities (typing, sending, attaching, model select, search toggle) work as expected on desktop.
+*   **Task 3.3: Functional Regression Test (Brief)**
+    *   ` ` Send a message without search. **Verify:** Response is generated correctly.
+    *   ` ` Send a message *with* search enabled. **Verify:** Search results are displayed correctly (if applicable) and response is generated.
+    *   ` ` Attach and send a file (if implemented). **Verify:** File upload and message sending works.
+    *   ` ` Check chat history navigation. **Verify:** Switching between chats works.
+    *   ` ` Open and close the sidebar. **Verify:** Layout adjusts correctly.
+
+```
+
+This checklist provides granular, testable steps focused solely on the CSS/layout changes needed for mobile responsiveness, explicitly warning against altering component logic to minimize the risk of breaking existing functions.
