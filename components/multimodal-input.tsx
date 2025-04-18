@@ -183,13 +183,7 @@ export function PureMultimodalInput({
       }),
     });
 
-    // Show toast if search is enabled
-    if (isSearchEnabled) {
-      toast.success('Searching the web for information...', {
-        id: 'search-toast',
-        duration: 3000,
-      });
-    }
+    // No need to show toast for search anymore as it will be shown inline in the message
 
     setAttachments([]);
     setLocalStorageInput('');
@@ -334,13 +328,7 @@ export function PureMultimodalInput({
       setAttachments([]);
       setLocalStorageInput('');
 
-      // Tampilkan toast jika search diaktifkan
-      if (withSearch) {
-        toast.success('Searching the web for information...', {
-          id: 'search-toast',
-          duration: 3000,
-        });
-      }
+      // No need to show toast for search anymore as it will be shown inline in the message
     } catch (error) {
       console.error('Error submitting message:', error);
       toast.error('Failed to send message. Please try again.');

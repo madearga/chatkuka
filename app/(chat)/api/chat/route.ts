@@ -24,7 +24,7 @@ import { createDocument } from '@/lib/ai/tools/create-document';
 import { updateDocument } from '@/lib/ai/tools/update-document';
 import { requestSuggestions } from '@/lib/ai/tools/request-suggestions';
 import { getWeather } from '@/lib/ai/tools/get-weather';
-import { searchTavily } from '@/lib/clients/tavily';
+import { tavilySearchTool } from '@/lib/ai/tools/tavily';
 
 export const maxDuration = 60;
 
@@ -52,8 +52,8 @@ export async function POST(request: Request) {
         excludeDomains?: string[];
         includeImages?: boolean;
         includeImageDescriptions?: boolean;
-        topic?: string;
-        timeRange?: string;
+        topic?: 'general' | 'news' | 'finance';
+        timeRange?: 'day' | 'week' | 'month' | 'year' | 'd' | 'w' | 'm' | 'y';
         days?: number;
       };
       systemPrompt?: string; // Add systemPrompt type
@@ -213,34 +213,9 @@ export async function POST(request: Request) {
 
     return createDataStreamResponse({
       execute: async (dataStream) => {
-        // Jika search diaktifkan, kirim status pencarian ke client
-        if (useSearch && searchToolAvailable && searchQuery) {
-          // Kirim status pencarian ke client
-          dataStream.writeData({
-            type: 'search-status',
-            status: 'searching',
-            query: searchQuery,
-          });
-        }
 
-        // Determine which tools to use
-        type ToolName =
-          | 'getWeather'
-          | 'createDocument'
-          | 'updateDocument'
-          | 'requestSuggestions';
-        const activeTools =
-          selectedChatModel === 'chat-model-reasoning'
-            ? ([] as ToolName[])
-            : ([
-                'getWeather',
-                'createDocument',
-                'updateDocument',
-                'requestSuggestions',
-              ] as ToolName[]);
-
-        // Combine standard tools
-        const tools = {
+        // Define available tools
+        const availableTools: Record<string, any> = {
           getWeather,
           createDocument: createDocument({
             session,
@@ -258,76 +233,23 @@ export async function POST(request: Request) {
           }),
         };
 
-        // If search is enabled, perform search before starting the AI response
+        // Add tavilySearchTool if search is enabled and API key is available
+        const isSearchToolAvailable = !!tavilyApiKey;
+
+        if (useSearch && isSearchToolAvailable) {
+          availableTools.tavilySearchTool = tavilySearchTool;
+          console.log("[API Route] Tavily search tool included for AI.");
+        } else {
+          console.log("[API Route] Tavily search tool excluded for AI.");
+        }
+
+        // Create system message
         let systemMessage =
           requestSystemPrompt || systemPrompt({ selectedChatModel });
-        let searchResults = null;
 
-        if (useSearch && searchToolAvailable && searchQuery && tavilyApiKey) {
-          try {
-            // Update status to processing
-            dataStream.writeData({
-              type: 'search-status',
-              status: 'processing',
-              query: searchQuery,
-            });
-
-            searchResults = await searchTavily(searchQuery, searchOptions);
-            console.log('Search results from Tavily:', searchResults);
-
-            // Send search results to client
-            dataStream.writeData({
-              type: 'search-results',
-              status: 'complete',
-              query: searchQuery,
-              results: searchResults.results
-                ? JSON.parse(JSON.stringify(searchResults.results))
-                : [],
-              answer: searchResults.answer,
-              images: searchResults.images
-                ? JSON.parse(JSON.stringify(searchResults.images))
-                : [],
-              responseTime: searchResults.responseTime,
-            } as any);
-
-            // Add search results to system message
-            systemMessage += `\n\nSearch results for "${searchQuery}":\n\n`;
-            if (searchResults.answer) {
-              systemMessage += `Summary: ${searchResults.answer}\n\n`;
-            }
-
-            if (
-              Array.isArray(searchResults.results) &&
-              searchResults.results.length > 0
-            ) {
-              systemMessage += `Sources:\n`;
-              searchResults.results.forEach((result: any, index: number) => {
-                systemMessage += `Source ${index + 1}: ${result.title}\n`;
-                systemMessage += `URL: ${result.url}\n`;
-                systemMessage += `Content: ${result.content}\n\n`;
-              });
-
-              // Add citation instructions
-              systemMessage += `\nWhen referencing the above search results in your response, please cite the sources using markdown links in this format: [Source Title](URL).\n`;
-              systemMessage += `For example: "According to [${searchResults.results[0].title}](${searchResults.results[0].url}), ..."\n\n`;
-            } else {
-              systemMessage += `No search results found.\n\n`;
-            }
-
-            systemMessage += `Please use these search results to provide a comprehensive response to the user's query.`;
-          } catch (error) {
-            console.error('Search error:', error);
-
-            // Send error to client
-            dataStream.writeData({
-              type: 'search-status',
-              status: 'error',
-              query: searchQuery,
-              error: error instanceof Error ? error.message : String(error),
-            });
-
-            systemMessage += `\n\nAttempted to search for "${searchQuery}" but encountered an error. Please inform the user that the search failed and answer based on your knowledge.`;
-          }
+        // Add search instructions to system prompt if search is enabled
+        if (useSearch && searchToolAvailable && tavilyApiKey) {
+          systemMessage += `\n\nThe user has enabled web search. If the user's query requires current or factual information, use the tavilySearchTool to search the web. When using search results, cite sources using markdown links in this format: [Source Title](URL).`;
         } else if (useSearch && !searchToolAvailable) {
           systemMessage += `\n\nThe user requested web search, but it's not available. Please inform them that search is unavailable and answer based on your knowledge.`;
         }
@@ -342,100 +264,193 @@ export async function POST(request: Request) {
           system: systemMessage,
           messages,
           maxSteps: 5,
-          tools,
+          tools: availableTools,
+          toolChoice: 'auto', // Let AI decide when to use tools
           temperature: needsDefaultTemp ? 1 : 0, // Set temperature to 1 for models that require it
           onFinish: async (response) => {
-            // Log the entire response object for debugging purposes
+            // 1.7.1: Log the entire response object for debugging purposes
             console.log(
               '[onFinish] Full Response Object:',
               JSON.stringify(response, null, 2),
             );
 
-            // Extract the final text content
-            const finalText = response.text;
+            // Initialize array for assistant messages to save
+            const assistantMessagesToSave: DBSchemaMessage[] = [];
 
-            // Initialize parts array with the final text
-            const parts: Array<any> = [];
-            if (finalText) {
-              parts.push({ type: 'text', text: finalText });
-            }
+            // 1.7.2: Iterate through response.response.messages if available
+            if (response.response && response.response.messages && response.response.messages.length > 0) {
+              for (const msg of response.response.messages) {
+                if (msg.role === 'assistant') {
+                  // 1.7.3: Build parts for this assistant message
+                  const partsForDb: Array<any> = [];
 
-            // Find tool results within the steps array
-            // Often, the relevant results are in the first step when a tool is called.
-            // We need to handle cases where tools might be called in later steps too, but for now,
-            // let's focus on the common case shown in the logs.
-            let relevantToolResults: any[] = [];
-            if (
-              response.steps &&
-              response.steps.length > 0 &&
-              response.steps[0].toolResults
-            ) {
-              relevantToolResults = response.steps[0].toolResults;
-            }
+                  // Process text content
+                  if (typeof msg.content === 'string' && msg.content.trim().length > 0) {
+                    partsForDb.push({ type: 'text', text: msg.content });
+                  } else if (Array.isArray(msg.content)) {
+                    // Find text parts in content array
+                    for (const part of msg.content) {
+                      if (part.type === 'text' && part.text && part.text.trim().length > 0) {
+                        partsForDb.push({ type: 'text', text: part.text });
+                      }
+                    }
+                  }
 
-            // Add tool results to the parts array in the required format
-            relevantToolResults.forEach((toolResult) => {
-              // Check if it's the tool result format we expect
-              if (
-                toolResult.type === 'tool-result' &&
-                toolResult.toolCallId &&
-                toolResult.toolName &&
-                toolResult.result
-              ) {
-                parts.push({
-                  type: 'tool-invocation',
-                  toolInvocation: {
-                    toolCallId: toolResult.toolCallId,
-                    toolName: toolResult.toolName,
-                    state: 'result', // Mark as result
-                    result: toolResult.result, // Include the actual result object
-                    // args: toolResult.args, // Optionally include args if needed
-                  },
+                  // Process tool calls and results
+                  // First, collect all tool calls from this message
+                  const toolCalls: any[] = [];
+
+                  // Extract tool calls from message content
+                  if (Array.isArray(msg.content)) {
+                    for (const part of msg.content) {
+                      // Check for tool-call type (using any to bypass type checking)
+                      const anyPart = part as any;
+                      if (anyPart.type === 'tool_call' || anyPart.type === 'tool-call') {
+                        toolCalls.push({
+                          id: anyPart.id,
+                          name: anyPart.name,
+                          args: anyPart.args
+                        });
+                      }
+                    }
+                  }
+
+                  // Also check if tool_calls exists directly on the message (using any to bypass type checking)
+                  const anyMsg = msg as any;
+                  if (anyMsg.tool_calls && Array.isArray(anyMsg.tool_calls)) {
+                    toolCalls.push(...anyMsg.tool_calls);
+                  }
+
+                  // For each tool call, find matching result in steps
+                  if (toolCalls.length > 0 && response.steps && response.steps.length > 0) {
+                    for (const toolCall of toolCalls) {
+                      let matchingResult = null;
+
+                      // Search through all steps for matching tool result
+                      for (const step of response.steps) {
+                        if (step.toolResults && step.toolResults.length > 0) {
+                          for (const toolResult of step.toolResults) {
+                            if (
+                              toolResult.type === 'tool-result' &&
+                              toolResult.toolCallId === toolCall.id
+                            ) {
+                              matchingResult = toolResult;
+                              break;
+                            }
+                          }
+                          if (matchingResult) break;
+                        }
+                      }
+
+                      // Add tool invocation to parts
+                      if (matchingResult) {
+                        partsForDb.push({
+                          type: 'tool-invocation',
+                          toolInvocation: {
+                            toolCallId: matchingResult.toolCallId,
+                            toolName: matchingResult.toolName,
+                            state: 'result',
+                            args: matchingResult.args || toolCall.args,
+                            result: matchingResult.result
+                          }
+                        });
+                      } else {
+                        // Tool call without result (in progress)
+                        partsForDb.push({
+                          type: 'tool-invocation',
+                          toolInvocation: {
+                            toolCallId: toolCall.id,
+                            toolName: toolCall.name,
+                            state: 'call',
+                            args: toolCall.args
+                          }
+                        });
+                      }
+                    }
+                  }
+
+                  // If we have parts to save, create a message object
+                  if (partsForDb.length > 0) {
+                    assistantMessagesToSave.push({
+                      id: generateUUID(),
+                      role: 'assistant',
+                      parts: partsForDb,
+                      attachments: [],
+                      createdAt: new Date(),
+                      chatId: id,
+                    });
+                  }
+                }
+              }
+            } else {
+              // Fallback to using response.text if messages aren't available
+              const parts: Array<any> = [];
+
+              if (response.text && response.text.trim().length > 0) {
+                parts.push({ type: 'text', text: response.text });
+              }
+
+              // Process tool results from all steps
+              if (response.steps && response.steps.length > 0) {
+                for (const step of response.steps) {
+                  if (step.toolResults && step.toolResults.length > 0) {
+                    for (const toolResult of step.toolResults) {
+                      if (
+                        toolResult.type === 'tool-result' &&
+                        toolResult.toolCallId &&
+                        toolResult.toolName &&
+                        toolResult.result
+                      ) {
+                        parts.push({
+                          type: 'tool-invocation',
+                          toolInvocation: {
+                            toolCallId: toolResult.toolCallId,
+                            toolName: toolResult.toolName,
+                            state: 'result',
+                            result: toolResult.result,
+                            args: toolResult.args,
+                          },
+                        });
+                      }
+                    }
+                  }
+                }
+              }
+
+              if (parts.length > 0) {
+                assistantMessagesToSave.push({
+                  id: generateUUID(),
+                  role: 'assistant',
+                  parts: parts,
+                  attachments: [],
+                  createdAt: new Date(),
+                  chatId: id,
                 });
-              } else {
-                console.warn(
-                  '[onFinish] Encountered unexpected toolResult format:',
-                  toolResult,
+              }
+            }
+
+            // 1.7.4: Save all messages
+            if (assistantMessagesToSave.length > 0) {
+              try {
+                // Log the structure before saving
+                console.log(
+                  '[onFinish] Messages to Save:',
+                  JSON.stringify(assistantMessagesToSave, null, 2),
+                );
+
+                // Save the constructed messages
+                await saveMessages({ messages: assistantMessagesToSave });
+                console.log(
+                  '[onFinish] Successfully saved assistant messages.',
+                );
+              } catch (error) {
+                console.error(
+                  '[onFinish] Failed to save assistant messages:',
+                  error,
                 );
               }
-            });
-
-            // If parts array is empty (no text, no valid tool results), log and exit.
-            if (parts.length === 0) {
-              console.error(
-                '[onFinish] No valid parts (text or tool results) found to save.',
-              );
-              return;
-            }
-
-            try {
-              // Construct the assistant message object using combined parts
-              const assistantMessageToSave: DBSchemaMessage = {
-                id: generateUUID(), // Generate a new ID for this composite message
-                role: 'assistant',
-                parts: parts, // Use the combined parts array
-                // TODO: Decide if attachments need to be extracted from steps/response
-                attachments: [],
-                createdAt: new Date(),
-                chatId: id,
-              };
-
-              // Log the structure before saving
-              console.log(
-                '[onFinish] Message to Save:',
-                JSON.stringify(assistantMessageToSave, null, 2),
-              );
-
-              // Save the constructed message
-              await saveMessages({ messages: [assistantMessageToSave] });
-              console.log(
-                '[onFinish] Successfully saved final assistant message.',
-              );
-            } catch (error) {
-              console.error(
-                '[onFinish] Failed to save final assistant message:',
-                error,
-              );
+            } else {
+              console.error('[onFinish] No valid messages to save.');
             }
           },
           onError: (error) => {

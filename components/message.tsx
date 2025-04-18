@@ -32,8 +32,11 @@ import { DocumentPreview } from './document-preview';
 import { MessageReasoning } from './message-reasoning';
 import { SearchResults } from './search-results';
 import { SearchProgress, type SearchStatus } from './search-progress';
+import { CollapsibleMessage } from './collapsible-message';
+import { Section, ToolArgsSection } from './section';
+import { ToolBadge } from './tool-badge';
 
-import { File, FileText, FileSpreadsheet, FileCode } from 'lucide-react';
+import { File, FileText, FileSpreadsheet, FileCode, Search, Globe } from 'lucide-react';
 
 // Simple loading indicator component for text responses
 const ThinkingDots = () => (
@@ -44,6 +47,128 @@ const ThinkingDots = () => (
     <div className="h-1.5 w-1.5 bg-current rounded-full animate-bounce"></div>
   </div>
 );
+
+// Component to render tool invocations
+interface RenderToolInvocationProps {
+  toolInvocation: any;
+  isReadonly: boolean;
+}
+
+function RenderToolInvocation({ toolInvocation, isReadonly }: RenderToolInvocationProps) {
+  const { toolName, toolCallId, state, args } = toolInvocation;
+  const result = toolInvocation.result;
+
+  // Handle Tavily Search Tool
+  if (toolName === 'tavilySearchTool') {
+    if (state === 'call') {
+      return (
+        <CollapsibleMessage
+          header={<ToolArgsSection tool="search">{args?.query}</ToolArgsSection>}
+          isOpen={true}
+        >
+          <SearchProgress status="searching" query={args?.query} />
+        </CollapsibleMessage>
+      );
+    }
+
+    if (state === 'result' && result) {
+      if (result.error) {
+        return (
+          <CollapsibleMessage
+            header={<ToolArgsSection tool="search">{args?.query || result.query}</ToolArgsSection>}
+            isOpen={true}
+          >
+            <SearchProgress status="error" query={args?.query || result.query} error={result.error} />
+          </CollapsibleMessage>
+        );
+      }
+
+      return (
+        <CollapsibleMessage
+          header={<ToolArgsSection tool="search">{args?.query || result.query}</ToolArgsSection>}
+          isOpen={true}
+        >
+          <Section title="Sources" icon={<Globe className="size-4 text-sky-500" />}>
+            <SearchResults
+              results={result.results}
+              query={result.query}
+              answer={result.answer}
+              images={result.images}
+              responseTime={result.responseTime}
+            />
+          </Section>
+        </CollapsibleMessage>
+      );
+    }
+  }
+
+  // Handle other tools without CollapsibleMessage
+  if (state === 'call') {
+    return (
+      <div key={toolCallId}>
+        {toolName === 'getWeather' ? (
+          <Weather />
+        ) : toolName === 'createDocument' ? (
+          <DocumentPreview
+            isReadonly={isReadonly}
+            args={args}
+          />
+        ) : toolName === 'updateDocument' ? (
+          <DocumentToolCall
+            type="update"
+            args={args}
+            isReadonly={isReadonly}
+          />
+        ) : toolName === 'requestSuggestions' ? (
+          <DocumentToolCall
+            type="request-suggestions"
+            args={args}
+            isReadonly={isReadonly}
+          />
+        ) : (
+          <div className="p-3 border rounded-md bg-muted/50">
+            <ToolBadge tool={toolName} className="mb-2" />
+            <pre className="text-xs overflow-auto">{JSON.stringify(args, null, 2)}</pre>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (state === 'result' && result !== undefined) {
+    return (
+      <div key={toolCallId}>
+        {toolName === 'getWeather' ? (
+          <Weather weatherAtLocation={result} />
+        ) : toolName === 'createDocument' ? (
+          <DocumentPreview
+            isReadonly={isReadonly}
+            result={result}
+          />
+        ) : toolName === 'updateDocument' ? (
+          <DocumentToolResult
+            type="update"
+            result={result}
+            isReadonly={isReadonly}
+          />
+        ) : toolName === 'requestSuggestions' ? (
+          <DocumentToolResult
+            type="request-suggestions"
+            result={result}
+            isReadonly={isReadonly}
+          />
+        ) : (
+          <div className="p-3 border rounded-md bg-muted/50">
+            <ToolBadge tool={toolName} className="mb-2" />
+            <pre className="text-xs overflow-auto">{JSON.stringify(result, null, 2)}</pre>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return null;
+}
 
 // Tambahkan interface untuk data pencarian
 interface SearchData {
@@ -213,85 +338,11 @@ const PurePreviewMessage = ({
                           part,
                         );
 
-                        const { toolInvocation } = part;
-                        const { toolName, toolCallId, state, args } =
-                          toolInvocation;
-                        const result = (toolInvocation as any).result;
-                        if (state === 'call') {
-                          return (
-                            <div key={toolCallId}>
-                              {toolName === 'getWeather' ? (
-                                <Weather />
-                              ) : toolName === 'createDocument' ? (
-                                <DocumentPreview
-                                  isReadonly={isReadonly}
-                                  args={args}
-                                />
-                              ) : toolName === 'updateDocument' ? (
-                                <DocumentToolCall
-                                  type="update"
-                                  args={args}
-                                  isReadonly={isReadonly}
-                                />
-                              ) : toolName === 'requestSuggestions' ? (
-                                <DocumentToolCall
-                                  type="request-suggestions"
-                                  args={args}
-                                  isReadonly={isReadonly}
-                                />
-                              ) : toolName === 'search' ? (
-                                <SearchProgress
-                                  status="searching"
-                                  query={args.query}
-                                />
-                              ) : null}
-                            </div>
-                          );
-                        }
-                        if (state === 'result' && result !== undefined) {
-                          // Log state and result when condition is met
-                          console.log(
-                            '[PurePreviewMessage] Tool Invocation State:',
-                            state,
-                            'Result Object:',
-                            result,
-                          );
-                          return (
-                            <div key={toolCallId}>
-                              {toolName === 'getWeather' ? (
-                                <Weather weatherAtLocation={result} />
-                              ) : toolName === 'createDocument' ? (
-                                <DocumentPreview
-                                  isReadonly={isReadonly}
-                                  result={result}
-                                />
-                              ) : toolName === 'updateDocument' ? (
-                                <DocumentToolResult
-                                  type="update"
-                                  result={result}
-                                  isReadonly={isReadonly}
-                                />
-                              ) : toolName === 'requestSuggestions' ? (
-                                <DocumentToolResult
-                                  type="request-suggestions"
-                                  result={result}
-                                  isReadonly={isReadonly}
-                                />
-                              ) : toolName === 'search' ? (
-                                <SearchResults
-                                  results={result.results}
-                                  query={result.query}
-                                  answer={result.answer}
-                                  images={result.images}
-                                  responseTime={result.responseTime}
-                                />
-                              ) : (
-                                <pre>{JSON.stringify(result, null, 2)}</pre>
-                              )}
-                            </div>
-                          );
-                        }
-                        return null;
+                        return <RenderToolInvocation
+                          key={index}
+                          toolInvocation={part.toolInvocation}
+                          isReadonly={isReadonly}
+                        />;
                       }
                       case 'reasoning':
                         return (
